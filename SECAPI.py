@@ -45,21 +45,24 @@ async def get_company_filings(company_name: str):
 def get_cik(company_name):
     """
     Searches the SEC database for a company's CIK (Central Index Key).
-    Implements fuzzy matching for better results.
+    Implements fuzzy matching to handle variations.
     """
-    # ✅ Normalize name: Remove Corp, LLC, Ltd, etc.
-    cleaned_name = re.sub(r"(\s*Corp\.?|\s*LLC|\s*Ltd\.?)", "", company_name, flags=re.IGNORECASE).strip()
-    cleaned_name = cleaned_name.replace("&", "%26")  # ✅ Encode "&" for SEC URL compatibility
+    HEADERS = {"User-Agent": "Your Name (your@email.com)"}
 
+    # ✅ Normalize company name (remove common suffixes like Inc, Corp, Ltd)
+    cleaned_name = re.sub(r"( Corp\.?| Inc\.?| Ltd\.?| LLC\.?)$", "", company_name, flags=re.IGNORECASE).strip()
+    cleaned_name = cleaned_name.replace("&", "%26")  # ✅ Handle "&" in AT&T
+
+    # ✅ SEC search URL
     search_url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={cleaned_name.replace(' ', '+')}&match=contains&action=getcompany"
+    
     response = requests.get(search_url, headers=HEADERS)
-
     if response.status_code != 200:
         return {"error": f"Failed to retrieve SEC data for {company_name}"}
 
     soup = BeautifulSoup(response.text, "html.parser")
 
-    # ✅ Find all matching companies in the SEC search results
+    # ✅ Extract company names and CIKs from the SEC search results table
     company_names = []
     cik_numbers = []
 
@@ -68,8 +71,8 @@ def get_cik(company_name):
     for row in rows:
         cols = row.find_all("td")
         if len(cols) > 1:
-            sec_name = cols[0].text.strip()
-            cik_link = cols[1].find("a")  # CIK is inside an <a> tag
+            sec_name = cols[0].text.strip()  # Company Name
+            cik_link = cols[1].find("a")  # CIK is inside <a> tag
 
             if cik_link:
                 cik = cik_link.text.strip().zfill(10)
@@ -82,11 +85,11 @@ def get_cik(company_name):
     # ✅ Use fuzzy matching to find the best match
     best_match, match_score = process.extractOne(company_name, company_names)
 
-    if match_score > 80:  # ✅ Only return a match if it's above 80% confidence
+    if match_score > 75:  # ✅ Confidence threshold to avoid bad matches
         cik_index = company_names.index(best_match)
         matched_cik = cik_numbers[cik_index]
-        print(f"Fuzzy matched {company_name} to {best_match} (CIK: {matched_cik}) with {match_score}% confidence")
-        return matched_cik
+        print(f"✔ Fuzzy matched {company_name} to {best_match} (CIK: {matched_cik}) with {match_score}% confidence")
+        return {"CIK": matched_cik, "Normalized Company Name": best_match}
 
     return {"error": f"Company '{company_name}' not found in SEC database"}
 
