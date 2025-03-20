@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 import requests
 from bs4 import BeautifulSoup
+import re
+from fuzzywuzzy import process
 
 app = FastAPI(
     title="Get SEC Filings Data",
@@ -39,9 +41,6 @@ async def get_company_filings(company_name: str):
         return {"error": f"Company '{company_name}' not found in SEC database"}
 
     return get_filings(cik, company_name)
-
-import re
-from fuzzywuzzy import process
 
 def get_cik(company_name):
     """
