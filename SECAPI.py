@@ -3,6 +3,11 @@ import requests
 from bs4 import BeautifulSoup
 from fuzzywuzzy import process
 
+app = FastAPI(
+    title="Get SEC Filings Data",
+    description="Retrieves the latest 10-K, 10-Q, and Financial Report for any public company.",
+    version="v3.2.3"
+    
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 
 def get_cik(company_name):
