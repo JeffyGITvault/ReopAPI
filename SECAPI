@@ -65,3 +65,4 @@ def get_company_filings(company_name: str):
         return {"error": "Company not found in our database"}
 
     return get_filings(cik)
+
