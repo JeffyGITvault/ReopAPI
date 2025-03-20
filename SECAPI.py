@@ -1,59 +1,20 @@
-from fastapi import FastAPI
+import re
 import requests
 from bs4 import BeautifulSoup
-import re
 from fuzzywuzzy import process
 
-app = FastAPI(
-    title="Get SEC Filings Data",
-    description="Retrieves the latest 10-K, 10-Q, and Financial Report for any public company.",
-    version="v3.1.3"
-)
-
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
-
-@app.api_route("/", methods=["GET", "HEAD"], operation_id="get_home")
-def home():
-    return {"message": "SEC API is live!"}
-
-@app.get("/get_cik/{company_name}", response_model=dict)
-async def get_cik_route(company_name: str):
-    """
-    API endpoint to fetch the CIK for a given company.
-    """
-    cik = get_cik(company_name)
-
-    if not cik:
-        print(f"Company '{company_name}' not found in SEC database")  # Debug log
-        return {"error": f"Company '{company_name}' not found in SEC database"}
-
-    print(f"Retrieved CIK for {company_name}: {cik}")  # Debug log
-    return {"CIK": cik}
-
-@app.get("/get_filings/{company_name}", response_model=dict)
-async def get_company_filings(company_name: str):
-    """
-    API endpoint to fetch 10-K and 10-Q filings for any public company.
-    """
-    cik = get_cik(company_name)
-
-    if not cik:
-        return {"error": f"Company '{company_name}' not found in SEC database"}
-
-    return get_filings(cik, company_name)
 
 def get_cik(company_name):
     """
     Searches the SEC database for a company's CIK (Central Index Key).
-    Implements fuzzy matching to handle variations.
+    Implements proper SEC table parsing and fuzzy matching.
     """
-    HEADERS = {"User-Agent": "Your Name (your@email.com)"}
-
-    # ✅ Normalize company name (remove common suffixes like Inc, Corp, Ltd)
+    # ✅ Normalize the company name (handle 'Inc.', 'Corp.', '&' encoding)
     cleaned_name = re.sub(r"( Corp\.?| Inc\.?| Ltd\.?| LLC\.?)$", "", company_name, flags=re.IGNORECASE).strip()
-    cleaned_name = cleaned_name.replace("&", "%26")  # ✅ Handle "&" in AT&T
+    cleaned_name = cleaned_name.replace("&", "%26")  # ✅ Encode '&' properly
 
-    # ✅ SEC search URL
+    # ✅ Construct the SEC search URL
     search_url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={cleaned_name.replace(' ', '+')}&match=contains&action=getcompany"
     
     response = requests.get(search_url, headers=HEADERS)
@@ -62,13 +23,11 @@ def get_cik(company_name):
 
     soup = BeautifulSoup(response.text, "html.parser")
 
-    # ✅ Extract company names and CIKs from the SEC search results table
+    # ✅ Extract company names and CIKs from the SEC table
     company_names = []
     cik_numbers = []
 
-    rows = soup.find_all("tr")
-
-    for row in rows:
+    for row in soup.find_all("tr"):
         cols = row.find_all("td")
         if len(cols) > 1:
             sec_name = cols[0].text.strip()  # Company Name
@@ -82,13 +41,12 @@ def get_cik(company_name):
     if not company_names:
         return {"error": f"Company '{company_name}' not found in SEC database"}
 
-    # ✅ Use fuzzy matching to find the best match
+    # ✅ Use fuzzy matching to get the best match
     best_match, match_score = process.extractOne(company_name, company_names)
 
-    if match_score > 75:  # ✅ Confidence threshold to avoid bad matches
+    if match_score > 75:  # ✅ Confidence threshold
         cik_index = company_names.index(best_match)
         matched_cik = cik_numbers[cik_index]
-        print(f"✔ Fuzzy matched {company_name} to {best_match} (CIK: {matched_cik}) with {match_score}% confidence")
         return {"CIK": matched_cik, "Normalized Company Name": best_match}
 
     return {"error": f"Company '{company_name}' not found in SEC database"}
@@ -114,7 +72,6 @@ def get_actual_filing_urls(index_url, company_name):
         href = link.get("href")
 
         if href:
-           
             if "10-q" in href.lower() and href.lower().endswith(".htm"):
                 if "summary" not in href.lower() and "index" not in href.lower():
                     if "x10q" in href.lower() or company_abbr in href.lower():
@@ -122,6 +79,7 @@ def get_actual_filing_urls(index_url, company_name):
           
             if "Financial_Report.xlsx" in href or "financial_report.xlsx" in href.lower():
                 financial_report_url = f"https://www.sec.gov{href}"
+    
     return {
         "10-Q Report": ten_q_htm_url if ten_q_htm_url else "Not Found",
         "Financial Report (Excel)": financial_report_url if financial_report_url else "Not Found"
