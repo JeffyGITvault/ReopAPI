@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 app = FastAPI(
     title="Get SEC Filings Data",
     description="Retrieves the latest 10-K, 10-Q, and Financial Report for any public company.",
-    version="v3.1.0"
+    version="v3.1.1"
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
@@ -92,7 +92,9 @@ def get_actual_filing_urls(index_url):
 def get_filings(cik):
     """
     Fetches the latest 10-K and 10-Q filings for a given CIK.
+    Ensures CIK is formatted correctly before making the request.
     """
+    cik = cik.lstrip("0")  # ✅ Remove leading zeros for SEC URL
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
     response = requests.get(url, headers=HEADERS)
 
@@ -100,9 +102,9 @@ def get_filings(cik):
         return {"error": f"Failed to retrieve filings for CIK {cik}"}
 
     data = response.json()
-    filings = data["filings"]["recent"]
+    filings = data.get("filings", {}).get("recent", {})
 
-    if not filings["form"]:
+    if not filings.get("form"):
         return {"error": "No recent filings found"}
 
     ten_k_index_url = None
@@ -132,6 +134,7 @@ def get_filings(cik):
 
     return filing_data
 
+# ✅ FIXED: Explicitly define the FastAPI route to prevent 404 errors
 @app.get("/get_filings/{company_name}", response_model=dict)
 async def get_company_filings(company_name: str):
     """
