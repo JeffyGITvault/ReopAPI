@@ -86,15 +86,17 @@ def get_actual_filing_urls(index_url):
         href = link.get("href")
 
         if href:
-            # Extract the correct 10-K and 10-Q document
-            if "10-k" in href.lower() and href.lower().endswith(".htm"):
+           
+            if "10k" in href.lower() and href.lower().endswith(".htm"):
                 if "summary" not in href.lower() and "index" not in href.lower():
                     ten_k_htm_url = f"https://www.sec.gov{href}"
 
-            if "10-q" in href.lower() and href.lower().endswith(".htm"):
+            if "10q" in href.lower() and href.lower().endswith(".htm"):
                 if "summary" not in href.lower() and "index" not in href.lower():
                     ten_q_htm_url = f"https://www.sec.gov{href}"
-
+          
+            if "Financial_Report.xlsx" in href or "financial_report.xlsx" in href.lower():
+                financial_report_url = f"https://www.sec.gov{href}"
     return {
         "10-K Report": ten_k_htm_url if ten_k_htm_url else "Not Found",
         "10-Q Report": ten_q_htm_url if ten_q_htm_url else "Not Found",
