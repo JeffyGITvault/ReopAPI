@@ -13,6 +13,21 @@ HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 @app.api_route("/", methods=["GET", "HEAD"])
 def home():
     return {"message": "SEC API is live!"}
+    
+@app.get("/get_filings/{company_name}", response_model=dict)
+async def get_company_filings(company_name: str):
+    """
+    API endpoint to fetch 10-K and 10-Q filings for any public company.
+    """
+    cik = get_cik(company_name)
+
+    if not cik:
+        print(f"Company '{company_name}' not found in SEC database")  # Debug log
+        return {"error": f"Company '{company_name}' not found in SEC database"}
+
+    print(f"Fetching filings for CIK {cik}")  # Debug log
+
+    return get_filings(cik)    
 
 def get_cik(company_name):
     """
