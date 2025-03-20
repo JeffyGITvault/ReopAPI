@@ -56,7 +56,7 @@ def get_cik(company_name):
 
     soup = BeautifulSoup(response.text, "html.parser")
 
-    cik_element = soup.find("span", class_="companyMatch")
+    cik_element = soup.find("a", href=True, string=lambda text: text and text.isdigit())
 
     if cik_element:
         cik = cik_element.text.strip().zfill(10)  # Ensure 10-digit CIK format
