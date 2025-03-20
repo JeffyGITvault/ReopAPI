@@ -7,7 +7,7 @@ app = FastAPI()
 def home():
     return {"message": "API is working!"}
 
-HEADERS = {"User-Agent": "YourName (your@email.com)"}
+HEADERS = {"User-Agent": "JeffreyGuenthner (jeffrey.guenthner@gmail.com)"}
 
 COMPANIES = {
     "Central Garden & Pet": "0000887733",
