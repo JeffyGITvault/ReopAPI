@@ -63,7 +63,7 @@ def get_cik(company_name):
         print(f"CIK not found for {company_name}")
         return None
 
-def get_actual_filing_urls(index_url):
+def get_actual_filing_urls(index_url, company_name):
     """
     Parses the SEC index.html page and extracts direct links to:
     - The full 10-Q report (.htm)
@@ -97,7 +97,7 @@ def get_actual_filing_urls(index_url):
         "Financial Report (Excel)": financial_report_url if financial_report_url else "Not Found"
     }
 
-def get_filings(cik):
+def get_filings(cik, company_name=None):
     """
     Fetches the latest 10-K and 10-Q filings for a given CIK.
     Ensures SEC response is properly handled.
