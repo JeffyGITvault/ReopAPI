@@ -1,7 +1,11 @@
 from fastapi import FastAPI
 import requests
 
-app = FastAPI()
+app = FastAPI(title="Get SEC Filings Data",
+    description="Retrieves the latest 10-K and 10-Q SEC filings for a company.",
+    version="v1.0.0")
+
+
 
 HEADERS = {"User-Agent": "JeffreyGuenthner (jeffrey.guenthner@gmail.com)"}
 
@@ -22,6 +26,10 @@ COMPANIES = {
     "Tri-State Energy": "0001637880",
 }
 
+@app.get("/")
+def home():
+    return {"message": "SEC API is live!"}
+    
 def get_filings(cik):
     """Fetch the latest 10-K and 10-Q filings for a given CIK"""
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
