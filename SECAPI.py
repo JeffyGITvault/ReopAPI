@@ -92,29 +92,34 @@ def get_actual_filing_urls(index_url):
 def get_filings(cik):
     """
     Fetches the latest 10-K and 10-Q filings for a given CIK.
-    Ensures CIK is formatted correctly before making the request.
+    Ensures the SEC response is properly handled.
     """
     cik = cik.lstrip("0") 
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
+
     response = requests.get(url, headers=HEADERS)
 
     if response.status_code != 200:
+        print(f"SEC API error: {response.status_code} - {response.text}")  # Debug log
         return {"error": f"Failed to retrieve filings for CIK {cik}"}
 
     data = response.json()
     filings = data.get("filings", {}).get("recent", {})
 
-    if not filings.get("form"):
+    if not filings or "form" not in filings:
         return {"error": "No recent filings found"}
 
     ten_k_index_url = None
     ten_q_index_url = None
 
-    for i, form in enumerate(filings["form"]):
-        if form == "10-K" and not ten_k_index_url:
-            ten_k_index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{filings['accessionNumber'][i].replace('-', '')}/index.html"
-        elif form == "10-Q" and not ten_q_index_url:
-            ten_q_index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{filings['accessionNumber'][i].replace('-', '')}/index.html"
+    for i, form in enumerate(filings.get("form", [])):
+        try:
+            if form == "10-K" and not ten_k_index_url:
+                ten_k_index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{filings['accessionNumber'][i].replace('-', '')}/index.html"
+            elif form == "10-Q" and not ten_q_index_url:
+                ten_q_index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{filings['accessionNumber'][i].replace('-', '')}/index.html"
+        except Exception as e:
+            print(f"Error processing filings for CIK {cik}: {e}")
 
         if ten_k_index_url and ten_q_index_url:
             break
