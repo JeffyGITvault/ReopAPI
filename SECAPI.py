@@ -40,11 +40,16 @@ async def get_company_filings(company_name: str):
 
     return get_filings(cik, company_name)
 
+import re
+
 def get_cik(company_name):
     """
     Searches the SEC database for a company's CIK (Central Index Key).
-    Ensures that the correct company is selected.
+    Implements fuzzy matching for better results.
     """
+    # ✅ Remove common suffixes and special characters for better matching
+    cleaned_name = re.sub(r"(\s*Inc\.?|\s*Corp\.?|\s*LLC|\s*Ltd\.?|&|\/|-)", "", company_name, flags=re.IGNORECASE).strip()
+
     search_url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={company_name.replace(' ', '+')}&match=contains&action=getcompany"
     response = requests.get(search_url, headers=HEADERS)
 
@@ -53,15 +58,34 @@ def get_cik(company_name):
 
     soup = BeautifulSoup(response.text, "html.parser")
 
-    cik_element = soup.find("a", href=True, string=lambda text: text and text.isdigit())
+    # ✅ Find all company rows in the SEC search result
+    rows = soup.find_all("tr")
 
-    if cik_element:
-        cik = cik_element.text.strip().zfill(10)  # Ensure 10-digit CIK format
-        print(f"Selected CIK for {company_name}: {cik}")  # Debug log
-        return cik
-    else:
-        print(f"CIK not found for {company_name}")
-        return None
+    best_match = None
+    best_cik = None
+
+    for row in rows:
+        cols = row.find_all("td")
+        if len(cols) > 1:
+            name = cols[0].text.strip().lower()
+            cik_link = cols[1].find("a")  # CIK should be inside an <a> tag
+
+            # ✅ Exact match takes priority
+            if company_name.lower() == name and cik_link:
+                return cik_link.text.strip().zfill(10)
+
+            # ✅ If "Inc." or "Corp." was omitted, prioritize a best match
+            if cleaned_name.lower() in name and cik_link:
+                best_match = name
+                best_cik = cik_link.text.strip().zfill(10)
+
+    # ✅ Return best match if no exact match was found
+    if best_cik:
+        print(f"Fuzzy matched {company_name} to {best_match} (CIK: {best_cik})")
+        return best_cik
+
+    print(f"CIK not found for {company_name} (Normalized: {cleaned_name})")
+    return None
 
 def get_actual_filing_urls(index_url, company_name):
     """
