@@ -27,6 +27,43 @@ def get_cik(company_name):
 
     soup = BeautifulSoup(response.text, "html.parser")
 
+    # Find all company rows in the SEC search result
+    rows = soup.find_all("tr")
+
+    for row in rows:
+        cols = row.find_all("td")
+        if len(cols) > 1:
+            name = cols[0].text.strip().lower()
+            cik_link = cols[1].find("a")
+
+            # Check if the company name closely matches the search query
+            if company_name.lower() in name and cik_link:
+                cik = cik_link.text.strip().zfill(10)  # Ensure 10-digit CIK format
+                return cik
+
+    return None  # If no valid CIK is found
+
+
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # Find all company rows in the SEC search result
+    rows = soup.find_all("tr")
+
+    for row in rows:
+        cols = row.find_all("td")
+        if len(cols) > 1:
+            name = cols[0].text.strip().lower()
+            cik_link = cols[1].find("a")
+
+            # Check if the company name closely matches the search query
+            if company_name.lower() in name and cik_link:
+                cik = cik_link.text.strip().zfill(10)  # Ensure 10-digit CIK format
+                return cik
+
+    return None  # If no valid CIK is found
+
+    soup = BeautifulSoup(response.text, "html.parser")
+
     # Find all company names in the search results
     company_results = soup.find_all("tr")
 
