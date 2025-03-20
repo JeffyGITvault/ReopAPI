@@ -75,17 +75,17 @@ def get_actual_filing_urls(index_url):
 
         if href:
             # Extract the correct 10-K and 10-Q document
-            if "10-k" in href.lower() and href.lower().endswith(".htm"):
+            if "10k" in href.lower() and href.lower().endswith(".htm"):
                 if "summary" not in href.lower() and "index" not in href.lower():
                     ten_k_htm_url = f"https://www.sec.gov{href}"
 
-            if "10-q" in href.lower() and href.lower().endswith(".htm"):
+            if "10q" in href.lower() and href.lower().endswith(".htm"):
                 if "summary" not in href.lower() and "index" not in href.lower():
                     ten_q_htm_url = f"https://www.sec.gov{href}"
 
     return {
-        "10-K Report": ten_k_htm_url if ten_k_htm_url else "Not Found",
-        "10-Q Report": ten_q_htm_url if ten_q_htm_url else "Not Found",
+        "10K Report": ten_k_htm_url if ten_k_htm_url else "Not Found",
+        "10Q Report": ten_q_htm_url if ten_q_htm_url else "Not Found",
         "Financial Report (Excel)": financial_report_url if financial_report_url else "Not Found"
     }
 
@@ -114,9 +114,9 @@ def get_filings(cik):
 
     for i, form in enumerate(filings.get("form", [])):
         try:
-            if form == "10-K" and not ten_k_index_url:
+            if form == "10K" and not ten_k_index_url:
                 ten_k_index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{filings['accessionNumber'][i].replace('-', '')}/index.html"
-            elif form == "10-Q" and not ten_q_index_url:
+            elif form == "10Q" and not ten_q_index_url:
                 ten_q_index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{filings['accessionNumber'][i].replace('-', '')}/index.html"
         except Exception as e:
             print(f"Error processing filings for CIK {cik}: {e}")
