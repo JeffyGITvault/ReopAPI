@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 app = FastAPI(
     title="Get SEC Filings Data",
     description="Retrieves the latest 10-K, 10-Q, and Financial Report for any public company.",
-    version="v3.1.1"
+    version="v3.1.2"
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
@@ -75,51 +75,60 @@ def get_actual_filing_urls(index_url):
 
         if href:
             # Extract the correct 10-K and 10-Q document
-            if "10k" in href.lower() and href.lower().endswith(".htm"):
+            if "10-k" in href.lower() and href.lower().endswith(".htm"):
                 if "summary" not in href.lower() and "index" not in href.lower():
                     ten_k_htm_url = f"https://www.sec.gov{href}"
 
-            if "10q" in href.lower() and href.lower().endswith(".htm"):
+            if "10-q" in href.lower() and href.lower().endswith(".htm"):
                 if "summary" not in href.lower() and "index" not in href.lower():
                     ten_q_htm_url = f"https://www.sec.gov{href}"
 
     return {
-        "10K Report": ten_k_htm_url if ten_k_htm_url else "Not Found",
-        "10Q Report": ten_q_htm_url if ten_q_htm_url else "Not Found",
+        "10-K Report": ten_k_htm_url if ten_k_htm_url else "Not Found",
+        "10-Q Report": ten_q_htm_url if ten_q_htm_url else "Not Found",
         "Financial Report (Excel)": financial_report_url if financial_report_url else "Not Found"
     }
 
 def get_filings(cik):
     """
     Fetches the latest 10-K and 10-Q filings for a given CIK.
-    Ensures the SEC response is properly handled.
+    Ensures SEC response is properly handled.
     """
-    cik = cik.lstrip("0") 
+    cik = cik.zfill(10)  # ✅ Always ensure CIK is 10 digits
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
-
     response = requests.get(url, headers=HEADERS)
 
     if response.status_code != 200:
         print(f"SEC API error: {response.status_code} - {response.text}")  # Debug log
         return {"error": f"Failed to retrieve filings for CIK {cik}"}
 
-    data = response.json()
-    filings = data.get("filings", {}).get("recent", {})
+    try:
+        data = response.json()
+    except Exception as e:
+        print(f"Error parsing SEC JSON response: {e}")  # Debug log
+        return {"error": "Invalid SEC JSON response"}
 
-    if not filings or "form" not in filings:
+    filings = data.get("filings", {}).get("recent", {})
+    forms = filings.get("form", [])
+    accession_numbers = filings.get("accessionNumber", [])
+
+    # ✅ Handle missing or empty filings list
+    if not forms or not accession_numbers:
         return {"error": "No recent filings found"}
 
     ten_k_index_url = None
     ten_q_index_url = None
 
-    for i, form in enumerate(filings.get("form", [])):
+    # ✅ Extract latest 10-K and 10-Q filings
+    for i, form in enumerate(forms):
         try:
-            if form == "10K" and not ten_k_index_url:
-                ten_k_index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{filings['accessionNumber'][i].replace('-', '')}/index.html"
-            elif form == "10Q" and not ten_q_index_url:
-                ten_q_index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{filings['accessionNumber'][i].replace('-', '')}/index.html"
+            accession_number = accession_numbers[i].replace("-", "")  # ✅ Format accession number
+            if form == "10-K" and not ten_k_index_url:
+                ten_k_index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession_number}/index.html"
+            elif form == "10-Q" and not ten_q_index_url:
+                ten_q_index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession_number}/index.html"
         except Exception as e:
-            print(f"Error processing filings for CIK {cik}: {e}")
+            print(f"Error processing filings for CIK {cik}: {e}")  # Debug log
 
         if ten_k_index_url and ten_q_index_url:
             break
@@ -139,6 +148,7 @@ def get_filings(cik):
 
     return filing_data
 
+# ✅ FIXED: Explicitly define the FastAPI route to prevent 404 errors
 @app.get("/get_filings/{company_name}", response_model=dict)
 async def get_company_filings(company_name: str):
     """
