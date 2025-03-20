@@ -94,7 +94,7 @@ def get_filings(cik):
     Fetches the latest 10-K and 10-Q filings for a given CIK.
     Ensures CIK is formatted correctly before making the request.
     """
-    cik = cik.lstrip("0")  # ✅ Remove leading zeros for SEC URL
+    cik = cik.lstrip("0") 
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
     response = requests.get(url, headers=HEADERS)
 
@@ -134,7 +134,6 @@ def get_filings(cik):
 
     return filing_data
 
-# ✅ FIXED: Explicitly define the FastAPI route to prevent 404 errors
 @app.get("/get_filings/{company_name}", response_model=dict)
 async def get_company_filings(company_name: str):
     """
