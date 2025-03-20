@@ -34,7 +34,7 @@ def get_cik(company_name):
         cols = row.find_all("td")
         if len(cols) > 1:
             name = cols[0].text.strip().lower()
-            cik_link = cols[1].find("a")
+            cik_link = cols[1].find("a")  # CIK should be inside an <a> tag
 
             # Debugging: Print extracted company names to check what's found
             print(f"Found company: {name}, CIK: {cik_link.text.strip() if cik_link else 'No CIK'}")
@@ -42,6 +42,7 @@ def get_cik(company_name):
             # Check if the company name closely matches the search query
             if company_name.lower() in name and cik_link:
                 cik = cik_link.text.strip().zfill(10)  # Ensure 10-digit CIK format
+                print(f"Selected CIK for {company_name}: {cik}")  # Debug log
                 return cik
 
     return None  # If no valid CIK is found
