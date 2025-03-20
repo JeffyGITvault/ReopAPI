@@ -9,6 +9,9 @@ app = FastAPI(title="Get SEC Filings Data",
 
 HEADERS = {"User-Agent": "JeffreyGuenthner (jeffrey.guenthner@gmail.com)"}
 
+@app.api_route("/", methods=["GET", "HEAD"])
+def home():
+    return {"message": "SEC API is live!"}
 COMPANIES = {
     "Central Garden & Pet": "0000887733",
     "Restoration Hardware (RH)": "0001528849",
@@ -26,9 +29,7 @@ COMPANIES = {
     "Tri-State Energy": "0001637880",
 }
 
-@app.get("/")
-def home():
-    return {"message": "SEC API is live!"}
+
     
 def get_filings(cik):
     """Fetch the latest 10-K and 10-Q filings for a given CIK"""
