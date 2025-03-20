@@ -4,38 +4,40 @@ from bs4 import BeautifulSoup
 
 app = FastAPI(
     title="Get SEC Filings Data",
-    description="Retrieves the latest 10-K and 10-Q SEC filings for a company, including direct links to the financial report and full filing document.",
-    version="v2.0.0"
+    description="Retrieves the latest 10-K, 10-Q, and Financial Report for any public company.",
+    version="v3.0.0"
 )
 
 HEADERS = {"User-Agent": "Your Name (your@email.com)"}
-
-COMPANIES = {
-    "Central Garden & Pet": "0000887733",
-    "Restoration Hardware (RH)": "0001528849",
-    "Ball Corporation": "0000009389",
-    "DISH Network Corporation": "0001001082",
-    "Frontier Airlines": "0001034645",
-    "Community Health Systems": "0001108109",
-    "Expeditors International": "0000746515",
-    "iHeartMedia, Inc.": "0001400891",
-    "Caesars Entertainment": "0000858339",
-    "Boyd Gaming Corporation": "0000003545",
-    "Penn Entertainment, Inc.": "0000921738",
-    "Bally's Corporation": "0001747079",
-    "Harrah's Entertainment": "0000049939",
-    "Tri-State Energy": "0001637880",
-}
 
 @app.api_route("/", methods=["GET", "HEAD"])
 def home():
     return {"message": "SEC API is live!"}
 
+def get_cik(company_name):
+    """
+    Searches the SEC database for a company's CIK (Central Index Key).
+    """
+    search_url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={company_name.replace(' ', '+')}&match=contains&action=getcompany"
+    response = requests.get(search_url, headers=HEADERS)
+
+    if response.status_code != 200:
+        return None
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    cik_tag = soup.find("span", class_="companyMatch")
+
+    if cik_tag:
+        cik = cik_tag.text.strip().zfill(10)  # Ensure 10-digit CIK format
+        return cik
+    else:
+        return None
+
 def get_actual_filing_urls(index_url):
     """
     Parses the SEC index.html page and extracts direct links to:
-    1. The full 10-K and 10-Q report (.htm)
-    2. The Financial_Report.xlsx file (if available)
+    - The full 10-K and 10-Q report (.htm)
+    - The Financial_Report.xlsx file (if available)
     """
     response = requests.get(index_url, headers=HEADERS)
     if response.status_code != 200:
@@ -51,17 +53,16 @@ def get_actual_filing_urls(index_url):
         href = link.get("href")
 
         if href:
-            # Ensure correct 10-K format: {company}-{YYYYMMDD}x10k.htm
-            if "10k" in href.lower() and href.lower().endswith(".htm"):
+            # Extract the correct 10-K and 10-Q document
+            if "10-k" in href.lower() and href.lower().endswith(".htm"):
                 if "summary" not in href.lower() and "index" not in href.lower():
                     ten_k_htm_url = f"https://www.sec.gov{href}"
 
-            # Ensure correct 10-Q format: {company}-{YYYYMMDD}x10q.htm
-            if "10q" in href.lower() and href.lower().endswith(".htm"):
+            if "10-q" in href.lower() and href.lower().endswith(".htm"):
                 if "summary" not in href.lower() and "index" not in href.lower():
                     ten_q_htm_url = f"https://www.sec.gov{href}"
 
-            # Find the downloadable Financial Report Excel file
+            # Find the Financial Report Excel file
             if "Financial_Report.xlsx" in href:
                 financial_report_url = f"https://www.sec.gov{href}"
 
@@ -72,7 +73,9 @@ def get_actual_filing_urls(index_url):
     }
 
 def get_filings(cik):
-    """Fetch the latest 10-K and 10-Q filings for a given CIK"""
+    """
+    Fetches the latest 10-K and 10-Q filings for a given CIK.
+    """
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
     response = requests.get(url, headers=HEADERS)
 
@@ -98,6 +101,7 @@ def get_filings(cik):
             break
 
     filing_data = {
+        "Company CIK": cik,
         "10-K Index Page": ten_k_index_url if ten_k_index_url else "Not Found",
         "10-Q Index Page": ten_q_index_url if ten_q_index_url else "Not Found",
     }
@@ -113,17 +117,12 @@ def get_filings(cik):
 
 @app.get("/get_filings/{company_name}")
 def get_company_filings(company_name: str):
-    """API endpoint to fetch 10-K and 10-Q filings for a company, including direct document links."""
-    company_name = company_name.lower().strip()
-    cik = None
-
-    for name, cik_value in COMPANIES.items():
-        if company_name in name.lower():
-            cik = cik_value
-            break
+    """
+    API endpoint to fetch 10-K and 10-Q filings for any public company.
+    """
+    cik = get_cik(company_name)
 
     if not cik:
-        return {"error": "Company not found in our database"}
+        return {"error": f"Company '{company_name}' not found in SEC database"}
 
     return get_filings(cik)
-
