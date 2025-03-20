@@ -25,10 +25,10 @@ def get_cik(company_name):
         return None
 
     soup = BeautifulSoup(response.text, "html.parser")
-    cik_tag = soup.find("a", {"id": "cik"})  # SEC stores CIK in <a id="cik">
-    
+    cik_tag = soup.find("a", href=True, string="CIK")
+
     if cik_tag:
-        cik = cik_tag.text.strip().zfill(10)  # Ensure 10-digit CIK format
+        cik = cik_tag.find_next("td").text.strip().zfill(10)  # Ensure 10-digit CIK format
         return cik
     else:
         return None
