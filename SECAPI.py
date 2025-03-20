@@ -38,10 +38,9 @@ def get_filings(cik):
 
     for i, form in enumerate(filings["form"]):
         if form == "10-K" and not ten_k_url:
-            ten_k_url = f"https://www.sec.gov/Archives/{filings['fileNumber'][i]}/{filings['accessionNumber'][i].replace('-', '')}/index.html"
+            ten_k_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{filings['accessionNumber'][i].replace('-', '')}/index.html"
         elif form == "10-Q" and not ten_q_url:
-            ten_q_url = f"https://www.sec.gov/Archives/{filings['fileNumber'][i]}/{filings['accessionNumber'][i].replace('-', '')}/index.html"
-
+            ten_q_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{filings['accessionNumber'][i].replace('-', '')}/index.html"
         if ten_k_url and ten_q_url:
             break
 
