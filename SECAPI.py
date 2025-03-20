@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 app = FastAPI(
     title="Get SEC Filings Data",
     description="Retrieves the latest 10-K, 10-Q, and Financial Report for any public company.",
-    version="v3.1.2"
+    version="v3.1.3"
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
@@ -13,7 +13,21 @@ HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 @app.api_route("/", methods=["GET", "HEAD"])
 def home():
     return {"message": "SEC API is live!"}
-    
+
+@app.get("/get_cik/{company_name}", response_model=dict)
+async def get_cik_route(company_name: str):
+    """
+    API endpoint to fetch the CIK for a given company.
+    """
+    cik = get_cik(company_name)
+
+    if not cik:
+        print(f"Company '{company_name}' not found in SEC database")  # Debug log
+        return {"error": f"Company '{company_name}' not found in SEC database"}
+
+    print(f"Retrieved CIK for {company_name}: {cik}")  # Debug log
+    return {"CIK": cik}
+
 @app.get("/get_filings/{company_name}", response_model=dict)
 async def get_company_filings(company_name: str):
     """
@@ -27,7 +41,7 @@ async def get_company_filings(company_name: str):
 
     print(f"Fetching filings for CIK {cik}")  # Debug log
 
-    return get_filings(cik)    
+    return get_filings(cik)
 
 def get_cik(company_name):
     """
@@ -51,7 +65,7 @@ def get_cik(company_name):
     else:
         print(f"CIK not found for {company_name}")
         return None
-   
+
 def get_actual_filing_urls(index_url):
     """
     Parses the SEC index.html page and extracts direct links to:
