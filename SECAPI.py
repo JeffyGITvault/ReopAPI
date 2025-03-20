@@ -77,9 +77,17 @@ def get_filings(cik):
     Fetches the latest 10-K and 10-Q filings for a given CIK.
     Ensures SEC response is properly handled.
     """
-    cik = cik.zfill(10)  # ✅ Always ensure CIK is 10 digits
+    cik = cik.lstrip("0").zfill(10)  # ✅ Ensure CIK is always 10 digits
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
-    response = requests.get(url, headers=HEADERS)
+
+    # ✅ Add robust headers to avoid SEC blocking
+    headers = {
+        "User-Agent": "Your Name (your@email.com)",
+        "Accept-Encoding": "gzip, deflate",
+        "Host": "data.sec.gov",
+        "Connection": "keep-alive"
+    }
+    response = requests.get(url, headers=headers)
 
     if response.status_code != 200:
         print(f"SEC API error: {response.status_code} - {response.text}")  # Debug log
@@ -97,7 +105,8 @@ def get_filings(cik):
 
     # ✅ Handle missing or empty filings list
     if not forms or not accession_numbers:
-        return {"error": "No recent filings found"}
+        print(f"No recent filings found for CIK {cik}")  # Debug log
+        return {"error": f"No recent filings found for CIK {cik}"}
 
     ten_k_index_url = None
     ten_q_index_url = None
@@ -130,16 +139,3 @@ def get_filings(cik):
         filing_data.update(get_actual_filing_urls(ten_q_index_url))
 
     return filing_data
-
-# ✅ FIXED: Explicitly define the FastAPI route to prevent 404 errors
-@app.get("/get_filings/{company_name}", response_model=dict)
-async def get_company_filings(company_name: str):
-    """
-    API endpoint to fetch 10-K and 10-Q filings for any public company.
-    """
-    cik = get_cik(company_name)
-
-    if not cik:
-        return {"error": f"Company '{company_name}' not found in SEC database"}
-
-    return get_filings(cik)
