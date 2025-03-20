@@ -27,33 +27,16 @@ def get_cik(company_name):
 
     soup = BeautifulSoup(response.text, "html.parser")
 
-    # Find all company rows in the SEC search result
-    rows = soup.find_all("tr")
+    cik_element = soup.find("span", class_="companyMatch")
 
-    best_match = None
-
-    for row in rows:
-        cols = row.find_all("td")
-        if len(cols) > 1:
-            name = cols[0].text.strip().lower()
-            cik_link = cols[1].find("a")  # CIK should be inside an <a> tag
-
-            # Debugging: Print extracted company names in Render logs
-            print(f"Found company: {name}, CIK: {cik_link.text.strip() if cik_link else 'No CIK'}")
-
-            # Prioritize exact company name matches
-            if company_name.lower() == name and cik_link:
-                cik = cik_link.text.strip().zfill(10)  # Ensure 10-digit CIK format
-                print(f"Selected CIK for {company_name}: {cik}")  # Debug log
-                return cik
-
-            # If no exact match, store the first reasonable match
-            if best_match is None and cik_link:
-                best_match = cik_link.text.strip().zfill(10)
-
-    # Return best match if no exact match was found
-    return best_match if best_match else None
-
+    if cik_element:
+        cik = cik_element.text.strip().zfill(10)  # Ensure 10-digit CIK format
+        print(f"Selected CIK for {company_name}: {cik}")  # Debug log
+        return cik
+    else:
+        print(f"CIK not found for {company_name}")
+        return None
+   
 def get_actual_filing_urls(index_url):
     """
     Parses the SEC index.html page and extracts direct links to:
