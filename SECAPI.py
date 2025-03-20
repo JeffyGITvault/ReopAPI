@@ -54,8 +54,8 @@ def get_actual_filing_urls(index_url):
             # Find the actual 10-K or 10-Q document (not just another index page)
             if href.lower().endswith(".htm") and "10k" in href.lower():
                 ten_k_htm_url = f"https://www.sec.gov{href}"
-            if href.lower().endswith(".htm") and "10q" in href.lower():
-                ten_q_htm_url = f"https://www.sec.gov{href}
+            elif href.lower().endswith(".htm") and "10q" in href.lower():
+                ten_q_htm_url = f"https://www.sec.gov{href}"
 
             # Find Financial Report Excel File
             if "Financial_Report.xlsx" in href:
