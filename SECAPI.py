@@ -1,3 +1,4 @@
+from fastapi import FastAPI 
 import re
 import requests
 from bs4 import BeautifulSoup
