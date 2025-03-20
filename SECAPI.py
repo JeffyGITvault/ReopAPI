@@ -83,4 +83,63 @@ def get_actual_filing_urls(index_url):
                 if "summary" not in href.lower() and "index" not in href.lower():
                     ten_q_htm_url = f"https://www.sec.gov{href}"
 
-     
+    return {
+        "10-K Report": ten_k_htm_url if ten_k_htm_url else "Not Found",
+        "10-Q Report": ten_q_htm_url if ten_q_htm_url else "Not Found",
+        "Financial Report (Excel)": financial_report_url if financial_report_url else "Not Found"
+    }
+
+def get_filings(cik):
+    """
+    Fetches the latest 10-K and 10-Q filings for a given CIK.
+    """
+    url = f"https://data.sec.gov/submissions/CIK{cik}.json"
+    response = requests.get(url, headers=HEADERS)
+
+    if response.status_code != 200:
+        return {"error": f"Failed to retrieve filings for CIK {cik}"}
+
+    data = response.json()
+    filings = data["filings"]["recent"]
+
+    if not filings["form"]:
+        return {"error": "No recent filings found"}
+
+    ten_k_index_url = None
+    ten_q_index_url = None
+
+    for i, form in enumerate(filings["form"]):
+        if form == "10-K" and not ten_k_index_url:
+            ten_k_index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{filings['accessionNumber'][i].replace('-', '')}/index.html"
+        elif form == "10-Q" and not ten_q_index_url:
+            ten_q_index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{filings['accessionNumber'][i].replace('-', '')}/index.html"
+
+        if ten_k_index_url and ten_q_index_url:
+            break
+
+    filing_data = {
+        "Company CIK": cik,
+        "10-K Index Page": ten_k_index_url if ten_k_index_url else "Not Found",
+        "10-Q Index Page": ten_q_index_url if ten_q_index_url else "Not Found",
+    }
+
+    # Fetch actual file links if available
+    if ten_k_index_url:
+        filing_data.update(get_actual_filing_urls(ten_k_index_url))
+
+    if ten_q_index_url:
+        filing_data.update(get_actual_filing_urls(ten_q_index_url))
+
+    return filing_data
+
+@app.get("/get_filings/{company_name}", response_model=dict)
+async def get_company_filings(company_name: str):
+    """
+    API endpoint to fetch 10-K and 10-Q filings for any public company.
+    """
+    cik = get_cik(company_name)
+
+    if not cik:
+        return {"error": f"Company '{company_name}' not found in SEC database"}
+
+    return get_filings(cik)
