@@ -10,7 +10,7 @@ app = FastAPI(
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 
-@app.api_route("/", methods=["GET", "HEAD"])
+@app.api_route("/", methods=["GET", "HEAD"], operation_id="get_home")
 def home():
     return {"message": "SEC API is live!"}
 
