@@ -1,5 +1,4 @@
-echo "fastapi\nuvicorn\nrequests" > requirements.txt
-cat requirements.txt
+
 fastapi
 uvicorn
 requests
