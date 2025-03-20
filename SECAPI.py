@@ -25,13 +25,16 @@ def get_cik(company_name):
         return None
 
     soup = BeautifulSoup(response.text, "html.parser")
-    cik_tag = soup.find("a", href=True, string="CIK")
 
-    if cik_tag:
-        cik = cik_tag.find_next("td").text.strip().zfill(10)  # Ensure 10-digit CIK format
+    # Find the CIK in SEC's search result
+    cik_element = soup.find("a", href=True, text="CIK")
+    
+    if cik_element:
+        cik = cik_element.find_next("td").text.strip().zfill(10)  # Ensure 10-digit CIK format
         return cik
     else:
         return None
+
 
 def get_actual_filing_urls(index_url):
     """
