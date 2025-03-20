@@ -8,7 +8,7 @@ app = FastAPI(
     version="v3.0.0"
 )
 
-HEADERS = {"User-Agent": "Your Name (your@email.com)"}
+HEADERS = {"User-Agent": "Jeffrey Geunthner (jeffrey.guenthner@email.com)"}
 
 @app.api_route("/", methods=["GET", "HEAD"])
 def home():
