@@ -17,6 +17,7 @@ def home():
 def get_cik(company_name):
     """
     Searches the SEC database for a company's CIK (Central Index Key).
+    If multiple results exist, selects the most relevant match.
     """
     search_url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={company_name.replace(' ', '+')}&match=contains&action=getcompany"
     response = requests.get(search_url, headers=HEADERS)
@@ -26,14 +27,21 @@ def get_cik(company_name):
 
     soup = BeautifulSoup(response.text, "html.parser")
 
-    # Find the CIK in SEC's search result
-    cik_element = soup.find("a", href=True, text="CIK")
-    
-    if cik_element:
-        cik = cik_element.find_next("td").text.strip().zfill(10)  # Ensure 10-digit CIK format
-        return cik
-    else:
-        return None
+    # Find all company names in the search results
+    company_results = soup.find_all("tr")
+
+    for row in company_results:
+        columns = row.find_all("td")
+        if len(columns) > 1:
+            name = columns[0].text.strip().lower()
+            cik_link = columns[1].find("a")
+
+            # Check if the company name closely matches the search query
+            if company_name.lower() in name and cik_link:
+                cik = cik_link.text.strip().zfill(10)  # Ensure 10-digit CIK format
+                return cik
+
+    return None
 
 
 def get_actual_filing_urls(index_url):
