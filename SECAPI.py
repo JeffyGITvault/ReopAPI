@@ -36,12 +36,9 @@ async def get_company_filings(company_name: str):
     cik = get_cik(company_name)
 
     if not cik:
-        print(f"Company '{company_name}' not found in SEC database")  # Debug log
         return {"error": f"Company '{company_name}' not found in SEC database"}
 
-    print(f"Fetching filings for CIK {cik}")  # Debug log
-
-    return get_filings(cik)
+    return get_filings(cik, company_name)
 
 def get_cik(company_name):
     """
@@ -69,7 +66,7 @@ def get_cik(company_name):
 def get_actual_filing_urls(index_url):
     """
     Parses the SEC index.html page and extracts direct links to:
-    - The full 10-K and 10-Q report (.htm)
+    - The full 10-Q report (.htm)
     - The Financial_Report.xlsx file (if available)
     """
     response = requests.get(index_url, headers=HEADERS)
@@ -78,27 +75,24 @@ def get_actual_filing_urls(index_url):
 
     soup = BeautifulSoup(response.text, "html.parser")
 
-    ten_k_htm_url = None
     ten_q_htm_url = None
     financial_report_url = None
 
+    company_abbr = company_name.lower().replace(" ", "").replace(".", "")
+    
     for link in soup.find_all("a"):
         href = link.get("href")
 
         if href:
            
-            if "10k" in href.lower() and href.lower().endswith(".htm"):
+            if "10-q" in href.lower() and href.lower().endswith(".htm"):
                 if "summary" not in href.lower() and "index" not in href.lower():
-                    ten_k_htm_url = f"https://www.sec.gov{href}"
-
-            if "10q" in href.lower() and href.lower().endswith(".htm"):
-                if "summary" not in href.lower() and "index" not in href.lower():
-                    ten_q_htm_url = f"https://www.sec.gov{href}"
+                    if "x10q" in href.lower() or company_abbr in href.lower():
+                        ten_q_htm_url = f"https://www.sec.gov{href}"
           
             if "Financial_Report.xlsx" in href or "financial_report.xlsx" in href.lower():
                 financial_report_url = f"https://www.sec.gov{href}"
     return {
-        "10-K Report": ten_k_htm_url if ten_k_htm_url else "Not Found",
         "10-Q Report": ten_q_htm_url if ten_q_htm_url else "Not Found",
         "Financial Report (Excel)": financial_report_url if financial_report_url else "Not Found"
     }
@@ -113,7 +107,7 @@ def get_filings(cik):
 
     # ✅ Add robust headers to avoid SEC blocking
     headers = {
-        "User-Agent": "Your Name (your@email.com)",
+        "User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)",
         "Accept-Encoding": "gzip, deflate",
         "Host": "data.sec.gov",
         "Connection": "keep-alive"
@@ -121,22 +115,14 @@ def get_filings(cik):
     response = requests.get(url, headers=headers)
 
     if response.status_code != 200:
-        print(f"SEC API error: {response.status_code} - {response.text}")  # Debug log
         return {"error": f"Failed to retrieve filings for CIK {cik}"}
 
-    try:
-        data = response.json()
-    except Exception as e:
-        print(f"Error parsing SEC JSON response: {e}")  # Debug log
-        return {"error": "Invalid SEC JSON response"}
-
+    data = response.json()
     filings = data.get("filings", {}).get("recent", {})
     forms = filings.get("form", [])
     accession_numbers = filings.get("accessionNumber", [])
 
-    # ✅ Handle missing or empty filings list
     if not forms or not accession_numbers:
-        print(f"No recent filings found for CIK {cik}")  # Debug log
         return {"error": f"No recent filings found for CIK {cik}"}
 
     ten_k_index_url = None
@@ -164,9 +150,9 @@ def get_filings(cik):
 
     # Fetch actual file links if available
     if ten_k_index_url:
-        filing_data.update(get_actual_filing_urls(ten_k_index_url))
+        filing_data.update(get_actual_filing_urls(ten_k_index_url, company_name))
 
     if ten_q_index_url:
-        filing_data.update(get_actual_filing_urls(ten_q_index_url))
+        filing_data.update(get_actual_filing_urls(ten_q_index_url, company_name))
 
     return filing_data
