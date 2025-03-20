@@ -36,13 +36,15 @@ def get_cik(company_name):
             name = cols[0].text.strip().lower()
             cik_link = cols[1].find("a")
 
+            # Debugging: Print extracted company names to check what's found
+            print(f"Found company: {name}, CIK: {cik_link.text.strip() if cik_link else 'No CIK'}")
+
             # Check if the company name closely matches the search query
             if company_name.lower() in name and cik_link:
                 cik = cik_link.text.strip().zfill(10)  # Ensure 10-digit CIK format
                 return cik
 
     return None  # If no valid CIK is found
-
 
     soup = BeautifulSoup(response.text, "html.parser")
 
