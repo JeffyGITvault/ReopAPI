@@ -50,12 +50,6 @@ def get_actual_filing_urls(index_url):
     for link in soup.find_all("a"):
         href = link.get("href")
 
-        if href: 
-            # Ensure correct 10-K format: {company}-{YYYYMMDD}x10k.htm
-            if "10k" in href.lower() and href.lower().endswith(".htm"):
-                if "summary" not in href.lower() and "index" not in href.lower():
-                    ten_k_htm_url = f"https://www.sec.gov{href}"
-
             # Ensure correct 10-Q format: {company}-{YYYYMMDD}x10q.htm
             if "10q" in href.lower() and href.lower().endswith(".htm"):
                 if "summary" not in href.lower() and "index" not in href.lower():
