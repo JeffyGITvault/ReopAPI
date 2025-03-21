@@ -1,4 +1,4 @@
-from fastapi import FastAPI 
+from fastapi import FastAPI
 import re
 import requests
 from bs4 import BeautifulSoup
@@ -8,7 +8,7 @@ app = FastAPI(
     title="Get SEC Filings Data",
     description="Retrieves the latest 10-K, 10-Q, and Financial Report for any public company.",
     version="v3.2.4"
-)    
+)
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 
@@ -39,6 +39,7 @@ async def get_company_filings(company_name: str):
         return {"error": f"Company '{company_name}' not found in SEC database"}
 
     cik = cik_data["CIK"]
+    return get_filings(cik, cik_data["Normalized Company Name"])
 
 def get_cik(company_name):
     """
