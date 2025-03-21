@@ -40,7 +40,7 @@ async def get_company_filings(company_name: str):
 
     cik = cik_data["CIK"]
 
-    def get_cik(company_name):
+def get_cik(company_name):
     """
     Searches the SEC database for a company's CIK (Central Index Key).
     Fixes SEC table parsing and fuzzy matching.
