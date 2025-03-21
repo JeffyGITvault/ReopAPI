@@ -9,7 +9,12 @@ app = FastAPI(
     description="Retrieves the latest 10-K, 10-Q, and Financial Report for any public company.",
     version="v3.2.4"
 )    
+
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
+
+@app.api_route("/", methods=["GET", "HEAD"])
+def home():
+    return {"message": "SEC API is live!"}
 
 @app.get("/get_cik/{company_name}", response_model=dict)
 async def get_cik_route(company_name: str):
@@ -23,16 +28,27 @@ async def get_cik_route(company_name: str):
 
     return cik_data
 
+@app.get("/get_filings/{company_name}", response_model=dict)
+async def get_company_filings(company_name: str):
+    """
+    API endpoint to fetch 10-K and 10-Q filings for any public company.
+    """
+    cik_data = get_cik(company_name)
+
+    if not cik_data or "CIK" not in cik_data:
+        return {"error": f"Company '{company_name}' not found in SEC database"}
+
+    cik = cik_data["CIK"]
+    return get_filings(cik, cik_data["Normalized Company Name"])
+
 def get_cik(company_name):
     """
     Searches the SEC database for a company's CIK (Central Index Key).
     Implements proper SEC table parsing and fuzzy matching.
     """
-    # ✅ Normalize the company name (handle 'Inc.', 'Corp.', '&' encoding)
     cleaned_name = re.sub(r"( Corp\.?| Inc\.?| Ltd\.?| LLC\.?)$", "", company_name, flags=re.IGNORECASE).strip()
-    cleaned_name = cleaned_name.replace("&", "%26")  # ✅ Encode '&' properly
+    cleaned_name = cleaned_name.replace("&", "%26")
 
-    # ✅ Construct the SEC search URL
     search_url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={cleaned_name.replace(' ', '+')}&match=contains&action=getcompany"
     
     response = requests.get(search_url, headers=HEADERS)
@@ -41,15 +57,14 @@ def get_cik(company_name):
 
     soup = BeautifulSoup(response.text, "html.parser")
 
-    # ✅ Extract company names and CIKs from the SEC table
     company_names = []
     cik_numbers = []
 
     for row in soup.find_all("tr"):
         cols = row.find_all("td")
         if len(cols) > 1:
-            sec_name = cols[0].text.strip()  # Company Name
-            cik_link = cols[1].find("a")  # CIK is inside <a> tag
+            sec_name = cols[0].text.strip()
+            cik_link = cols[1].find("a")
 
             if cik_link:
                 cik = cik_link.text.strip().zfill(10)
@@ -59,10 +74,9 @@ def get_cik(company_name):
     if not company_names:
         return {"error": f"Company '{company_name}' not found in SEC database"}
 
-    # ✅ Use fuzzy matching to get the best match
     best_match, match_score = process.extractOne(company_name, company_names)
 
-    if match_score > 75:  # ✅ Confidence threshold
+    if match_score > 75:
         cik_index = company_names.index(best_match)
         matched_cik = cik_numbers[cik_index]
         return {"CIK": matched_cik, "Normalized Company Name": best_match}
@@ -108,10 +122,9 @@ def get_filings(cik, company_name=None):
     Fetches the latest 10-K and 10-Q filings for a given CIK.
     Ensures SEC response is properly handled.
     """
-    cik = cik.lstrip("0").zfill(10)  # ✅ Ensure CIK is always 10 digits
+    cik = cik.lstrip("0").zfill(10)
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
 
-    # ✅ Add robust headers to avoid SEC blocking
     headers = {
         "User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)",
         "Accept-Encoding": "gzip, deflate",
@@ -134,16 +147,15 @@ def get_filings(cik, company_name=None):
     ten_k_index_url = None
     ten_q_index_url = None
 
-    # ✅ Extract latest 10-K and 10-Q filings
     for i, form in enumerate(forms):
         try:
-            accession_number = accession_numbers[i].replace("-", "")  # ✅ Format accession number
+            accession_number = accession_numbers[i].replace("-", "")
             if form == "10-K" and not ten_k_index_url:
                 ten_k_index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession_number}/index.html"
             elif form == "10-Q" and not ten_q_index_url:
                 ten_q_index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession_number}/index.html"
         except Exception as e:
-            print(f"Error processing filings for CIK {cik}: {e}")  # Debug log
+            print(f"Error processing filings for CIK {cik}: {e}")
 
         if ten_k_index_url and ten_q_index_url:
             break
@@ -154,7 +166,6 @@ def get_filings(cik, company_name=None):
         "10-Q Index Page": ten_q_index_url if ten_q_index_url else "Not Found",
     }
 
-    # Fetch actual file links if available
     if ten_k_index_url:
         filing_data.update(get_actual_filing_urls(ten_k_index_url, company_name))
 
