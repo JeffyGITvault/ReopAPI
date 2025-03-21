@@ -7,9 +7,21 @@ from fuzzywuzzy import process
 app = FastAPI(
     title="Get SEC Filings Data",
     description="Retrieves the latest 10-K, 10-Q, and Financial Report for any public company.",
-    version="v3.2.3"
+    version="v3.2.4"
 )    
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
+
+@app.get("/get_cik/{company_name}", response_model=dict)
+async def get_cik_route(company_name: str):
+    """
+    API endpoint to fetch the CIK for a given company.
+    """
+    cik_data = get_cik(company_name)
+
+    if not cik_data or "CIK" not in cik_data:
+        return {"error": f"Company '{company_name}' not found in SEC database"}
+
+    return cik_data
 
 def get_cik(company_name):
     """
