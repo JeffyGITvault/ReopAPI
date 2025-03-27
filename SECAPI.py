@@ -60,8 +60,8 @@ def get_actual_filing_urls(index_url):
                 financial_report_url = f"https://www.sec.gov{href}"
 
     return {
-        "10-Q Report": ten_q_htm_url if ten_q_htm_url else "Not Found",
-        "Financial Report (Excel)": financial_report_url if financial_report_url else "Not Found"
+        "10-Q Report": ten_q_htm_url or None,
+        "Financial Report (Excel)": financial_report_url or None
     }
 
 def get_filings(cik):
