@@ -34,7 +34,7 @@ def home():
 def get_actual_filing_urls(index_url):
     """
     Parses the SEC index.html page and extracts direct links to:
-    1. The full 10-K and 10-Q report (.htm)
+    1. The full 10-Q report (.htm)
     2. The Financial_Report.xlsx file (if available)
     """
     response = requests.get(index_url, headers=HEADERS)
@@ -43,7 +43,7 @@ def get_actual_filing_urls(index_url):
 
     soup = BeautifulSoup(response.text, "html.parser")
 
-    ten_k_htm_url = None
+    
     ten_q_htm_url = None
     financial_report_url = None
 
@@ -51,10 +51,6 @@ def get_actual_filing_urls(index_url):
         href = link.get("href")
 
         if href:
-            # Find 10-K HTML Report
-            if "10-k" in href.lower() and href.endswith(".htm"):
-                ten_k_htm_url = f"https://www.sec.gov{href}"
-
             # Find 10-Q HTML Report
             if "10-q" in href.lower() and href.endswith(".htm"):
                 ten_q_htm_url = f"https://www.sec.gov{href}"
@@ -64,13 +60,12 @@ def get_actual_filing_urls(index_url):
                 financial_report_url = f"https://www.sec.gov{href}"
 
     return {
-        "10-K Report": ten_k_htm_url if ten_k_htm_url else "Not Found",
         "10-Q Report": ten_q_htm_url if ten_q_htm_url else "Not Found",
         "Financial Report (Excel)": financial_report_url if financial_report_url else "Not Found"
     }
 
 def get_filings(cik):
-    """Fetch the latest 10-K and 10-Q filings for a given CIK"""
+    """Fetch the latest 10-Q filings for a given CIK"""
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
     response = requests.get(url, headers=HEADERS)
 
@@ -83,26 +78,21 @@ def get_filings(cik):
     if not filings["form"]:
         return {"error": "No recent filings found"}
 
-    ten_k_index_url = None
+   
     ten_q_index_url = None
 
     for i, form in enumerate(filings["form"]):
-        if form == "10-K" and not ten_k_index_url:
-            ten_k_index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{filings['accessionNumber'][i].replace('-', '')}/index.html"
-        elif form == "10-Q" and not ten_q_index_url:
+        if form == "10-Q" and not ten_q_index_url:
             ten_q_index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{filings['accessionNumber'][i].replace('-', '')}/index.html"
 
-        if ten_k_index_url and ten_q_index_url:
+        if ten_q_index_url:
             break
 
     filing_data = {
-        "10-K Index Page": ten_k_index_url if ten_k_index_url else "Not Found",
         "10-Q Index Page": ten_q_index_url if ten_q_index_url else "Not Found",
     }
 
     # Fetch actual file links if available
-    if ten_k_index_url:
-        filing_data.update(get_actual_filing_urls(ten_k_index_url))
 
     if ten_q_index_url:
         filing_data.update(get_actual_filing_urls(ten_q_index_url))
