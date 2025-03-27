@@ -2,7 +2,7 @@ from fastapi import FastAPI
 import re
 import requests
 from bs4 import BeautifulSoup
-from fuzzywuzzy import process
+
 
 app = FastAPI(
     title="Get SEC Filings Data",
@@ -44,56 +44,29 @@ async def get_company_filings(company_name: str):
 def get_cik(company_name):
     """
     Searches the SEC database for a company's CIK (Central Index Key).
-    Fixes SEC table parsing and fuzzy matching.
+    Ensures that the correct company is selected.
     """
-    HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
-    
-    # ✅ Normalize company name (handle 'Inc.', 'Corp.', '&' encoding)
-    cleaned_name = re.sub(r"( Corp\.?| Inc\.?| Ltd\.?| LLC\.?)$", "", company_name, flags=re.IGNORECASE).strip()
-    cleaned_name = cleaned_name.replace("&", "%26")  # ✅ Fix AT&T encoding
-
-    # ✅ SEC search URL
-    search_url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={cleaned_name.replace(' ', '+')}&match=contains&action=getcompany"
-    
+    search_url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={company_name.replace(' ', '+')}&match=contains&action=getcompany"
     response = requests.get(search_url, headers=HEADERS)
+
     if response.status_code != 200:
-        return {"error": f"Failed to retrieve SEC data for {company_name}"}
+        return None
 
     soup = BeautifulSoup(response.text, "html.parser")
 
-    # ✅ Extract company names and CIKs from the SEC table
-    company_names = []
-    cik_numbers = []
+    # ✅ Find the CIK inside the correct <a> tag
+    cik_element = soup.find("a", href=True, string=lambda text: text and text.isdigit())
 
-    for row in soup.find_all("tr"):
-        cols = row.find_all("td")
-        if len(cols) > 1:
-            sec_name = cols[0].text.strip()  # ✅ Company Name
-            cik_link = cols[1].find("a")  # ✅ CIK is inside <a> tag
+    if cik_element:
+        cik = cik_element.text.strip().zfill(10)  # ✅ Ensure 10-digit CIK format
+        return cik
 
-            if cik_link:
-                cik = cik_link.text.strip().zfill(10)
-                company_names.append(sec_name)
-                cik_numbers.append(cik)
-
-    if not company_names:
-        return {"error": f"Company '{company_name}' not found in SEC database"}
-
-    # ✅ Fuzzy match company name to get best result
-    best_match, match_score = process.extractOne(company_name, company_names)
-
-    if match_score > 75:  # ✅ Confidence threshold
-        cik_index = company_names.index(best_match)
-        matched_cik = cik_numbers[cik_index]
-        print(f"✔ Matched {company_name} to {best_match} (CIK: {matched_cik}) with {match_score}% confidence")
-        return {"CIK": matched_cik, "Normalized Company Name": best_match}
-
-    return {"error": f"Company '{company_name}' not found in SEC database"}
-
-def get_actual_filing_urls(index_url, company_name):
+    return None
+ 
+def get_actual_filing_urls(index_url):
     """
     Parses the SEC index.html page and extracts direct links to:
-    - The full 10-Q report (.htm)
+    - The full 10-K and 10-Q report (.htm)
     - The Financial_Report.xlsx file (if available)
     """
     response = requests.get(index_url, headers=HEADERS)
@@ -102,24 +75,29 @@ def get_actual_filing_urls(index_url, company_name):
 
     soup = BeautifulSoup(response.text, "html.parser")
 
+    ten_k_htm_url = None
     ten_q_htm_url = None
     financial_report_url = None
 
-    company_abbr = company_name.lower().replace(" ", "").replace(".", "")
-    
     for link in soup.find_all("a"):
         href = link.get("href")
 
         if href:
+            # ✅ Extract the correct 10-K and 10-Q document
+            if "10-k" in href.lower() and href.lower().endswith(".htm"):
+                if "summary" not in href.lower() and "index" not in href.lower():
+                    ten_k_htm_url = f"https://www.sec.gov{href}"
+
             if "10-q" in href.lower() and href.lower().endswith(".htm"):
                 if "summary" not in href.lower() and "index" not in href.lower():
-                    if "x10q" in href.lower() or company_abbr in href.lower():
-                        ten_q_htm_url = f"https://www.sec.gov{href}"
-          
+                    ten_q_htm_url = f"https://www.sec.gov{href}"
+
+            # ✅ Find the downloadable Financial Report Excel file
             if "Financial_Report.xlsx" in href or "financial_report.xlsx" in href.lower():
                 financial_report_url = f"https://www.sec.gov{href}"
-    
+
     return {
+        "10-K Report": ten_k_htm_url if ten_k_htm_url else "Not Found",
         "10-Q Report": ten_q_htm_url if ten_q_htm_url else "Not Found",
         "Financial Report (Excel)": financial_report_url if financial_report_url else "Not Found"
     }
