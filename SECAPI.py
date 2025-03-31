@@ -31,34 +31,31 @@ COMPANIES = {
 def home():
     return {"message": "SEC API is live!"}
 
-def get_actual_filing_urls(folder_url, primary_doc):
+def get_actual_filing_urls(index_url):
     """
-    Construct direct links to the 10-Q .htm file and Financial_Report.xlsx if they exist.
+    Parses the SEC index.html page and extracts direct links to:
+    - The Financial_Report.xlsx file (if available)
     """
-    ten_q_htm_url = f"{folder_url}/{primary_doc}" if primary_doc.endswith(".htm") else None
+    response = requests.get(index_url, headers=HEADERS)
+    if response.status_code != 200:
+        return {}
 
-    index_response = requests.get(f"{folder_url}/index.html", headers=HEADERS)
-    if index_response.status_code != 200:
-        return {
-            "10-Q Report": ten_q_htm_url,
-            "Financial Report (Excel)": None
-        }
-
-    soup = BeautifulSoup(index_response.text, "html.parser")
+    soup = BeautifulSoup(response.text, "html.parser")
     financial_report_url = None
 
     for link in soup.find_all("a"):
         href = link.get("href")
         if href and "Financial_Report.xlsx" in href:
             financial_report_url = f"https://www.sec.gov{href}"
-            break
 
     return {
-        "10-Q Report": ten_q_htm_url,
-        "Financial Report (Excel)": financial_report_url
+        "Financial Report (Excel)": financial_report_url or None
     }
 
 def get_filings(cik):
+    """
+    Fetches the latest 10-Q filing for a given CIK and builds valid clickable URLs.
+    """
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
     response = requests.get(url, headers=HEADERS)
 
@@ -76,13 +73,15 @@ def get_filings(cik):
             accession = filings["accessionNumber"][i]
             primary_doc = filings["primaryDocument"][i]
             folder = accession.replace("-", "")
-            folder_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{folder}"
-            ten_q_index_url = f"{folder_url}/index.html"
+            ten_q_index_url = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{folder}/index.html"
+            ten_q_report_url = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{folder}/{primary_doc}"
 
             result = {
-                "10-Q Index Page": ten_q_index_url
+                "10-Q Index Page": ten_q_index_url,
+                "10-Q Report": ten_q_report_url
             }
-            result.update(get_actual_filing_urls(folder_url, primary_doc))
+
+            result.update(get_actual_filing_urls(ten_q_index_url))
             return result
 
     return {"error": "No 10-Q filing found"}
