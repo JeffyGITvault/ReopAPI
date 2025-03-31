@@ -24,33 +24,38 @@ COMPANIES = {
     "Penn Entertainment, Inc.": "0000921738",
     "Bally's Corporation": "0001747079",
     "Harrah's Entertainment": "0000049939",
-    "Tri-State Energy": "0001637880",
+    "Tri-State Energy": "0001637880"
 }
 
 @app.api_route("/", methods=["GET", "HEAD"])
 def home():
     return {"message": "SEC API is live!"}
 
-def get_actual_filing_urls(index_url):
-    response = requests.get(index_url, headers=HEADERS)
-    if response.status_code != 200:
-        return {}
+def get_actual_filing_urls(folder_url, primary_doc):
+    """
+    Construct direct links to the 10-Q .htm file and Financial_Report.xlsx if they exist.
+    """
+    ten_q_htm_url = f"{folder_url}/{primary_doc}" if primary_doc.endswith(".htm") else None
 
-    soup = BeautifulSoup(response.text, "html.parser")
-    ten_q_htm_url = None
+    index_response = requests.get(f"{folder_url}/index.html", headers=HEADERS)
+    if index_response.status_code != 200:
+        return {
+            "10-Q Report": ten_q_htm_url,
+            "Financial Report (Excel)": None
+        }
+
+    soup = BeautifulSoup(index_response.text, "html.parser")
     financial_report_url = None
 
     for link in soup.find_all("a"):
         href = link.get("href")
-        if href:
-            if "10-q" in href.lower() and href.endswith(".htm"):
-                ten_q_htm_url = f"https://www.sec.gov{href}"
-            if "Financial_Report.xlsx" in href:
-                financial_report_url = f"https://www.sec.gov{href}"
+        if href and "Financial_Report.xlsx" in href:
+            financial_report_url = f"https://www.sec.gov{href}"
+            break
 
     return {
-        "10-Q Report": ten_q_htm_url or None,
-        "Financial Report (Excel)": financial_report_url or None
+        "10-Q Report": ten_q_htm_url,
+        "Financial Report (Excel)": financial_report_url
     }
 
 def get_filings(cik):
@@ -71,15 +76,13 @@ def get_filings(cik):
             accession = filings["accessionNumber"][i]
             primary_doc = filings["primaryDocument"][i]
             folder = accession.replace("-", "")
-            ten_q_index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{folder}/index.html"
-            ten_q_report_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{folder}/{primary_doc}"
+            folder_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{folder}"
+            ten_q_index_url = f"{folder_url}/index.html"
 
             result = {
-                "10-Q Index Page": ten_q_index_url,
-                "10-Q Report": ten_q_report_url
+                "10-Q Index Page": ten_q_index_url
             }
-
-            result.update(get_actual_filing_urls(ten_q_index_url))
+            result.update(get_actual_filing_urls(folder_url, primary_doc))
             return result
 
     return {"error": "No 10-Q filing found"}
