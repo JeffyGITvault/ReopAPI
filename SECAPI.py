@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 app = FastAPI(
     title="Get SEC Filings Data",
     description="Retrieves the latest 10-Q and financial report for specific public companies.",
-    version="v2.0.3"
+    version="v2.0.5"
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
@@ -24,7 +24,7 @@ COMPANIES = {
     "Penn Entertainment, Inc.": "0000921738",
     "Bally's Corporation": "0001747079",
     "Harrah's Entertainment": "0000049939",
-    "Tri-State Energy": "0001637880"
+    "Tri-State Energy": "0001637880",
 }
 
 @app.api_route("/", methods=["GET", "HEAD"])
@@ -32,11 +32,6 @@ def home():
     return {"message": "SEC API is live!"}
 
 def get_actual_filing_urls(index_url):
-    """
-    Parses the SEC index.html page to find:
-    - The 10-Q .htm file with Document Type = 10-Q
-    - The Financial_Report.xlsx file (if available)
-    """
     response = requests.get(index_url, headers=HEADERS)
     if response.status_code != 200:
         return {}
@@ -45,21 +40,13 @@ def get_actual_filing_urls(index_url):
     ten_q_htm_url = None
     financial_report_url = None
 
-    # Look for the main table that lists the documents
-    table = soup.find("table", class_="tableFile", summary="Document Format Files")
-    if table:
-        rows = table.find_all("tr")[1:]  # Skip header row
-        for row in rows:
-            cols = row.find_all("td")
-            if len(cols) >= 4:
-                doc_name = cols[2].text.strip().lower()
-                href = cols[2].find("a")["href"] if cols[2].find("a") else None
-
-                if doc_name == "10-q" and href:
-                    ten_q_htm_url = f"https://www.sec.gov{href}"
-
-                if "financial_report.xlsx" in cols[2].text.lower() and href:
-                    financial_report_url = f"https://www.sec.gov{href}"
+    for link in soup.find_all("a"):
+        href = link.get("href")
+        if href:
+            if "10-q" in href.lower() and href.endswith(".htm"):
+                ten_q_htm_url = f"https://www.sec.gov{href}"
+            if "Financial_Report.xlsx" in href:
+                financial_report_url = f"https://www.sec.gov{href}"
 
     return {
         "10-Q Report": ten_q_htm_url or None,
@@ -67,9 +54,6 @@ def get_actual_filing_urls(index_url):
     }
 
 def get_filings(cik):
-    """
-    Fetches the latest 10-Q filing for a given CIK and builds valid clickable URLs.
-    """
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
     response = requests.get(url, headers=HEADERS)
 
@@ -87,15 +71,15 @@ def get_filings(cik):
             accession = filings["accessionNumber"][i]
             primary_doc = filings["primaryDocument"][i]
             folder = accession.replace("-", "")
-            ten_q_index_url = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{folder}/index.html"
-            ten_q_report_url = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{folder}/{primary_doc}"
+            index_url = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{folder}/index.html"
+            html_url = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{folder}/{primary_doc}"
 
             result = {
-                "10-Q Index Page": ten_q_index_url,
-                "10-Q Report": ten_q_report_url
+                "10-Q Index Page": index_url,
+                "10-Q Report": html_url
             }
 
-            result.update(get_actual_filing_urls(ten_q_index_url))
+            result.update(get_actual_filing_urls(index_url))
             return result
 
     return {"error": "No 10-Q filing found"}
