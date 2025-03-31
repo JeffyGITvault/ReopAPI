@@ -32,9 +32,6 @@ def home():
     return {"message": "SEC API is live!"}
 
 def get_actual_filing_urls(index_url):
-    """
-    Extracts the direct 10-Q .htm link and Financial_Report.xlsx from index page.
-    """
     response = requests.get(index_url, headers=HEADERS)
     if response.status_code != 200:
         return {}
@@ -57,9 +54,6 @@ def get_actual_filing_urls(index_url):
     }
 
 def get_filings(cik):
-    """
-    Builds the 10-Q index URL and uses primary document name for direct access.
-    """
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
     response = requests.get(url, headers=HEADERS)
 
@@ -85,7 +79,6 @@ def get_filings(cik):
                 "10-Q Report": ten_q_report_url
             }
 
-            # Get Excel link if available
             result.update(get_actual_filing_urls(ten_q_index_url))
             return result
 
