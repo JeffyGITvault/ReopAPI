@@ -33,7 +33,8 @@ def home():
 
 def get_actual_filing_urls(index_url):
     """
-    Parses the SEC index.html page and extracts direct links to:
+    Parses the SEC index.html page to find:
+    - The 10-Q .htm file with Document Type = 10-Q
     - The Financial_Report.xlsx file (if available)
     """
     response = requests.get(index_url, headers=HEADERS)
@@ -41,14 +42,27 @@ def get_actual_filing_urls(index_url):
         return {}
 
     soup = BeautifulSoup(response.text, "html.parser")
+    ten_q_htm_url = None
     financial_report_url = None
 
-    for link in soup.find_all("a"):
-        href = link.get("href")
-        if href and "Financial_Report.xlsx" in href:
-            financial_report_url = f"https://www.sec.gov{href}"
+    # Look for the main table that lists the documents
+    table = soup.find("table", class_="tableFile", summary="Document Format Files")
+    if table:
+        rows = table.find_all("tr")[1:]  # Skip header row
+        for row in rows:
+            cols = row.find_all("td")
+            if len(cols) >= 4:
+                doc_name = cols[2].text.strip().lower()
+                href = cols[2].find("a")["href"] if cols[2].find("a") else None
+
+                if doc_name == "10-q" and href:
+                    ten_q_htm_url = f"https://www.sec.gov{href}"
+
+                if "financial_report.xlsx" in cols[2].text.lower() and href:
+                    financial_report_url = f"https://www.sec.gov{href}"
 
     return {
+        "10-Q Report": ten_q_htm_url or None,
         "Financial Report (Excel)": financial_report_url or None
     }
 
