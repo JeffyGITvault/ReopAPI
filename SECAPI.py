@@ -83,14 +83,17 @@ def get_filings(cik):
             break
 
     filing_data = {
-        "10-Q Index Page": f"[10-Q Index Page]({ten_q_folder_url})" if ten_q_folder_url else "Not Found",
-        "10-Q Report": f"[Download 10-Q Report]({ten_q_report_url})" if ten_q_report_url else "Not Found"
-    }
+    "10-Q Index Page": f"[10-Q Index Page]({ten_q_folder_url})" if ten_q_folder_url else "Not Found",
+    "10-Q Report": f"[Download 10-Q Report]({ten_q_report_url})" if ten_q_report_url else "Not Found"
+}
 
-    if ten_q_folder_url:
-        filing_data.update(get_actual_filing_urls(ten_q_folder_url))
+if ten_q_folder_url:
+    extras = get_actual_filing_urls(ten_q_folder_url)
+    if extras.get("Financial Report (Excel)"):
+        filing_data["Financial Report (Excel)"] = f"[Download Excel Financials]({extras['Financial Report (Excel)']})"
+    else:
+        filing_data["Financial Report (Excel)"] = "Not Found"
 
-    return filing_data
 
 @app.get("/get_filings/{company_name}")
 def get_company_filings(company_name: str):
