@@ -23,7 +23,6 @@ COMPANIES = {
     "Boyd Gaming Corporation": "0000906553",
     "Penn Entertainment, Inc.": "0000921738",
     "Bally's Corporation": "0001747079",
-    "Harrah's Entertainment": "0000049939",
     "Tri-State Energy": "0001637880",
 }
 
