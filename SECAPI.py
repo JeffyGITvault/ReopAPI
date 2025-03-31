@@ -52,9 +52,10 @@ def get_actual_filing_urls(index_url):
                 financial_report_url = f"https://www.sec.gov{href}"
 
     return {
-        "10-Q Report": ten_q_htm_url or None,
-        "Financial Report (Excel)": financial_report_url or None
-    }
+    "10-Q Report": f"[Full 10-Q Report (HTML)]({ten_q_htm_url})" if ten_q_htm_url else None,
+    "Financial Report (Excel)": f"[Download Excel Financials]({financial_report_url})" if financial_report_url else None
+}
+
 
 def get_filings(cik):
     """
@@ -83,9 +84,9 @@ def get_filings(cik):
             ten_q_report_url = f"{base_url}/{primary_doc}"
 
             result = {
-                "10-Q Index Page": ten_q_index_url,
-                "10-Q Report": ten_q_report_url
-            }
+    "10-Q Index Page": f"[10-Q Index Page]({ten_q_index_url})",
+    "10-Q Report": f"[Full 10-Q Report (HTML)]({ten_q_report_url})"
+}
 
             # Only Excel comes from actual parsing
             links = get_actual_filing_urls(ten_q_index_url)
