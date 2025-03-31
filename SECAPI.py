@@ -15,7 +15,7 @@ COMPANIES = {
     "Restoration Hardware (RH)": "0001528849",
     "Ball Corporation": "0000009389",
     "DISH Network Corporation": "0001001082",
-    "Frontier Airlines": "0001830033",
+    "Frontier Airlines": "0001670076",
     "Community Health Systems": "0001108109",
     "Expeditors International": "0000746515",
     "iHeartMedia, Inc.": "0001400891",
