@@ -4,11 +4,11 @@ from bs4 import BeautifulSoup
 
 app = FastAPI(
     title="Get SEC Filings Data",
-    description="Retrieves the latest 10-K and 10-Q SEC filings for a company, including direct links to the financial report and full filing document.",
-    version="v2.0.0"
+    description="Retrieves the latest 10-Q and financial report for specific public companies.",
+    version="v2.0.3"
 )
 
-HEADERS = {"User-Agent": "jeffrey guenthner (jeffrey.guenthner@gmail.com)"}
+HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 
 COMPANIES = {
     "Central Garden & Pet": "0000887733",
@@ -32,31 +32,34 @@ def home():
     return {"message": "SEC API is live!"}
 
 def get_actual_filing_urls(index_url):
+    """
+    Extracts the direct 10-Q .htm link and Financial_Report.xlsx from index page.
+    """
     response = requests.get(index_url, headers=HEADERS)
     if response.status_code != 200:
-        return {"error": "Failed to fetch SEC index page"}
+        return {}
 
     soup = BeautifulSoup(response.text, "html.parser")
-
     ten_q_htm_url = None
     financial_report_url = None
 
     for link in soup.find_all("a"):
         href = link.get("href")
-
         if href:
             if "10-q" in href.lower() and href.endswith(".htm"):
                 ten_q_htm_url = f"https://www.sec.gov{href}"
-
             if "Financial_Report.xlsx" in href:
                 financial_report_url = f"https://www.sec.gov{href}"
 
     return {
-        "10-Q Report": f"[Download 10-Q Report]({ten_q_htm_url})" if ten_q_htm_url else "Not Found",
-        "Financial Report (Excel)": f"[Download Excel Financials]({financial_report_url})" if financial_report_url else "Not Found"
+        "10-Q Report": ten_q_htm_url or None,
+        "Financial Report (Excel)": financial_report_url or None
     }
 
 def get_filings(cik):
+    """
+    Builds the 10-Q index URL and uses primary document name for direct access.
+    """
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
     response = requests.get(url, headers=HEADERS)
 
@@ -64,48 +67,34 @@ def get_filings(cik):
         return {"error": f"Failed to retrieve filings for CIK {cik}"}
 
     data = response.json()
-    filings = data["filings"]["recent"]
+    filings = data.get("filings", {}).get("recent", {})
 
-    if not filings["form"]:
+    if not filings.get("form"):
         return {"error": "No recent filings found"}
-
-    ten_q_folder_url = None
-    ten_q_report_url = None
 
     for i, form in enumerate(filings["form"]):
         if form == "10-Q":
             accession = filings["accessionNumber"][i]
             primary_doc = filings["primaryDocument"][i]
             folder = accession.replace("-", "")
-
-            ten_q_folder_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{folder}/index.html"
+            ten_q_index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{folder}/index.html"
             ten_q_report_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{folder}/{primary_doc}"
-            break
 
-    filing_data = {
-    "10-Q Index Page": f"[10-Q Index Page]({ten_q_folder_url})" if ten_q_folder_url else "Not Found",
-    "10-Q Report": f"[Download 10-Q Report]({ten_q_report_url})" if ten_q_report_url else "Not Found"
-}
+            result = {
+                "10-Q Index Page": ten_q_index_url,
+                "10-Q Report": ten_q_report_url
+            }
 
-if ten_q_folder_url:
-    extras = get_actual_filing_urls(ten_q_folder_url)
-    if extras.get("Financial Report (Excel)"):
-        filing_data["Financial Report (Excel)"] = f"[Download Excel Financials]({extras['Financial Report (Excel)']})"
-    else:
-        filing_data["Financial Report (Excel)"] = "Not Found"
+            # Get Excel link if available
+            result.update(get_actual_filing_urls(ten_q_index_url))
+            return result
 
+    return {"error": "No 10-Q filing found"}
 
 @app.get("/get_filings/{company_name}")
 def get_company_filings(company_name: str):
     company_name = company_name.lower().strip()
-    cik = None
-
-    for name, cik_value in COMPANIES.items():
-        if company_name in name.lower():
-            cik = cik_value
-            break
-
+    cik = next((v for k, v in COMPANIES.items() if company_name in k.lower()), None)
     if not cik:
-        return {"error": "Company not found in our database"}
-
+        return {"error": "Company not found in database"}
     return get_filings(cik)
