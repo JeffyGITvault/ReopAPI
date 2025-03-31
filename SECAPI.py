@@ -20,7 +20,7 @@ COMPANIES = {
     "Expeditors International": "0000746515",
     "iHeartMedia, Inc.": "0001400891",
     "Caesars Entertainment": "0000858339",
-    "Boyd Gaming Corporation": "0000003545",
+    "Boyd Gaming Corporation": "0000906553",
     "Penn Entertainment, Inc.": "0000921738",
     "Bally's Corporation": "0001747079",
     "Harrah's Entertainment": "0000049939",
