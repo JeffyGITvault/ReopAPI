@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 app = FastAPI(
     title="Get SEC Filings Data",
     description="Retrieves the latest 10-Q and financial report for specific public companies.",
-    version="v2.0.4"
+    version="v2.0.3"
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
@@ -31,7 +31,10 @@ COMPANIES = {
 def home():
     return {"message": "SEC API is live!"}
 
-def get_actual_filing_urls(index_url, fallback_html_url):
+def get_actual_filing_urls(index_url):
+    """
+    Extracts the direct 10-Q .htm link and Financial_Report.xlsx from index page.
+    """
     response = requests.get(index_url, headers=HEADERS)
     if response.status_code != 200:
         return {}
@@ -43,21 +46,20 @@ def get_actual_filing_urls(index_url, fallback_html_url):
     for link in soup.find_all("a"):
         href = link.get("href")
         if href:
-            if href.lower().endswith(".htm") and ("10q" in href.lower() or "10-q" in href.lower()):
+            if "10-q" in href.lower() and href.endswith(".htm"):
                 ten_q_htm_url = f"https://www.sec.gov{href}"
-            if "financial_report.xlsx" in href.lower():
+            if "Financial_Report.xlsx" in href:
                 financial_report_url = f"https://www.sec.gov{href}"
 
-    # Fallback to primary document URL if no 10-Q HTML link is found
-    if not ten_q_htm_url:
-        ten_q_htm_url = fallback_html_url
-
     return {
-        "10-Q Report": ten_q_htm_url,
+        "10-Q Report": ten_q_htm_url or None,
         "Financial Report (Excel)": financial_report_url or None
     }
 
 def get_filings(cik):
+    """
+    Builds the 10-Q index URL and uses primary document name for direct access.
+    """
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
     response = requests.get(url, headers=HEADERS)
 
@@ -80,11 +82,11 @@ def get_filings(cik):
 
             result = {
                 "10-Q Index Page": ten_q_index_url,
-                "10-Q Report": ten_q_report_url  # Default, might be overwritten if better one found
+                "10-Q Report": ten_q_report_url
             }
 
-            # Attempt to enhance 10-Q Report link
-            result.update(get_actual_filing_urls(ten_q_index_url, ten_q_report_url))
+            # Get Excel link if available
+            result.update(get_actual_filing_urls(ten_q_index_url))
             return result
 
     return {"error": "No 10-Q filing found"}
