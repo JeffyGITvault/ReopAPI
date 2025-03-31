@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 app = FastAPI(
     title="Get SEC Filings Data",
     description="Retrieves the latest 10-Q and financial report for specific public companies.",
-    version="v2.0.5"
+    version="v2.0.4"
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
@@ -31,26 +31,36 @@ COMPANIES = {
 def home():
     return {"message": "SEC API is live!"}
 
-def get_actual_filing_urls(index_url):
+def get_actual_filing_urls(cik, accession):
+    base_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/"
+    index_url = base_url + "index.html"
+
     response = requests.get(index_url, headers=HEADERS)
     if response.status_code != 200:
-        return {}
+        return {
+            "10-Q Index Page": index_url,
+            "10-Q Report": None,
+            "Financial Report (Excel)": None
+        }
 
     soup = BeautifulSoup(response.text, "html.parser")
-    ten_q_htm_url = None
-    financial_report_url = None
+    ten_q_report = None
+    financial_report = None
 
     for link in soup.find_all("a"):
         href = link.get("href")
-        if href:
-            if "10-q" in href.lower() and href.endswith(".htm"):
-                ten_q_htm_url = f"https://www.sec.gov{href}"
-            if "Financial_Report.xlsx" in href:
-                financial_report_url = f"https://www.sec.gov{href}"
+        if not href:
+            continue
+        full_url = f"https://www.sec.gov{href}"
+        if "10-q" in href.lower() and href.endswith(".htm") and not ten_q_report:
+            ten_q_report = full_url
+        elif "financial_report.xlsx" in href.lower() and not financial_report:
+            financial_report = full_url
 
     return {
-        "10-Q Report": ten_q_htm_url or None,
-        "Financial Report (Excel)": financial_report_url or None
+        "10-Q Index Page": index_url,
+        "10-Q Report": ten_q_report,
+        "Financial Report (Excel)": financial_report
     }
 
 def get_filings(cik):
@@ -68,19 +78,8 @@ def get_filings(cik):
 
     for i, form in enumerate(filings["form"]):
         if form == "10-Q":
-            accession = filings["accessionNumber"][i]
-            primary_doc = filings["primaryDocument"][i]
-            folder = accession.replace("-", "")
-            index_url = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{folder}/index.html"
-            html_url = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{folder}/{primary_doc}"
-
-            result = {
-                "10-Q Index Page": index_url,
-                "10-Q Report": html_url
-            }
-
-            result.update(get_actual_filing_urls(index_url))
-            return result
+            accession = filings["accessionNumber"][i].replace("-", "")
+            return get_actual_filing_urls(cik, accession)
 
     return {"error": "No 10-Q filing found"}
 
