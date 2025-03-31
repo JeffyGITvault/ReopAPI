@@ -78,26 +78,29 @@ def get_filings(cik):
     if not filings["form"]:
         return {"error": "No recent filings found"}
 
-   
-    ten_q_index_url = None
+    ten_q_folder_url = None
+    ten_q_report_url = None
 
     for i, form in enumerate(filings["form"]):
-        if form == "10-Q" and not ten_q_index_url:
-            ten_q_index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{filings['accessionNumber'][i].replace('-', '')}/index.html"
+        if form == "10-Q":
+            accession = filings["accessionNumber"][i]
+            primary_doc = filings["primaryDocument"][i]
+            folder = accession.replace("-", "")
 
-        if ten_q_index_url:
+            ten_q_folder_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{folder}/index.html"
+            ten_q_report_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{folder}/{primary_doc}"
             break
 
     filing_data = {
-        ""10-Q Index Page": f"[View 10-Q Index]({ten_q_index_url})" if ten_q_index_url else "Not Found",
+        "10-Q Index Page": ten_q_folder_url or "Not Found",
+        "10-Q Report": ten_q_report_url or "Not Found"
     }
 
-    # Fetch actual file links if available
-
-    if ten_q_index_url:
-        filing_data.update(get_actual_filing_urls(ten_q_index_url))
+    if ten_q_folder_url:
+        filing_data.update(get_actual_filing_urls(ten_q_folder_url))
 
     return filing_data
+
 
 @app.get("/get_filings/{company_name}")
 def get_company_filings(company_name: str):
