@@ -89,7 +89,7 @@ def get_filings(cik):
             break
 
     filing_data = {
-        "10-Q Index Page": ten_q_index_url if ten_q_index_url else "Not Found",
+        ""10-Q Index Page": f"[View 10-Q Index]({ten_q_index_url})" if ten_q_index_url else "Not Found",
     }
 
     # Fetch actual file links if available
