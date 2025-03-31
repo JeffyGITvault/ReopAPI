@@ -85,8 +85,10 @@ def get_filings(cik):
                 "10-Q Report": ten_q_report_url
             }
 
-            # Get Excel link if available
-            result.update(get_actual_filing_urls(ten_q_index_url))
+            # Only fetch and update Excel report link (don’t overwrite 10-Q URL)
+            filing_links = get_actual_filing_urls(ten_q_index_url)
+            if filing_links.get("Financial Report (Excel)"):
+                result["Financial Report (Excel)"] = filing_links["Financial Report (Excel)"]
             return result
 
     return {"error": "No 10-Q filing found"}
