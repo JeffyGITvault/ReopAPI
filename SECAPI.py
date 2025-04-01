@@ -16,7 +16,7 @@ def home():
     return {"message": "SEC API is live!"}
 
 def resolve_cik_from_sec(company_name: str):
-    cleaned = re.sub(r'(,?\s+(Inc|Corp|Corporation|LLC|Ltd)\.?$)', '', company_name, flags=re.IGNORECASE)
+    cleaned = re.sub(r'(,?\s+(Inc|Corp|Corporation|LLC|Ltd)\.?)$', '', company_name, flags=re.IGNORECASE)
     query = cleaned.replace(" ", "+")
     url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={query}&match=contains&action=getcompany"
     resp = requests.get(url, headers=HEADERS)
@@ -29,42 +29,38 @@ def resolve_cik_from_sec(company_name: str):
         return cik_tag.text.strip().zfill(10)
     return None
 
-def get_actual_filing_urls(cik, accession):
+def get_actual_filing_urls(cik, accession, primary_doc):
     base_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/"
     index_url = base_url + "index.html"
+    primary_doc_url = base_url + primary_doc
 
-    response = requests.get(index_url, headers=HEADERS)
-    if response.status_code != 200:
-        return {
-            "10-Q Index Page": f"[📄 10-Q Index Page (SEC)]({index_url})",
-            "10-Q Report": None,
-            "Financial Report (Excel)": None
-        }
-
-    soup = BeautifulSoup(response.text, "html.parser")
-    ten_q_report = None
+    # Start with assumptions based on the JSON response (primaryDocument field)
+    ten_q_report = primary_doc_url if primary_doc.lower().endswith(".htm") else None
     financial_report = None
 
-    for link in soup.find_all("a"):
-        href = link.get("href")
-        if not href:
-            continue
-        full_url = f"https://www.sec.gov{href}"
-        if "10-q" in href.lower() and href.endswith(".htm") and not ten_q_report:
-            ten_q_report = full_url
-        elif "financial_report.xlsx" in href.lower() and not financial_report:
-            financial_report = full_url
+    # Fallback to parsing the index.html if needed
+    response = requests.get(index_url, headers=HEADERS)
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, "html.parser")
+        for link in soup.find_all("a"):
+            href = link.get("href")
+            if not href:
+                continue
+            full_url = f"https://www.sec.gov{href}"
+            if not ten_q_report and href.lower().endswith(".htm") and "10-q" in href.lower():
+                ten_q_report = full_url
+            elif "financial_report.xlsx" in href.lower():
+                financial_report = full_url
 
     return {
-        "10-Q Index Page": f"[📄 10-Q Index Page (SEC)]({index_url})",
-        "10-Q Report": f"[📘 Full 10-Q Report (HTML)]({ten_q_report})" if ten_q_report else None,
-        "Financial Report (Excel)": f"[📊 Financial Report (Excel)]({financial_report})" if financial_report else None
+        "10-Q Index Page": index_url,
+        "10-Q Report": ten_q_report,
+        "Financial Report (Excel)": financial_report
     }
 
 def get_filings(cik):
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
     response = requests.get(url, headers=HEADERS)
-
     if response.status_code != 200:
         return {"error": f"Failed to retrieve filings for CIK {cik}"}
 
@@ -77,7 +73,8 @@ def get_filings(cik):
     for i, form in enumerate(filings["form"]):
         if form == "10-Q":
             accession = filings["accessionNumber"][i].replace("-", "")
-            return get_actual_filing_urls(cik, accession)
+            primary_doc = filings["primaryDocument"][i]
+            return get_actual_filing_urls(cik, accession, primary_doc)
 
     return {"error": "No 10-Q filing found"}
 
