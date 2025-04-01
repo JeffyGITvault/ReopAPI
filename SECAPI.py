@@ -53,12 +53,10 @@ def get_actual_filing_urls(cik, accession, primary_doc):
                 financial_report = full_url
 
     return {
-       return {
     "10-Q Index Page": f"[10-Q Index Page (SEC)]({index_url})" if index_url else None,
     "10-Q Report": f"[Full 10-Q Report]({ten_q_report})" if ten_q_report else None,
     "Financial Report (Excel)": f"[Download Financials (Excel)]({financial_report})" if financial_report else None
 }
-
 
 def get_filings(cik):
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
