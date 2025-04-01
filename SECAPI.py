@@ -61,20 +61,24 @@ def get_actual_filing_urls(cik, accession, primary_doc):
     response = requests.get(index_url, headers=HEADERS)
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, "html.parser")
+        htm_candidates = []
         for link in soup.find_all("a"):
             href = link.get("href")
             if not href:
                 continue
-            full_url = f"https://www.sec.gov{href}"
-            if not ten_q_report and href.lower().endswith(".htm") and "10-q" in href.lower():
-                ten_q_report = full_url
-            elif "financial_report.xlsx" in href.lower():
-                financial_report = full_url
+            href_lower = href.lower()
+            if href_lower.endswith(".htm") and "summary" not in href_lower and "index" not in href_lower:
+                htm_candidates.append(href)
+            elif "financial_report.xlsx" in href_lower:
+                financial_report = f"https://www.sec.gov{href}"
+
+        if not ten_q_report and htm_candidates:
+            ten_q_report = f"https://www.sec.gov{htm_candidates[0]}"
 
     return {
-        "10-K/10-Q Index Page": f"[10-K / 10-Q Index Page (SEC)]({index_url})" if index_url else None,
-        "Full Filing Report": f"[Full HTML Filing Report]({ten_q_report})" if ten_q_report else None,
-        "Financial Report (Excel)": f"[Download Excel Financials]({financial_report})" if financial_report else None
+        "10-K/10-Q Index Page": index_url,
+        "Full Filing Report": ten_q_report,
+        "Financial Report (Excel)": financial_report
     }
 
 def get_filings(cik):
@@ -92,28 +96,16 @@ def get_filings(cik):
     today = datetime.today()
     three_years_ago = today - timedelta(days=3*365)
 
-    filings_list = []
     for i, form in enumerate(filings["form"]):
         if form in ["10-Q", "10-K"]:
             filing_date_str = filings["filingDate"][i]
-            try:
-                filing_date = datetime.strptime(filing_date_str, "%Y-%m-%d")
-            except ValueError:
-                continue
-
+            filing_date = datetime.strptime(filing_date_str, "%Y-%m-%d")
             if filing_date >= three_years_ago:
-                filings_list.append({
-                    "form": form,
-                    "date": filing_date,
-                    "accession": filings["accessionNumber"][i].replace("-", ""),
-                    "primary_doc": filings["primaryDocument"][i]
-                })
+                accession = filings["accessionNumber"][i].replace("-", "")
+                primary_doc = filings["primaryDocument"][i]
+                return get_actual_filing_urls(cik, accession, primary_doc)
 
-    if not filings_list:
-        return {"error": "No recent 10-K or 10-Q filings within the last 3 years"}
-
-    latest_filing = sorted(filings_list, key=lambda x: x["date"], reverse=True)[0]
-    return get_actual_filing_urls(cik, latest_filing["accession"], latest_filing["primary_doc"])
+    return {"error": "No recent 10-K or 10-Q filings within the last 3 years"}
 
 @app.get("/get_filings/{company_name}")
 def get_company_filings(company_name: str):
@@ -122,4 +114,3 @@ def get_company_filings(company_name: str):
     if not cik:
         return {"error": f"Company '{company_name}' not found in SEC database"}
     return get_filings(cik)
-
