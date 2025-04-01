@@ -2,6 +2,7 @@ from fastapi import FastAPI
 import requests
 from bs4 import BeautifulSoup
 import re
+from datetime import datetime
 
 app = FastAPI(
     title="Get SEC Filings Data",
@@ -51,18 +52,9 @@ def get_actual_filing_urls(cik, accession, primary_doc):
                 financial_report = full_url
 
     return {
-        "10-Q Index Page": {
-            "url": index_url,
-            "markdown": f"[📄 10-Q Index Page (SEC)]({index_url})"
-        },
-        "10-Q Report": {
-            "url": ten_q_report,
-            "markdown": f"[📘 Full 10-Q Report]({ten_q_report})"
-        } if ten_q_report else None,
-        "Financial Report (Excel)": {
-            "url": financial_report,
-            "markdown": f"[📊 Download Financials (Excel)]({financial_report})"
-        } if financial_report else None
+        "10-Q Index Page": f"[📄 10-Q Index Page]({index_url})",
+        "10-Q Report": f"[📘 Full 10-Q Report]({ten_q_report})" if ten_q_report else None,
+        "Financial Report (Excel)": f"[📊 Download Financials (Excel)]({financial_report})" if financial_report else None
     }
 
 def get_filings(cik):
@@ -86,6 +78,12 @@ def get_filings(cik):
     if not candidates:
         return {"error": "No 10-Q filing found"}
 
+    # Filter by filing date within the last 15 months
+    cutoff_date = datetime.now().replace(day=1)
+    candidates = [x for x in candidates if datetime.strptime(x[3], "%Y-%m-%d") > cutoff_date.replace(year=cutoff_date.year - 1)]
+    if not candidates:
+        return {"error": "No recent 10-Q filings within the last 12 months"}
+
     candidates.sort(key=lambda x: x[3], reverse=True)
     i, accession, primary_doc, _ = candidates[0]
     return get_actual_filing_urls(cik, accession, primary_doc)
@@ -97,3 +95,4 @@ def get_company_filings(company_name: str):
     if not cik:
         return {"error": f"Company '{company_name}' not found in SEC database"}
     return get_filings(cik)
+
