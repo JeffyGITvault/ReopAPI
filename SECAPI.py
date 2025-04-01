@@ -2,12 +2,11 @@ from fastapi import FastAPI
 import requests
 from bs4 import BeautifulSoup
 import re
-from datetime import datetime
 
 app = FastAPI(
     title="Get SEC Filings Data",
-    description="Retrieves the latest 10-Q and financial report for any public company by dynamically resolving the CIK.",
-    version="v3.0.0"
+    description="Retrieves the most recent 10-Q or 10-K report and financials (if available) for any public company.",
+    version="v3.1.0"
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
@@ -23,20 +22,15 @@ def resolve_cik_from_sec(company_name: str):
     resp = requests.get(url, headers=HEADERS)
     if resp.status_code != 200:
         return None
-
     soup = BeautifulSoup(resp.text, "html.parser")
     cik_tag = soup.find("a", href=True, string=lambda x: x and x.isdigit())
-    if cik_tag:
-        return cik_tag.text.strip().zfill(10)
-    return None
+    return cik_tag.text.strip().zfill(10) if cik_tag else None
 
 def get_actual_filing_urls(cik, accession, primary_doc):
     base_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/"
     index_url = base_url + "index.html"
-    primary_doc_url = base_url + primary_doc
-
-    ten_q_report = primary_doc_url if primary_doc.lower().endswith(".htm") else None
-    financial_report = None
+    html_report_url = base_url + primary_doc if primary_doc.lower().endswith(".htm") else None
+    excel_url = None
 
     response = requests.get(index_url, headers=HEADERS)
     if response.status_code == 200:
@@ -45,16 +39,14 @@ def get_actual_filing_urls(cik, accession, primary_doc):
             href = link.get("href")
             if not href:
                 continue
-            full_url = f"https://www.sec.gov{href}"
-            if not ten_q_report and href.lower().endswith(".htm") and "10-q" in href.lower():
-                ten_q_report = full_url
-            elif "financial_report.xlsx" in href.lower():
-                financial_report = full_url
+            if "financial_report.xlsx" in href.lower():
+                excel_url = f"https://www.sec.gov{href}"
+                break
 
     return {
-        "10-Q Index Page": f"[📄 10-Q Index Page]({index_url})",
-        "10-Q Report": f"[📘 Full 10-Q Report]({ten_q_report})" if ten_q_report else None,
-        "Financial Report (Excel)": f"[📊 Download Financials (Excel)]({financial_report})" if financial_report else None
+        "10-K/10-Q Index Page": f"[10-K/10-Q Index Page]({index_url})" if index_url else None,
+        "Full HTML Report": f"[Full HTML Report]({html_report_url})" if html_report_url else None,
+        "Excel Financials": f"[Excel Financials]({excel_url})" if excel_url else None
     }
 
 def get_filings(cik):
@@ -69,23 +61,18 @@ def get_filings(cik):
     if not filings.get("form"):
         return {"error": "No recent filings found"}
 
+    filing_types = ["10-Q", "10-K"]
     candidates = [
         (i, filings["accessionNumber"][i].replace("-", ""), filings["primaryDocument"][i], filings["filingDate"][i])
         for i, form in enumerate(filings["form"])
-        if form == "10-Q"
+        if form in filing_types
     ]
 
     if not candidates:
-        return {"error": "No 10-Q filing found"}
-
-    # Filter by filing date within the last 15 months
-    cutoff_date = datetime.now().replace(day=1)
-    candidates = [x for x in candidates if datetime.strptime(x[3], "%Y-%m-%d") > cutoff_date.replace(year=cutoff_date.year - 1)]
-    if not candidates:
-        return {"error": "No recent 10-Q filings within the last 12 months"}
+        return {"error": "No 10-Q or 10-K filing found"}
 
     candidates.sort(key=lambda x: x[3], reverse=True)
-    i, accession, primary_doc, _ = candidates[0]
+    _, accession, primary_doc, _ = candidates[0]
     return get_actual_filing_urls(cik, accession, primary_doc)
 
 @app.get("/get_filings/{company_name}")
@@ -95,4 +82,3 @@ def get_company_filings(company_name: str):
     if not cik:
         return {"error": f"Company '{company_name}' not found in SEC database"}
     return get_filings(cik)
-
