@@ -47,7 +47,9 @@ def resolve_cik_from_sec(company_name: str):
     soup = BeautifulSoup(resp.text, "html.parser")
     cik_tag = soup.find("a", href=True, string=lambda x: x and x.isdigit())
     if cik_tag:
-        return cik_tag.text.strip().zfill(10)
+        cik = cik_tag.text.strip().zfill(10)
+        print(f"Resolved CIK for '{company_name}' as '{cik}'")  # Debug logging
+        return cik
     return None
 
 def get_actual_filing_urls(cik, accession, primary_doc):
@@ -68,7 +70,10 @@ def get_actual_filing_urls(cik, accession, primary_doc):
                 continue
             href_lower = href.lower()
             if href_lower.endswith(".htm") and "summary" not in href_lower and "index" not in href_lower:
-                htm_candidates.append(href)
+                if "10q" in href_lower or "10k" in href_lower:
+                    htm_candidates.insert(0, href)  # prioritize relevant documents
+                else:
+                    htm_candidates.append(href)
             elif "financial_report.xlsx" in href_lower:
                 financial_report = f"https://www.sec.gov{href}"
 
@@ -76,7 +81,7 @@ def get_actual_filing_urls(cik, accession, primary_doc):
             ten_q_report = f"https://www.sec.gov{htm_candidates[0]}"
 
     return {
-        "10-K/10-Q Index Page": index_url,
+        "Latest Filing Index URL": index_url,
         "Full Filing Report": ten_q_report,
         "Financial Report (Excel)": financial_report
     }
