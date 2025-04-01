@@ -16,7 +16,7 @@ def home():
     return {"message": "SEC API is live!"}
 
 def resolve_cik_from_sec(company_name: str):
-    cleaned = re.sub(r'(,?\s+(Inc|Corp|Corporation|LLC|Ltd)\.?)$', '', company_name, flags=re.IGNORECASE)
+    cleaned = re.sub(r'(,?\s+(Inc|Corp|Corporation|LLC|Ltd))?\.?$', '', company_name, flags=re.IGNORECASE)
     query = cleaned.replace(" ", "+")
     url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={query}&match=contains&action=getcompany"
     resp = requests.get(url, headers=HEADERS)
@@ -34,11 +34,9 @@ def get_actual_filing_urls(cik, accession, primary_doc):
     index_url = base_url + "index.html"
     primary_doc_url = base_url + primary_doc
 
-    # Start with assumptions based on the JSON response (primaryDocument field)
     ten_q_report = primary_doc_url if primary_doc.lower().endswith(".htm") else None
     financial_report = None
 
-    # Fallback to parsing the index.html if needed
     response = requests.get(index_url, headers=HEADERS)
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, "html.parser")
@@ -53,10 +51,10 @@ def get_actual_filing_urls(cik, accession, primary_doc):
                 financial_report = full_url
 
     return {
-    "10-Q Index Page": f"[10-Q Index Page (SEC)]({index_url})" if index_url else None,
-    "10-Q Report": f"[Full 10-Q Report]({ten_q_report})" if ten_q_report else None,
-    "Financial Report (Excel)": f"[Download Financials (Excel)]({financial_report})" if financial_report else None
-}
+        "10-Q Index Page": f"[10-Q Index Page (SEC)]({index_url})" if index_url else None,
+        "10-Q Report": f"[Full 10-Q Report]({ten_q_report})" if ten_q_report else None,
+        "Financial Report (Excel)": f"[Download Financials (Excel)]({financial_report})" if financial_report else None
+    }
 
 def get_filings(cik):
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
@@ -70,13 +68,20 @@ def get_filings(cik):
     if not filings.get("form"):
         return {"error": "No recent filings found"}
 
-    for i, form in enumerate(filings["form"]):
-        if form == "10-Q":
-            accession = filings["accessionNumber"][i].replace("-", "")
-            primary_doc = filings["primaryDocument"][i]
-            return get_actual_filing_urls(cik, accession, primary_doc)
+    # Iterate through the forms and choose the most recent 10-Q by checking dateFiled
+    candidates = [
+        (i, filings["accessionNumber"][i].replace("-", ""), filings["primaryDocument"][i], filings["filingDate"][i])
+        for i, form in enumerate(filings["form"])
+        if form == "10-Q"
+    ]
 
-    return {"error": "No 10-Q filing found"}
+    if not candidates:
+        return {"error": "No 10-Q filing found"}
+
+    # Sort by date (descending) and pick the latest
+    candidates.sort(key=lambda x: x[3], reverse=True)
+    i, accession, primary_doc, _ = candidates[0]
+    return get_actual_filing_urls(cik, accession, primary_doc)
 
 @app.get("/get_filings/{company_name}")
 def get_company_filings(company_name: str):
