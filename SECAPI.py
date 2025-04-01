@@ -19,7 +19,7 @@ COMPANIES = {
     "Community Health Systems": "0001108109",
     "Expeditors International": "0000746515",
     "iHeartMedia, Inc.": "0001400891",
-    "Caesars Entertainment": "0000858339",
+    "Caesars Entertainment": 0001590895",
     "Boyd Gaming Corporation": "0001309848",
     "Penn Entertainment, Inc.": "0000921738",
     "Bally's Corporation": "0001747079",
