@@ -2,6 +2,7 @@ from fastapi import FastAPI
 import requests
 from bs4 import BeautifulSoup
 import re
+from datetime import datetime, timedelta
 
 app = FastAPI(
     title="Get SEC Filings Data",
@@ -34,11 +35,9 @@ def get_actual_filing_urls(cik, accession, primary_doc):
     index_url = base_url + "index.html"
     primary_doc_url = base_url + primary_doc
 
-    # If primary_doc points to a .htm file, we use it as the 10-Q or 10-K
     ten_x_report = primary_doc_url if primary_doc.lower().endswith(".htm") else None
     financial_report = None
 
-    # Parse the index.html page to confirm or fallback on report and Excel file
     response = requests.get(index_url, headers=HEADERS)
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, "html.parser")
@@ -49,7 +48,6 @@ def get_actual_filing_urls(cik, accession, primary_doc):
             full_url = f"https://www.sec.gov{href}"
             if not ten_x_report and href.lower().endswith(".htm") and ("10-q" in href.lower() or "10-k" in href.lower()):
                 ten_x_report = full_url
-            # ✅ Excel Financials are pulled from 10-K filings when available
             elif "financial_report.xlsx" in href.lower():
                 financial_report = full_url
 
@@ -58,6 +56,12 @@ def get_actual_filing_urls(cik, accession, primary_doc):
         "Full Filing Report": f"[📘 Full HTML Filing Report]({ten_x_report})" if ten_x_report else None,
         "Financial Report (Excel)": f"[📊 Download Excel Financials]({financial_report})" if financial_report else None
     }
+
+def parse_date_safe(date_str):
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d")
+    except Exception:
+        return datetime.min
 
 def get_latest_filing(cik):
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
@@ -78,8 +82,10 @@ def get_latest_filing(cik):
             for i, form in enumerate(filings["form"])
             if form == form_type
         ]
+        three_years_ago = datetime.today() - timedelta(days=3*365)
+        candidates = [c for c in candidates if parse_date_safe(c[3]) >= three_years_ago]
         if candidates:
-            candidates.sort(key=lambda x: x[3], reverse=True)
+            candidates.sort(key=lambda x: parse_date_safe(x[3]), reverse=True)
             i, accession, primary_doc, _ = candidates[0]
             return get_actual_filing_urls(cik, accession, primary_doc)
 
