@@ -36,7 +36,7 @@ def get_actual_filing_urls(cik, accession):
     response = requests.get(index_url, headers=HEADERS)
     if response.status_code != 200:
         return {
-            "10-Q Index Page": index_url,
+            "10-Q Index Page": f"[📄 10-Q Index Page (SEC)]({index_url})",
             "10-Q Report": None,
             "Financial Report (Excel)": None
         }
@@ -56,9 +56,9 @@ def get_actual_filing_urls(cik, accession):
             financial_report = full_url
 
     return {
-        "10-Q Index Page": index_url,
-        "10-Q Report": ten_q_report,
-        "Financial Report (Excel)": financial_report
+        "10-Q Index Page": f"[📄 10-Q Index Page (SEC)]({index_url})",
+        "10-Q Report": f"[📘 Full 10-Q Report (HTML)]({ten_q_report})" if ten_q_report else None,
+        "Financial Report (Excel)": f"[📊 Financial Report (Excel)]({financial_report})" if financial_report else None
     }
 
 def get_filings(cik):
