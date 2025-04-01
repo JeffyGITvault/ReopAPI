@@ -92,16 +92,28 @@ def get_filings(cik):
     today = datetime.today()
     three_years_ago = today - timedelta(days=3*365)
 
+    filings_list = []
     for i, form in enumerate(filings["form"]):
         if form in ["10-Q", "10-K"]:
             filing_date_str = filings["filingDate"][i]
-            filing_date = datetime.strptime(filing_date_str, "%Y-%m-%d")
-            if filing_date >= three_years_ago:
-                accession = filings["accessionNumber"][i].replace("-", "")
-                primary_doc = filings["primaryDocument"][i]
-                return get_actual_filing_urls(cik, accession, primary_doc)
+            try:
+                filing_date = datetime.strptime(filing_date_str, "%Y-%m-%d")
+            except ValueError:
+                continue
 
-    return {"error": "No recent 10-K or 10-Q filings within the last 3 years"}
+            if filing_date >= three_years_ago:
+                filings_list.append({
+                    "form": form,
+                    "date": filing_date,
+                    "accession": filings["accessionNumber"][i].replace("-", ""),
+                    "primary_doc": filings["primaryDocument"][i]
+                })
+
+    if not filings_list:
+        return {"error": "No recent 10-K or 10-Q filings within the last 3 years"}
+
+    latest_filing = sorted(filings_list, key=lambda x: x["date"], reverse=True)[0]
+    return get_actual_filing_urls(cik, latest_filing["accession"], latest_filing["primary_doc"])
 
 @app.get("/get_filings/{company_name}")
 def get_company_filings(company_name: str):
@@ -110,3 +122,4 @@ def get_company_filings(company_name: str):
     if not cik:
         return {"error": f"Company '{company_name}' not found in SEC database"}
     return get_filings(cik)
+
