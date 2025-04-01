@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 app = FastAPI(
     title="Get SEC Filings Data",
-    description="Retrieves the latest 10-Q or fallback 10-K, and Excel financial report for any public company by dynamically resolving the CIK.",
+    description="Retrieves the latest 10-Q or fallback 10-K, and Excel financial report (based on 10-K) for any public company by dynamically resolving the CIK.",
     version="v3.1.0"
 )
 
@@ -36,7 +36,7 @@ def get_actual_filing_urls(cik, accession, primary_doc):
     primary_doc_url = base_url + primary_doc
 
     ten_x_report = primary_doc_url if primary_doc.lower().endswith(".htm") else None
-    financial_report = None
+    financial_report = None  # Note: This Excel report is always based on the 10-K filing, not 10-Q.
 
     response = requests.get(index_url, headers=HEADERS)
     if response.status_code == 200:
