@@ -1,62 +1,63 @@
 from fastapi import FastAPI
 import requests
 from bs4 import BeautifulSoup
+import re
 
 app = FastAPI(
     title="Get SEC Filings Data",
-    description="Retrieves the latest 10-Q and financial report for specific public companies.",
-    version="v2.0.5"  # Base API 2
+    description="Retrieves the latest 10-Q and financial report for any public company by dynamically resolving the CIK.",
+    version="v3.0.0"
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
-
-COMPANIES = {
-    "Central Garden & Pet": "0000887733",
-    "Restoration Hardware (RH)": "0001528849",
-    "Ball Corporation": "0000009389",
-    "DISH Network Corporation": "0001001082",
-    "Frontier Airlines": "0001670076",
-    "Community Health Systems": "0001108109",
-    "Expeditors International": "0000746515",
-    "iHeartMedia, Inc.": "0001400891",
-    "Caesars Entertainment": "0001590895",
-    "Boyd Gaming Corporation": "0001309848",
-    "Penn Entertainment, Inc.": "0000921738",
-    "Bally's Corporation": "0001747079",
-    "Tri-State Energy": "0001637880",
-}
 
 @app.api_route("/", methods=["GET", "HEAD"])
 def home():
     return {"message": "SEC API is live!"}
 
-def get_actual_filing_urls(cik, accession, primary_doc):
+def resolve_cik_from_sec(company_name: str):
+    cleaned = re.sub(r'(,?\s+(Inc|Corp|Corporation|LLC|Ltd)\.?$)', '', company_name, flags=re.IGNORECASE)
+    query = cleaned.replace(" ", "+")
+    url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={query}&match=contains&action=getcompany"
+    resp = requests.get(url, headers=HEADERS)
+    if resp.status_code != 200:
+        return None
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+    cik_tag = soup.find("a", href=True, string=lambda x: x and x.isdigit())
+    if cik_tag:
+        return cik_tag.text.strip().zfill(10)
+    return None
+
+def get_actual_filing_urls(cik, accession):
     base_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/"
     index_url = base_url + "index.html"
-    full_10q_url = base_url + primary_doc
 
     response = requests.get(index_url, headers=HEADERS)
     if response.status_code != 200:
         return {
             "10-Q Index Page": index_url,
-            "10-Q Report": full_10q_url,
+            "10-Q Report": None,
             "Financial Report (Excel)": None
         }
 
     soup = BeautifulSoup(response.text, "html.parser")
+    ten_q_report = None
     financial_report = None
 
     for link in soup.find_all("a"):
         href = link.get("href")
         if not href:
             continue
-        if "financial_report.xlsx" in href.lower():
-            financial_report = f"https://www.sec.gov{href}"
-            break
+        full_url = f"https://www.sec.gov{href}"
+        if "10-q" in href.lower() and href.endswith(".htm") and not ten_q_report:
+            ten_q_report = full_url
+        elif "financial_report.xlsx" in href.lower() and not financial_report:
+            financial_report = full_url
 
     return {
         "10-Q Index Page": index_url,
-        "10-Q Report": full_10q_url,
+        "10-Q Report": ten_q_report,
         "Financial Report (Excel)": financial_report
     }
 
@@ -76,15 +77,14 @@ def get_filings(cik):
     for i, form in enumerate(filings["form"]):
         if form == "10-Q":
             accession = filings["accessionNumber"][i].replace("-", "")
-            primary_doc = filings["primaryDocument"][i]
-            return get_actual_filing_urls(cik, accession, primary_doc)
+            return get_actual_filing_urls(cik, accession)
 
     return {"error": "No 10-Q filing found"}
 
 @app.get("/get_filings/{company_name}")
 def get_company_filings(company_name: str):
-    company_name = company_name.lower().strip()
-    cik = next((v for k, v in COMPANIES.items() if company_name in k.lower()), None)
+    company_name = company_name.strip()
+    cik = resolve_cik_from_sec(company_name)
     if not cik:
-        return {"error": "Company not found in database"}
+        return {"error": f"Company '{company_name}' not found in SEC database"}
     return get_filings(cik)
