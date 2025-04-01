@@ -51,9 +51,18 @@ def get_actual_filing_urls(cik, accession, primary_doc):
                 financial_report = full_url
 
     return {
-        "10-Q Index Page": index_url,
-        "10-Q Report": ten_q_report,
-        "Financial Report (Excel)": financial_report
+        "10-Q Index Page": {
+            "url": index_url,
+            "markdown": f"[📄 10-Q Index Page (SEC)]({index_url})"
+        },
+        "10-Q Report": {
+            "url": ten_q_report,
+            "markdown": f"[📘 Full 10-Q Report]({ten_q_report})"
+        } if ten_q_report else None,
+        "Financial Report (Excel)": {
+            "url": financial_report,
+            "markdown": f"[📊 Download Financials (Excel)]({financial_report})"
+        } if financial_report else None
     }
 
 def get_filings(cik):
@@ -68,7 +77,6 @@ def get_filings(cik):
     if not filings.get("form"):
         return {"error": "No recent filings found"}
 
-    # Iterate through the forms and choose the most recent 10-Q by checking dateFiled
     candidates = [
         (i, filings["accessionNumber"][i].replace("-", ""), filings["primaryDocument"][i], filings["filingDate"][i])
         for i, form in enumerate(filings["form"])
@@ -78,7 +86,6 @@ def get_filings(cik):
     if not candidates:
         return {"error": "No 10-Q filing found"}
 
-    # Sort by date (descending) and pick the latest
     candidates.sort(key=lambda x: x[3], reverse=True)
     i, accession, primary_doc, _ = candidates[0]
     return get_actual_filing_urls(cik, accession, primary_doc)
