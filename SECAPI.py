@@ -3,33 +3,61 @@ import requests
 from bs4 import BeautifulSoup
 import re
 from datetime import datetime, timedelta
+import csv
+from io import StringIO
 
 app = FastAPI(
     title="Get SEC Filings Data",
     description="Retrieves the latest 10-Q for viewing and 10-K for Excel download. Uses dynamic CIK resolution, alias mapping, and fallback logic.",
-    version="v3.2.2"
+    version="v3.3.0"
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
+CIK_LOOKUP_URL = "https://www.sec.gov/files/company_tickers_exchange.json"
+CIK_FTP_CSV = "https://www.sec.gov/files/company_tickers.csv"
 
 ALIAS_MAP = {
-    "rh": "RH",
-    "restoration hardware": "RH",
+    "rh": "Restoration Hardware",
     "goog": "Alphabet Inc.",
     "google": "Alphabet Inc.",
     "meta": "Meta Platforms, Inc.",
     "fb": "Meta Platforms, Inc.",
     "cent": "Central Garden & Pet Company",
-    "central garden": "Central Garden & Pet Company",
     "ball corp": "Ball Corporation",
     "ball": "Ball Corporation"
 }
 
-def resolve_cik(company_name: str):
-    original_name = company_name
-    name_key = company_name.lower().strip()
-    resolved_name = ALIAS_MAP.get(name_key, company_name)
+CIK_CACHE = {}
 
+# Load ticker-to-CIK mapping at runtime
+def load_cik_cache():
+    global CIK_CACHE
+    try:
+        resp = requests.get(CIK_FTP_CSV, headers=HEADERS)
+        if resp.status_code == 200:
+            content = resp.text
+            reader = csv.DictReader(StringIO(content))
+            for row in reader:
+                ticker = row['ticker'].lower().strip()
+                title = row['title'].strip()
+                cik = str(row['cik_str']).zfill(10)
+                CIK_CACHE[ticker] = {"cik": cik, "name": title}
+    except Exception as e:
+        print(f"Failed to load CIK cache: {e}")
+
+load_cik_cache()
+
+def resolve_cik(company_name: str):
+    original_name = company_name.strip().lower()
+    resolved_name = ALIAS_MAP.get(original_name, company_name)
+
+    # First check ticker-based match from CIK_CACHE
+    ticker_key = original_name.replace(" ", "")
+    if ticker_key in CIK_CACHE:
+        cik_entry = CIK_CACHE[ticker_key]
+        return cik_entry['cik'], cik_entry['name']
+
+    # Fallback to SEC search
     cleaned = re.sub(r'(,?\s+(Inc|Corp|Corporation|LLC|Ltd)\.?$)', '', resolved_name, flags=re.IGNORECASE)
     query = cleaned.replace(" ", "+")
     url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={query}&match=contains&action=getcompany"
@@ -46,8 +74,9 @@ def resolve_cik(company_name: str):
 def get_actual_filing_urls(cik, accession, primary_doc):
     base_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/"
     index_url = base_url + "index.html"
-    report_url = base_url + primary_doc if primary_doc and primary_doc.endswith(".htm") else None
-    excel_url = None
+    report_url = base_url + primary_doc if primary_doc.endswith(".htm") else None
+    excel_url_q = None
+    excel_url_k = None
 
     resp = requests.get(index_url, headers=HEADERS)
     if resp.status_code == 200:
@@ -59,20 +88,23 @@ def get_actual_filing_urls(cik, accession, primary_doc):
             full_url = f"https://www.sec.gov{href}"
             if not report_url and href.endswith(".htm") and ("10q" in href or "10-k" in href):
                 report_url = full_url
-            if href.endswith("financial_report.xlsx"):
-                excel_url = full_url
+            if "10q" in href and "financial_report.xlsx" in href:
+                excel_url_q = full_url
+            if "10k" in href and "financial_report.xlsx" in href:
+                excel_url_k = full_url
 
     return {
-        "10-K/10-Q Index Page": index_url,
+        "10-K / 10-Q Index Page": index_url,
         "Full HTML Filing Report": report_url,
-        "Financial Report (Excel)": excel_url
+        "Financial Report (Excel, 10-Q)": excel_url_q,
+        "Financial Report (Excel, 10-K)": excel_url_k
     }
 
-def get_latest_filing(cik, form_type, years_back=3):
+def get_latest_filing(cik, form_type):
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
     response = requests.get(url, headers=HEADERS)
     if response.status_code != 200:
-        return None, None, None
+        return None, None
 
     data = response.json()
     filings = data.get("filings", {}).get("recent", {})
@@ -81,8 +113,7 @@ def get_latest_filing(cik, form_type, years_back=3):
     primary_docs = filings.get("primaryDocument", [])
     filing_dates = filings.get("filingDate", [])
 
-    cutoff = datetime.now() - timedelta(days=years_back * 365)
-    last_filing_date = None
+    cutoff = datetime.now() - timedelta(days=3*365)
 
     for i, form in enumerate(form_types):
         try:
@@ -91,21 +122,10 @@ def get_latest_filing(cik, form_type, years_back=3):
                 continue
             if form == form_type:
                 accession = accession_numbers[i].replace("-", "")
-                return accession, primary_docs[i], filing_date.date()
+                return accession, primary_docs[i]
         except Exception:
             continue
-
-    # fallback: try older than cutoff
-    for i, form in enumerate(form_types):
-        try:
-            if form == form_type:
-                accession = accession_numbers[i].replace("-", "")
-                filing_date = datetime.strptime(filing_dates[i], "%Y-%m-%d").date()
-                return accession, primary_docs[i], filing_date
-        except Exception:
-            continue
-
-    return None, None, None
+    return None, None
 
 @app.get("/get_filings/{company_name}")
 def get_company_filings(company_name: str):
@@ -113,17 +133,18 @@ def get_company_filings(company_name: str):
     if not cik:
         return {"error": f"Unable to resolve CIK for {company_name}"}
 
-    q_accession, q_doc, q_date = get_latest_filing(cik, "10-Q")
-    k_accession, k_doc, k_date = get_latest_filing(cik, "10-K")
+    q_accession, q_primary_doc = get_latest_filing(cik, "10-Q")
+    k_accession, k_primary_doc = get_latest_filing(cik, "10-K")
 
-    q_urls = get_actual_filing_urls(cik, q_accession, q_doc) if q_accession else {}
-    k_urls = get_actual_filing_urls(cik, k_accession, k_doc) if k_accession else {}
+    q_urls = get_actual_filing_urls(cik, q_accession, q_primary_doc) if q_accession else {}
+    k_urls = get_actual_filing_urls(cik, k_accession, k_primary_doc) if k_accession else {}
 
     return {
         "Matched Company Name": matched_name,
         "CIK": cik,
-        "10-Q Filing Date": str(q_date) if q_date else "None",
-        "10-K Filing Date": str(k_date) if k_date else "None",
-        "10-Q Filing": q_urls if q_urls else "No 10-Q available",
-        "10-K Excel": k_urls.get("Financial Report (Excel)") if k_urls else "No 10-K Excel found"
+        "10-Q Filing": q_urls if q_urls else "No recent 10-Q found",
+        "10-K Excel": {
+            "Excel from 10-Q": q_urls.get("Financial Report (Excel, 10-Q)"),
+            "Excel from 10-K": k_urls.get("Financial Report (Excel, 10-K)")
+        }
     }
