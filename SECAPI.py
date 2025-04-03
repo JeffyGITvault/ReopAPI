@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 app = FastAPI(
     title="Get SEC Filings Data",
     description="Retrieves the latest 10-Q or 10-K SEC filings and Excel financial reports for supported public companies. Uses dynamic CIK resolution with fallback logic and alias matching.",
-    version="v3.2.0"
+    version="v3.2.1"
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
@@ -61,9 +61,9 @@ def get_actual_filing_urls(cik, accession, primary_doc):
                 excel_url = full_url
 
     return {
-        "10-K/10-Q Index Page": index_url,
-        "Full HTML Filing Report": report_url,
-        "Financial Report (Excel)": excel_url
+        "10-K/10-Q Index Page": index_url if "index.html" in index_url else None,
+        "Full HTML Filing Report": report_url if report_url and report_url.endswith(".htm") else None,
+        "Financial Report (Excel)": excel_url if excel_url and excel_url.endswith(".xlsx") else None
     }
 
 def get_filings(cik):
