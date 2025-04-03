@@ -21,8 +21,8 @@ ALIAS_MAP = {
     "goog": "Alphabet Inc.",
     "google": "Alphabet Inc.",
     "meta": "Meta Platforms, Inc.",
-    "fb": "Meta Platforms, Inc.",
-    "cent": "Central Garden & Pet Company",
+    "facebook": "Meta Platforms, Inc.",
+    "central garden": "Central Garden & Pet Company",
     "ball corp": "Ball Corporation",
     "ball": "Ball Corporation"
 }
