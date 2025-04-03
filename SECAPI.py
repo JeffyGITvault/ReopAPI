@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 app = FastAPI(
     title="Get SEC Filings Data",
-    description="Retrieves the latest 10-Q or 10-K SEC filings and Excel financial reports for supported public companies. Uses dynamic CIK resolution with fallback logic and alias matching.",
+    description="Retrieves the latest 10-Q for viewing and 10-K for Excel download. Uses dynamic CIK resolution, alias mapping, and fallback logic.",
     version="v3.2.1"
 )
 
@@ -61,16 +61,16 @@ def get_actual_filing_urls(cik, accession, primary_doc):
                 excel_url = full_url
 
     return {
-        "10-K/10-Q Index Page": index_url if "index.html" in index_url else None,
-        "Full HTML Filing Report": report_url if report_url and report_url.endswith(".htm") else None,
-        "Financial Report (Excel)": excel_url if excel_url and excel_url.endswith(".xlsx") else None
+        "10-K/10-Q Index Page": index_url,
+        "Full HTML Filing Report": report_url,
+        "Financial Report (Excel)": excel_url
     }
 
-def get_filings(cik):
+def get_latest_filing(cik, form_type):
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
     response = requests.get(url, headers=HEADERS)
     if response.status_code != 200:
-        return None
+        return None, None
 
     data = response.json()
     filings = data.get("filings", {}).get("recent", {})
@@ -86,8 +86,7 @@ def get_filings(cik):
             filing_date = datetime.strptime(filing_dates[i], "%Y-%m-%d")
             if filing_date < cutoff:
                 continue
-
-            if form in ("10-Q", "10-K"):
+            if form == form_type:
                 accession = accession_numbers[i].replace("-", "")
                 return accession, primary_docs[i]
         except Exception:
@@ -100,13 +99,15 @@ def get_company_filings(company_name: str):
     if not cik:
         return {"error": f"Unable to resolve CIK for {company_name}"}
 
-    accession, primary_doc = get_filings(cik)
-    if not accession:
-        return {"error": f"No 10-Q or 10-K filings found for {matched_name} in the last 3 years"}
+    q_accession, q_primary_doc = get_latest_filing(cik, "10-Q")
+    k_accession, k_primary_doc = get_latest_filing(cik, "10-K")
 
-    urls = get_actual_filing_urls(cik, accession, primary_doc)
+    q_urls = get_actual_filing_urls(cik, q_accession, q_primary_doc) if q_accession else {}
+    k_urls = get_actual_filing_urls(cik, k_accession, k_primary_doc) if k_accession else {}
+
     return {
-        **urls,
+        "Matched Company Name": matched_name,
         "CIK": cik,
-        "Matched Company Name": matched_name
+        "10-Q Filing": q_urls if q_urls else "No recent 10-Q found",
+        "10-K Excel": k_urls.get("Financial Report (Excel)") if k_urls else "No recent 10-K Excel found"
     }
