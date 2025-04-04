@@ -63,7 +63,10 @@ def load_aliases():
         if os.path.exists(ALIAS_LOCAL_JSON):
             with open(ALIAS_LOCAL_JSON, "r") as f:
                 local_aliases = json.load(f)
-                ALIAS_MAP.update(local_aliases)
+                for key, val in local_aliases.items():
+                    if key in ALIAS_MAP and ALIAS_MAP[key] != val:
+                        print(f"⚠️ Local alias override: '{key}' was '{ALIAS_MAP[key]}', now '{val}'")
+                    ALIAS_MAP[key] = val
     except Exception as e:
         print(f"⚠️ Failed to load local alias_map.json: {e}")
 
@@ -71,7 +74,10 @@ def load_aliases():
         response = requests.get(ALIAS_GITHUB_JSON, headers=HEADERS, timeout=5)
         if response.status_code == 200:
             remote_aliases = response.json()
-            ALIAS_MAP.update(remote_aliases)
+            for key, val in remote_aliases.items():
+                if key in ALIAS_MAP and ALIAS_MAP[key] != val:
+                    print(f"⚠️ Remote alias override: '{key}' was '{ALIAS_MAP[key]}', now '{val}' (source: GitHub)")
+                ALIAS_MAP[key] = val
             print(f"🔁 Loaded {len(remote_aliases)} remote aliases")
         else:
             print("⚠️ Failed to fetch alias_map.json from GitHub")
