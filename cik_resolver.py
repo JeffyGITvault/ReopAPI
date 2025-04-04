@@ -1,81 +1,133 @@
 import json
 import os
+import time
+import csv
 import requests
+from io import StringIO
+from bs4 import BeautifulSoup
+import re
 
 # === Configuration ===
+HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
+SEC_TICKERS_JSON = "https://www.sec.gov/files/company_tickers.json"
+SEC_TICKERS_CSV = "https://www.sec.gov/files/company_tickers.csv"
+ALIAS_GITHUB_JSON = "https://raw.githubusercontent.com/JeffyGITvault/ReopAPI/main/alias_map.json"
+ALIAS_LOCAL_JSON = "alias_map.json"
 
-SEC_TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
-LOCAL_ALIAS_PATH = "alias_map.json"
-USER_AGENT_HEADER = {"User-Agent": "MyCompanyName your.email@example.com"}  # <-- Update this
+# === In-Memory Stores ===
+CIK_CACHE = {}
+ALIAS_MAP = {
+    "meta": "Meta Platforms, Inc.",
+    "goog": "Alphabet Inc.",
+    "google": "Alphabet Inc.",
+    "fb": "Meta Platforms, Inc.",
+    "rh": "RH",
+    "cent": "Central Garden & Pet Company",
+    "ball": "Ball Corporation"
+}
+NEW_ALIASES = {}
+ALIAS_TIMESTAMP = {}
+ALIAS_TTL = 60 * 60 * 24 * 7  # 1 week
 
-# === Utility Functions ===
-
-def load_company_tickers():
-    """Load SEC ticker/CIK data from the SEC website."""
-    response = requests.get(SEC_TICKERS_URL, headers=USER_AGENT_HEADER)
-    if response.status_code != 200:
-        raise Exception(f"Failed to fetch SEC ticker data. Status code: {response.status_code}")
-    return response.json()
-
-def load_alias_map(local_path=LOCAL_ALIAS_PATH):
-    """Load alias-to-ticker map from a local JSON file."""
-    if os.path.exists(local_path):
-        with open(local_path, "r") as f:
-            return json.load(f)
-    else:
-        # Create a default alias map and save it
-        default_aliases = {
-            "restoration hardware": "RH",
-            "williams sonoma": "WSM",
-            "grocery outlet": "GO",
-            "albertsons": "ACI",
-            "home depot": "HD",
-            "lowes": "LOW",
-            "google": "GOOGL",
-            "facebook": "META",
-            "alphabet": "GOOGL",
-            "meta": "META",
-            "apple": "AAPL",
-            "tesla": "TSLA",
-            "boeing": "BA"
-        }
-        with open(local_path, "w") as f:
-            json.dump(default_aliases, f, indent=4)
-        return default_aliases
-
-def resolve_cik(input_name, ticker_data, alias_map):
-    """Resolve user input to a 10-digit CIK using alias map and SEC ticker data."""
-    input_name = input_name.strip().lower()
-
-    # Step 1: Check alias map
-    if input_name in alias_map:
-        input_name = alias_map[input_name].lower()
-
-    # Step 2: Match by ticker
-    for entry in ticker_data.values():
-        if entry['ticker'].lower() == input_name:
-            return str(entry['cik_str']).zfill(10)
-
-    # Step 3: Match by company title
-    for entry in ticker_data.values():
-        if entry['title'].lower() == input_name:
-            return str(entry['cik_str']).zfill(10)
-
-    return None  # Not found
-
-# === Example Execution ===
-
-if __name__ == "__main__":
+# === Loaders ===
+def load_company_tickers_json():
     try:
-        # Load data
-        ticker_data = load_company_tickers()
-        alias_map = load_alias_map()
-
-        # Test inputs
-        test_inputs = ["Restoration Hardware", "GOOGL", "Meta", "Home Depot", "Tesla", "AAPL"]
-        for name in test_inputs:
-            cik = resolve_cik(name, ticker_data, alias_map)
-            print(f"{name} => CIK: {cik}")
-
+        resp = requests.get(SEC_TICKERS_JSON, headers=HEADERS)
+        if resp.status_code == 200:
+            return {v['ticker'].lower(): {
+                "cik": str(v['cik_str']).zfill(10),
+                "title": v['title']
+            } for v in resp.json().values()}
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"⚠️ JSON CIK load error: {e}")
+    return {}
+
+def load_company_tickers_csv():
+    try:
+        resp = requests.get(SEC_TICKERS_CSV, headers=HEADERS)
+        if resp.status_code == 200:
+            content = resp.text
+            reader = csv.DictReader(StringIO(content))
+            return {
+                row['ticker'].lower().strip(): {
+                    "cik": str(row['cik_str']).zfill(10),
+                    "title": row['title'].strip()
+                } for row in reader
+            }
+    except Exception as e:
+        print(f"⚠️ CSV CIK load error: {e}")
+    return {}
+
+def load_aliases():
+    try:
+        if os.path.exists(ALIAS_LOCAL_JSON):
+            with open(ALIAS_LOCAL_JSON, "r") as f:
+                local_aliases = json.load(f)
+                ALIAS_MAP.update(local_aliases)
+    except Exception as e:
+        print(f"⚠️ Failed to load local alias_map.json: {e}")
+
+    try:
+        response = requests.get(ALIAS_GITHUB_JSON, headers=HEADERS, timeout=5)
+        if response.status_code == 200:
+            remote_aliases = response.json()
+            ALIAS_MAP.update(remote_aliases)
+            print(f"🔁 Loaded {len(remote_aliases)} remote aliases")
+        else:
+            print("⚠️ Failed to fetch alias_map.json from GitHub")
+    except Exception as e:
+        print(f"⚠️ Alias fetch error: {e}")
+
+def init_cache():
+    global CIK_CACHE
+    CIK_CACHE = load_company_tickers_json()
+    if not CIK_CACHE:
+        print("⚠️ Falling back to CSV CIK cache...")
+        CIK_CACHE = load_company_tickers_csv()
+    load_aliases()
+
+# === Alias Recorder ===
+def record_alias(user_input: str, resolved_name: str):
+    alias_key = user_input.lower()
+    now = time.time()
+    if alias_key not in ALIAS_MAP or (alias_key in ALIAS_TIMESTAMP and now - ALIAS_TIMESTAMP[alias_key] > ALIAS_TTL):
+        NEW_ALIASES[alias_key] = resolved_name
+        ALIAS_TIMESTAMP[alias_key] = now
+        print(f"🆕 Learned alias: {alias_key} → {resolved_name}")
+
+# === Core Resolver ===
+def resolve_cik(company_name: str):
+    name_key = company_name.lower().strip()
+    resolved_name = ALIAS_MAP.get(name_key, company_name)
+
+    # 1. Direct match from cache (by ticker)
+    if name_key in CIK_CACHE:
+        record_alias(company_name, CIK_CACHE[name_key]['title'])
+        return CIK_CACHE[name_key]['cik'], CIK_CACHE[name_key]['title']
+
+    # 2. Match by official title
+    for ticker, data in CIK_CACHE.items():
+        if data['title'].lower() == name_key:
+            record_alias(company_name, data['title'])
+            return data['cik'], data['title']
+
+    # 3. Fallback: web scrape
+    cleaned = re.sub(r'(,?\s+(Inc|Corp|Corporation|LLC|Ltd)\.?)$', '', resolved_name, flags=re.IGNORECASE)
+    query = cleaned.replace(" ", "+")
+    url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={query}&match=contains&action=getcompany"
+    try:
+        resp = requests.get(url, headers=HEADERS)
+        if resp.status_code == 200:
+            soup = BeautifulSoup(resp.text, "html.parser")
+            cik_tag = soup.find("a", href=True, string=lambda x: x and x.isdigit())
+            if cik_tag:
+                cik = cik_tag.text.strip().zfill(10)
+                record_alias(company_name, resolved_name)
+                return cik, resolved_name
+    except Exception as e:
+        print(f"⚠️ Web fallback failed: {e}")
+
+    return None, resolved_name
+
+# === Initialize on import ===
+init_cache()
