@@ -6,6 +6,10 @@ import requests
 from io import StringIO
 from bs4 import BeautifulSoup
 import re
+from dotenv import load_dotenv
+
+# === Load .env if present ===
+load_dotenv()
 
 # === Configuration ===
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
