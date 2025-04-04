@@ -6,6 +6,7 @@ import json
 import csv
 from datetime import datetime, timedelta
 from io import StringIO
+import time
 
 app = FastAPI(
     title="Get SEC Filings Data",
@@ -30,7 +31,8 @@ ALIAS_MAP = {
 
 CIK_CACHE = {}
 NEW_ALIASES = {}
-
+ALIAS_TIMESTAMP = {}
+ALIAS_TTL = 60 * 60 * 24 * 7  # 1 week
 
 def load_cik_cache():
     try:
@@ -46,9 +48,7 @@ def load_cik_cache():
     except Exception as e:
         print(f"Failed to load CIK cache: {e}")
 
-
 load_cik_cache()
-
 
 def load_aliases_from_github():
     try:
@@ -62,15 +62,15 @@ def load_aliases_from_github():
     except Exception as e:
         print(f"⚠️ Alias fetch error: {e}")
 
-
 load_aliases_from_github()
 
-
 def record_alias(user_input: str, resolved_name: str):
-    if user_input.lower() not in ALIAS_MAP:
-        NEW_ALIASES[user_input.lower()] = resolved_name
-        print(f"🆕 Learned alias: {user_input.lower()} → {resolved_name}")
-
+    alias_key = user_input.lower()
+    now = time.time()
+    if alias_key not in ALIAS_MAP or (alias_key in ALIAS_TIMESTAMP and now - ALIAS_TIMESTAMP[alias_key] > ALIAS_TTL):
+        NEW_ALIASES[alias_key] = resolved_name
+        ALIAS_TIMESTAMP[alias_key] = now
+        print(f"🆕 Learned alias: {alias_key} → {resolved_name}")
 
 def resolve_cik(company_name: str):
     original_name = company_name
@@ -96,14 +96,12 @@ def resolve_cik(company_name: str):
         return cik, resolved_name
     return None, resolved_name
 
-
 def validate_url(url):
     try:
         resp = requests.head(url, headers=HEADERS)
         return resp.status_code == 200
     except:
         return False
-
 
 def get_actual_filing_urls(cik, accession, primary_doc):
     base_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/"
@@ -114,6 +112,7 @@ def get_actual_filing_urls(cik, accession, primary_doc):
     resp = requests.get(index_url, headers=HEADERS)
     if resp.status_code == 200:
         soup = BeautifulSoup(resp.text, "html.parser")
+        found_excel_files = []
         for a in soup.find_all("a"):
             href = a.get("href", "").lower()
             if not href:
@@ -121,15 +120,19 @@ def get_actual_filing_urls(cik, accession, primary_doc):
             full_url = f"https://www.sec.gov{href}"
             if not report_url and href.endswith(".htm") and ("10q" in href or "10-k" in href):
                 report_url = full_url
-            if href.endswith("financial_report.xlsx") and validate_url(full_url):
-                excel_url = full_url
+            if href.endswith(".xlsx") and "financial" in href:
+                found_excel_files.append(full_url)
+
+        for url in found_excel_files:
+            if validate_url(url):
+                excel_url = url
+                break
 
     return {
         "10-K/10-Q Index Page": index_url,
         "Full HTML Filing Report": report_url,
         "Financial Report (Excel)": excel_url
     }
-
 
 def get_latest_filing(cik, form_type):
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
@@ -149,15 +152,17 @@ def get_latest_filing(cik, form_type):
     for i, form in enumerate(form_types):
         try:
             filing_date = datetime.strptime(filing_dates[i], "%Y-%m-%d")
+            print(f"🔍 Checking {form} filed on {filing_date.date()}")
             if filing_date < cutoff:
+                print(f"⏭️ Skipped old filing: {filing_date.date()}")
                 continue
             if form == form_type:
                 accession = accession_numbers[i].replace("-", "")
                 return accession, primary_docs[i]
-        except Exception:
+        except Exception as e:
+            print(f"⚠️ Error parsing filing date: {e}")
             continue
     return None, None
-
 
 @app.get("/get_filings/{company_name}")
 def get_company_filings(company_name: str):
