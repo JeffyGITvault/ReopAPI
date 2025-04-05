@@ -82,16 +82,23 @@ def get_latest_filing(cik, form_type):
 
 @app.get("/get_filings/{company_name}")
 def get_company_filings(company_name: str):
-    cik, matched_name = resolve_cik(company_name)
+    # Normalize input for alias matching
+    input_key = company_name.lower().strip()
+
+    # Resolve CIK and matched name
+    cik, matched_name = resolve_cik(input_key)
     if not cik:
         return {"error": f"Unable to resolve CIK for {company_name}"}
 
+    # Attempt to pull both 10-Q and 10-K filings
     q_accession, q_primary_doc = get_latest_filing(cik, "10-Q")
     k_accession, k_primary_doc = get_latest_filing(cik, "10-K")
 
+    # Build filing URLs if filings exist
     q_urls = get_actual_filing_urls(cik, q_accession, q_primary_doc) if q_accession else {}
     k_urls = get_actual_filing_urls(cik, k_accession, k_primary_doc) if k_accession else {}
 
+    # Always try pushing aliases after resolving
     push_new_aliases_to_github()
 
     return {
