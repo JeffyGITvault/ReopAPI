@@ -2,11 +2,9 @@ from fastapi import FastAPI
 import requests
 from bs4 import BeautifulSoup
 import re
-import json
-import csv
 from datetime import datetime, timedelta
-from io import StringIO
-import time
+
+from cik_resolver import resolve_cik, push_new_aliases_to_github
 
 app = FastAPI(
     title="Get SEC Filings Data",
@@ -15,87 +13,8 @@ app = FastAPI(
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
-CIK_FTP_CSV = "https://www.sec.gov/files/company_tickers.csv"
-ALIAS_GITHUB_JSON = "https://raw.githubusercontent.com/JeffyGITvault/ReopAPI/main/alias_map.json"
 
-# Baseline hardcoded aliases
-ALIAS_MAP = {
-    "meta": "Meta Platforms, Inc.",
-    "goog": "Alphabet Inc.",
-    "google": "Alphabet Inc.",
-    "fb": "Meta Platforms, Inc.",
-    "rh": "RH",
-    "cent": "Central Garden & Pet Company",
-    "ball": "Ball Corporation"
-}
-
-CIK_CACHE = {}
-NEW_ALIASES = {}
-ALIAS_TIMESTAMP = {}
-ALIAS_TTL = 60 * 60 * 24 * 7  # 1 week
-
-def load_cik_cache():
-    try:
-        resp = requests.get(CIK_FTP_CSV, headers=HEADERS)
-        if resp.status_code == 200:
-            content = resp.text
-            reader = csv.DictReader(StringIO(content))
-            for row in reader:
-                ticker = row['ticker'].lower().strip()
-                title = row['title'].strip()
-                cik = str(row['cik_str']).zfill(10)
-                CIK_CACHE[ticker] = {"cik": cik, "name": title}
-    except Exception as e:
-        print(f"Failed to load CIK cache: {e}")
-
-load_cik_cache()
-
-def load_aliases_from_github():
-    try:
-        response = requests.get(ALIAS_GITHUB_JSON, headers=HEADERS, timeout=5)
-        if response.status_code == 200:
-            remote_aliases = response.json()
-            ALIAS_MAP.update(remote_aliases)
-            print(f"🔁 Loaded {len(remote_aliases)} remote aliases")
-        else:
-            print("⚠️ Failed to fetch alias_map.json")
-    except Exception as e:
-        print(f"⚠️ Alias fetch error: {e}")
-
-load_aliases_from_github()
-
-def record_alias(user_input: str, resolved_name: str):
-    alias_key = user_input.lower()
-    now = time.time()
-    if alias_key not in ALIAS_MAP or (alias_key in ALIAS_TIMESTAMP and now - ALIAS_TIMESTAMP[alias_key] > ALIAS_TTL):
-        NEW_ALIASES[alias_key] = resolved_name
-        ALIAS_TIMESTAMP[alias_key] = now
-        print(f"🆕 Learned alias: {alias_key} → {resolved_name}")
-
-def resolve_cik(company_name: str):
-    original_name = company_name
-    name_key = company_name.lower().strip()
-    resolved_name = ALIAS_MAP.get(name_key, company_name)
-
-    if name_key in CIK_CACHE:
-        record_alias(company_name, CIK_CACHE[name_key]['name'])
-        return CIK_CACHE[name_key]['cik'], CIK_CACHE[name_key]['name']
-
-    cleaned = re.sub(r'(,?\s+(Inc|Corp|Corporation|LLC|Ltd)\.?)$', '', resolved_name, flags=re.IGNORECASE)
-    query = cleaned.replace(" ", "+")
-    url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={query}&match=contains&action=getcompany"
-    resp = requests.get(url, headers=HEADERS)
-    if resp.status_code != 200:
-        return None, resolved_name
-
-    soup = BeautifulSoup(resp.text, "html.parser")
-    cik_tag = soup.find("a", href=True, string=lambda x: x and x.isdigit())
-    if cik_tag:
-        cik = cik_tag.text.strip().zfill(10)
-        record_alias(company_name, resolved_name)
-        return cik, resolved_name
-    return None, resolved_name
-
+# === Utility ===
 def validate_url(url):
     try:
         resp = requests.head(url, headers=HEADERS)
@@ -152,15 +71,12 @@ def get_latest_filing(cik, form_type):
     for i, form in enumerate(form_types):
         try:
             filing_date = datetime.strptime(filing_dates[i], "%Y-%m-%d")
-            print(f"🔍 Checking {form} filed on {filing_date.date()}")
             if filing_date < cutoff:
-                print(f"⏭️ Skipped old filing: {filing_date.date()}")
                 continue
             if form == form_type:
                 accession = accession_numbers[i].replace("-", "")
                 return accession, primary_docs[i]
-        except Exception as e:
-            print(f"⚠️ Error parsing filing date: {e}")
+        except:
             continue
     return None, None
 
@@ -175,6 +91,8 @@ def get_company_filings(company_name: str):
 
     q_urls = get_actual_filing_urls(cik, q_accession, q_primary_doc) if q_accession else {}
     k_urls = get_actual_filing_urls(cik, k_accession, k_primary_doc) if k_accession else {}
+
+    push_new_aliases_to_github()
 
     return {
         "Matched Company Name": matched_name,
