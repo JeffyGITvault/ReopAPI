@@ -4,4 +4,4 @@ uvicorn
 requests
 beautifulsoup4
 datetime  
-
+dotenv
