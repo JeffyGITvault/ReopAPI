@@ -178,6 +178,9 @@ init_cache()
 if __name__ == "__main__":
     # Temporary alias learning test
     record_alias("nvidia", "NVIDIA Corporation")
+print("nvidia" in ALIAS_MAP)  # Should print False if it's new
+print("Before record_alias:", NEW_ALIASES)
+
     push_new_aliases_to_github()
 
 
