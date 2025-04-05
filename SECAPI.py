@@ -97,6 +97,7 @@ def get_company_filings(company_name: str):
     if NEW_ALIASES:
         print(f"🔄 Committing {len(NEW_ALIASES)} learned aliases to GitHub...")
         push_new_aliases_to_github()
+        NEW_ALIASES.clear()  # clear after pushing to avoid duplicates or missed commits
 
     return {
         "Matched Company Name": matched_name,
