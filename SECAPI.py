@@ -100,3 +100,11 @@ def get_company_filings(company_name: str):
         "10-Q Filing": q_urls if q_urls else "No recent 10-Q found",
         "10-K Excel": k_urls.get("Financial Report (Excel)") if k_urls else "No recent 10-K Excel found"
     }
+
+@app.get("/docs/openapi", include_in_schema=False)
+def get_openapi_json():
+    url = "https://raw.githubusercontent.com/JeffyGITvault/ReopAPI/main/openapi.json"
+    response = requests.get(url, headers=HEADERS)
+    if response.status_code == 200:
+        return response.json()
+    return {"error": "Unable to fetch OpenAPI JSON from GitHub"}
