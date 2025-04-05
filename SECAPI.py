@@ -3,8 +3,11 @@ import requests
 from bs4 import BeautifulSoup
 import re
 from datetime import datetime, timedelta
+import base64
+import json
+import os
 
-from cik_resolver import resolve_cik, push_new_aliases_to_github, NEW_ALIASES
+from cik_resolver import resolve_cik, NEW_ALIASES
 
 app = FastAPI(
     title="Get SEC Filings Data",
@@ -13,6 +16,9 @@ app = FastAPI(
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+ALIAS_GITHUB_JSON = "https://raw.githubusercontent.com/JeffyGITvault/ReopAPI/main/alias_map.json"
+ALIAS_PUSH_URL = "https://api.github.com/repos/JeffyGITvault/ReopAPI/contents/alias_map.json"
 
 # === Utility ===
 def validate_url(url):
@@ -21,6 +27,49 @@ def validate_url(url):
         return resp.status_code == 200
     except:
         return False
+
+def push_new_aliases_to_github():
+    if not NEW_ALIASES or not GITHUB_TOKEN:
+        return
+
+    try:
+        headers = {
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github+json"
+        }
+
+        # Step 1: Fetch current alias_map.json
+        get_resp = requests.get(ALIAS_PUSH_URL, headers=headers)
+        if get_resp.status_code != 200:
+            print(f"❌ Failed to fetch alias_map.json metadata: {get_resp.status_code}")
+            return
+
+        sha = get_resp.json().get("sha")
+        current_content = requests.get(ALIAS_GITHUB_JSON, headers=HEADERS).json()
+
+        updated_content = {**current_content, **NEW_ALIASES}
+
+        if updated_content == current_content:
+            print("⚠️ No new changes to commit — skipping push.")
+            return
+
+        encoded = base64.b64encode(json.dumps(updated_content, indent=4).encode("utf-8")).decode("utf-8")
+
+        commit_payload = {
+            "message": "🔁 Update alias_map.json with learned aliases",
+            "content": encoded,
+            "sha": sha
+        }
+
+        put_resp = requests.put(ALIAS_PUSH_URL, headers=headers, json=commit_payload)
+        if put_resp.status_code in [200, 201]:
+            print("✅ GitHub alias_map.json updated successfully")
+        else:
+            print(f"❌ GitHub update failed: {put_resp.status_code} → {put_resp.text}")
+
+    except Exception as e:
+        print(f"❌ Exception during GitHub alias push: {e}")
+
 
 def get_actual_filing_urls(cik, accession, primary_doc):
     base_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/"
@@ -93,7 +142,6 @@ def get_company_filings(company_name: str):
     q_urls = get_actual_filing_urls(cik, q_accession, q_primary_doc) if q_accession else {}
     k_urls = get_actual_filing_urls(cik, k_accession, k_primary_doc) if k_accession else {}
 
-    # Final push of valid learned aliases
     if NEW_ALIASES:
         print(f"🔄 Committing {len(NEW_ALIASES)} learned aliases to GitHub...")
         push_new_aliases_to_github()
