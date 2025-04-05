@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 import re
 from datetime import datetime, timedelta
 
-from cik_resolver import resolve_cik, push_new_aliases_to_github
+from cik_resolver import resolve_cik, push_new_aliases_to_github, NEW_ALIASES
 
 app = FastAPI(
     title="Get SEC Filings Data",
@@ -93,7 +93,10 @@ def get_company_filings(company_name: str):
     q_urls = get_actual_filing_urls(cik, q_accession, q_primary_doc) if q_accession else {}
     k_urls = get_actual_filing_urls(cik, k_accession, k_primary_doc) if k_accession else {}
 
-    push_new_aliases_to_github()
+    # Final push of valid learned aliases
+    if NEW_ALIASES:
+        print(f"🔄 Committing {len(NEW_ALIASES)} learned aliases to GitHub...")
+        push_new_aliases_to_github()
 
     return {
         "Matched Company Name": matched_name,
@@ -113,4 +116,3 @@ def get_openapi_json():
     if response.status_code == 200:
         return response.json()
     return {"error": "Unable to fetch OpenAPI JSON from GitHub"}
-
