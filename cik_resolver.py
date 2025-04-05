@@ -176,19 +176,3 @@ def resolve_cik(company_name: str):
 # === Initialize on import ===
 init_cache()
 
-if __name__ == "__main__":
-    print("✅ ENTERED MAIN")
-
-    alias_key = "nvidia"
-    resolved_name = "NVIDIA Corporation"
-
-    # Ensure alias is not already mapped
-    ALIAS_MAP.pop(alias_key, None)
-
-    print("🔁 Forcing alias learning...")
-    record_alias(alias_key, resolved_name)
-
-    print("📦 NEW_ALIASES contents:", json.dumps(NEW_ALIASES, indent=2))
-
-    print("🚀 Attempting GitHub push...")
-    push_new_aliases_to_github()
