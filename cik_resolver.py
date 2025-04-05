@@ -176,10 +176,21 @@ def resolve_cik(company_name: str):
 # === Initialize on import ===
 init_cache()
 if __name__ == "__main__":
-    # Temporary alias learning test
-    record_alias("nvidia", "NVIDIA Corporation")
-print("nvidia" in ALIAS_MAP)  # Should print False if it's new
-print("Before record_alias:", NEW_ALIASES)
+    alias_key = "nvidia"
+    resolved_name = "NVIDIA Corporation"
+
+    # Remove if exists just in case
+    ALIAS_MAP.pop(alias_key, None)
+
+    # Force record and confirm
+    print("🔁 Forcing alias learning...")
+    record_alias(alias_key, resolved_name)
+
+    print("📦 NEW_ALIASES contents:", json.dumps(NEW_ALIASES, indent=2))
+
+    print("🚀 Attempting GitHub push...")
+    push_new_aliases_to_github()
+
 
     push_new_aliases_to_github()
 
