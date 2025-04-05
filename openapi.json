@@ -1,0 +1,103 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Get SEC Filings Data",
+    "description": "Fetches the latest 10-Q for reading and 10-K financials (Excel) using SEC data. CIK resolution supports aliases via GitHub, is case-insensitive, and avoids redundant mappings. Alias learning updates only valid matches and syncs to GitHub.",
+    "version": "v4.2.4"
+  },
+  "servers": [
+    {
+      "url": "https://secapi-5s5x.onrender.com"
+    }
+  ],
+  "paths": {
+    "/get_filings/{company_name}": {
+      "get": {
+        "description": "Returns the latest 10-Q HTML and 10-K Excel filing links for a company. Now with smarter fallback matching, alias learning avoids duplicates, and GitHub sync stores only validated aliases.",
+        "operationId": "GetSECFilings",
+        "parameters": [
+          {
+            "name": "company_name",
+            "in": "path",
+            "description": "Public company name, alias, or ticker symbol (e.g., AAPL, Apple, Meta, Facebook, RH, NVIDIA).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns matched company name, resolved CIK, most recent 10-Q HTML, and Excel from latest 10-K if available.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Matched Company Name": {
+                      "type": "string",
+                      "description": "SEC-registered name that best matches the input"
+                    },
+                    "CIK": {
+                      "type": "string",
+                      "description": "Central Index Key used to locate filings"
+                    },
+                    "10-Q Filing": {
+                      "description": "Most recent 10-Q links or a fallback string if none found",
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "10-K/10-Q Index Page": {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            "Full HTML Filing Report": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "uri"
+                            },
+                            "Financial Report (Excel)": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "uri"
+                            }
+                          }
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "10-K Excel": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uri",
+                      "description": "Excel financial download link from the latest 10-K"
+                    }
+                  },
+                  "required": [
+                    "Matched Company Name",
+                    "CIK"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No matching company or filings found"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {}
+  }
+}
