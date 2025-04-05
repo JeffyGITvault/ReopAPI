@@ -18,9 +18,8 @@ SEC_TICKERS_CSV = "https://www.sec.gov/files/company_tickers.csv"
 ALIAS_GITHUB_JSON = "https://raw.githubusercontent.com/JeffyGITvault/ReopAPI/main/alias_map.json"
 ALIAS_LOCAL_JSON = "alias_map.json"
 ALIAS_PUSH_URL = "https://api.github.com/repos/JeffyGITvault/ReopAPI/contents/alias_map.json"
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")  # Securely provide as env var
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
-# === In-Memory Stores ===
 CIK_CACHE = {}
 ALIAS_MAP = {
     "meta": "Meta Platforms, Inc.",
@@ -31,12 +30,11 @@ ALIAS_MAP = {
     "cent": "Central Garden & Pet Company",
     "ball": "Ball Corporation"
 }
-PROTECTED_ALIASES = {"meta", "facebook", "google", "alphabet", "fb"}  # Cannot be overridden
+PROTECTED_ALIASES = {"meta", "facebook", "google", "alphabet", "fb"}
 NEW_ALIASES = {}
 ALIAS_TIMESTAMP = {}
-ALIAS_TTL = 60 * 60 * 24 * 7  # 1 week
+ALIAS_TTL = 60 * 60 * 24 * 7
 
-# === Loaders ===
 def load_company_tickers_json():
     try:
         resp = requests.get(SEC_TICKERS_JSON, headers=HEADERS)
@@ -103,16 +101,15 @@ def push_new_aliases_to_github():
             "Authorization": f"token {GITHUB_TOKEN}",
             "Accept": "application/vnd.github+json"
         }
-        # Get the current file SHA
         get_resp = requests.get(ALIAS_PUSH_URL, headers=headers)
         if get_resp.status_code == 200:
             sha = get_resp.json().get("sha")
-            current_content = json.loads(
-                requests.get(ALIAS_GITHUB_JSON, headers=HEADERS).text)
+            current_content = json.loads(requests.get(ALIAS_GITHUB_JSON, headers=HEADERS).text)
             updated = {**current_content, **NEW_ALIASES}
+            encoded = json.dumps(updated, indent=4).encode("utf-8").decode("utf-8").encode("base64").decode()
             commit_msg = {
                 "message": "🔁 Update alias_map.json with learned aliases",
-                "content": json.dumps(updated, indent=4).encode("utf-8").decode("utf-8").encode("base64").decode(),
+                "content": encoded,
                 "sha": sha
             }
             put_resp = requests.put(ALIAS_PUSH_URL, headers=headers, json=commit_msg)
@@ -131,18 +128,19 @@ def init_cache():
         CIK_CACHE = load_company_tickers_csv()
     load_aliases()
 
-# === Alias Recorder ===
 def record_alias(user_input: str, resolved_name: str):
-    alias_key = user_input.lower()
+    alias_key = user_input.lower().strip()
+    resolved_clean = resolved_name.strip()
     if alias_key in PROTECTED_ALIASES:
+        return
+    if alias_key == resolved_clean.lower():
         return
     now = time.time()
     if alias_key not in ALIAS_MAP or (alias_key in ALIAS_TIMESTAMP and now - ALIAS_TIMESTAMP[alias_key] > ALIAS_TTL):
-        NEW_ALIASES[alias_key] = resolved_name
+        NEW_ALIASES[alias_key] = resolved_clean
         ALIAS_TIMESTAMP[alias_key] = now
-        print(f"🆕 Learned alias: {alias_key} → {resolved_name}")
+        print(f"🆕 Learned alias: {alias_key} → {resolved_clean}")
 
-# === Core Resolver ===
 def resolve_cik(company_name: str):
     name_key = company_name.lower().strip()
     resolved_name = ALIAS_MAP.get(name_key, company_name)
@@ -173,6 +171,4 @@ def resolve_cik(company_name: str):
 
     return None, resolved_name
 
-# === Initialize on import ===
 init_cache()
-
