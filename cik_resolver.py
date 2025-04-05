@@ -175,4 +175,9 @@ def resolve_cik(company_name: str):
 
 # === Initialize on import ===
 init_cache()
+if __name__ == "__main__":
+    # Temporary alias learning test
+    record_alias("nvidia", "NVIDIA Corporation")
+    push_new_aliases_to_github()
+
 push_new_aliases_to_github()
