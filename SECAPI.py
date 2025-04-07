@@ -38,7 +38,6 @@ def push_new_aliases_to_github():
             "Accept": "application/vnd.github+json"
         }
 
-        # Step 1: Fetch current alias_map.json
         get_resp = requests.get(ALIAS_PUSH_URL, headers=headers)
         if get_resp.status_code != 200:
             print(f"❌ Failed to fetch alias_map.json metadata: {get_resp.status_code}")
@@ -47,12 +46,13 @@ def push_new_aliases_to_github():
         sha = get_resp.json().get("sha")
         current_content = requests.get(ALIAS_GITHUB_JSON, headers=HEADERS).json()
 
-        updated_content = {**current_content, **NEW_ALIASES}
-
-        if updated_content == current_content:
-            print("⚠️ No new changes to commit — skipping push.")
+        # Filter: Only push aliases that don’t already exist with the same value
+        delta = {k: v for k, v in NEW_ALIASES.items() if current_content.get(k) != v}
+        if not delta:
+            print("⚠️ No new aliases to update — skipping push.")
             return
 
+        updated_content = {**current_content, **delta}
         encoded = base64.b64encode(json.dumps(updated_content, indent=4).encode("utf-8")).decode("utf-8")
 
         commit_payload = {
@@ -63,7 +63,7 @@ def push_new_aliases_to_github():
 
         put_resp = requests.put(ALIAS_PUSH_URL, headers=headers, json=commit_payload)
         if put_resp.status_code in [200, 201]:
-            print("✅ GitHub alias_map.json updated successfully")
+            print(f"✅ GitHub alias_map.json updated successfully with {len(delta)} aliases")
         else:
             print(f"❌ GitHub update failed: {put_resp.status_code} → {put_resp.text}")
 
@@ -133,6 +133,11 @@ def get_latest_filing(cik, form_type):
 def get_company_filings(company_name: str):
     input_key = company_name.lower().strip()
     cik, matched_name = resolve_cik(input_key)
+
+    # Reject alias learning if it just parrots back the input
+    if cik and input_key != matched_name.lower().strip():
+        NEW_ALIASES[input_key] = matched_name
+
     if not cik:
         return {"error": f"Unable to resolve CIK for {company_name}"}
 
