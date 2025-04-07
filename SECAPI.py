@@ -30,6 +30,7 @@ def validate_url(url):
 
 def push_new_aliases_to_github():
     if not NEW_ALIASES or not GITHUB_TOKEN:
+        print("⚠️ No aliases or token present, skipping push.")
         return
 
     try:
@@ -44,9 +45,12 @@ def push_new_aliases_to_github():
             return
 
         sha = get_resp.json().get("sha")
-        current_content = requests.get(ALIAS_GITHUB_JSON, headers=HEADERS).json()
+        content_resp = requests.get(ALIAS_GITHUB_JSON, headers=HEADERS)
+        if content_resp.status_code != 200:
+            print(f"❌ Failed to fetch current alias_map.json: {content_resp.status_code}")
+            return
 
-        # Filter: Only push aliases that don’t already exist with the same value
+        current_content = content_resp.json()
         delta = {k: v for k, v in NEW_ALIASES.items() if current_content.get(k) != v}
         if not delta:
             print("⚠️ No new aliases to update — skipping push.")
@@ -64,6 +68,7 @@ def push_new_aliases_to_github():
         put_resp = requests.put(ALIAS_PUSH_URL, headers=headers, json=commit_payload)
         if put_resp.status_code in [200, 201]:
             print(f"✅ GitHub alias_map.json updated successfully with {len(delta)} aliases")
+            NEW_ALIASES.clear()
         else:
             print(f"❌ GitHub update failed: {put_resp.status_code} → {put_resp.text}")
 
@@ -134,7 +139,6 @@ def get_company_filings(company_name: str):
     input_key = company_name.lower().strip()
     cik, matched_name = resolve_cik(input_key)
 
-    # Reject alias learning if it just parrots back the input
     if cik and input_key != matched_name.lower().strip():
         NEW_ALIASES[input_key] = matched_name
 
@@ -150,7 +154,6 @@ def get_company_filings(company_name: str):
     if NEW_ALIASES:
         print(f"🔄 Committing {len(NEW_ALIASES)} learned aliases to GitHub...")
         push_new_aliases_to_github()
-        NEW_ALIASES.clear()
 
     return {
         "Matched Company Name": matched_name,
