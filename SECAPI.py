@@ -119,6 +119,9 @@ def get_company_filings(company_name: str):
     q_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{q_accession}/{q_primary_doc}" if q_accession and q_primary_doc else None
     k_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{k_accession}/{k_primary_doc}" if k_accession and k_primary_doc else None
 
+    formatted_q = f"[📘 View Filing]({q_url})" if q_url else "❌ Not available"
+    formatted_k = f"[📊 Download Excel]({k_url})" if k_url and k_url.endswith(".xlsx") else "❌ Not available"
+
     if NEW_ALIASES:
         print(f"🔄 Committing {len(NEW_ALIASES)} learned aliases to GitHub...")
         push_new_aliases_to_github()
@@ -126,8 +129,8 @@ def get_company_filings(company_name: str):
     return {
         "Matched Company Name": matched_name,
         "CIK": cik,
-        "10-Q Filing": q_url if q_url else "No recent 10-Q found",
-        "10-K Excel": k_url if k_url and k_url.endswith(".xlsx") else "❌ Not available"
+        "10-Q Filing": formatted_q,
+        "10-K Excel": formatted_k
     }
 
 @app.get("/docs/openapi", include_in_schema=False)
