@@ -51,7 +51,12 @@
                       "description": "Direct URL to Excel financials from 10-K (if any)."
                     }
                   },
-                  "required": ["Matched Company Name", "CIK"]
+                  "required": [
+                    "Matched Company Name",
+                    "CIK",
+                    "10-Q Filing",
+                    "10-K Excel"
+                  ]
                 }
               }
             }
@@ -63,7 +68,7 @@
       }
     }
   },
-  "components": {}
- "schemas": {}
+  "components": {
+    "schemas": {}
   }
 }
