@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import base64
 import json
 import os
+from difflib import SequenceMatcher
 
 from cik_resolver import resolve_cik, NEW_ALIASES
 
@@ -27,6 +28,9 @@ def validate_url(url):
         return resp.status_code == 200
     except:
         return False
+
+def similar(a, b):
+    return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
 def push_new_aliases_to_github():
     if not NEW_ALIASES or not GITHUB_TOKEN:
@@ -107,8 +111,14 @@ def get_company_filings(company_name: str):
     input_key = company_name.lower().strip()
     cik, matched_name = resolve_cik(input_key)
 
-    if cik and input_key != matched_name.lower().strip():
-        NEW_ALIASES[input_key] = matched_name
+    if cik:
+        if input_key != matched_name.lower().strip():
+            if similar(input_key, matched_name) > 0.8:
+                NEW_ALIASES[input_key] = matched_name
+            else:
+                print(f"⚠️ Match for '{company_name}' → '{matched_name}' failed similarity check")
+        else:
+            NEW_ALIASES[input_key] = matched_name
 
     if not cik:
         return {"error": f"Unable to resolve CIK for {company_name}"}
