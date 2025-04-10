@@ -112,11 +112,12 @@ def resolve_cik(company_name: str):
     # Priority 2: Alias map lookup
     resolved_name = ALIAS_MAP.get(name_key, company_name)
 
-    # Priority 3: Fuzzy match against SEC titles
+    # Priority 3: Fuzzy match with validation (title must differ from input and be similar)
     for data in CIK_CACHE.values():
-        if similar(name_key, data['title']) >= 0.8:
-            record_alias(company_name, data['title'])
-            return data['cik'], data['title']
+        title = data['title']
+        if name_key != title.lower().strip() and similar(name_key, title) >= 0.8:
+            record_alias(company_name, title)
+            return data['cik'], title
 
     # Priority 4: Last-resort web scrape fallback
     cleaned = re.sub(r'(,?\s+(Inc|Corp|Corporation|LLC|Ltd)\.?$)', '', resolved_name, flags=re.IGNORECASE)
