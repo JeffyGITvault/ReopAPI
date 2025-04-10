@@ -8,7 +8,7 @@ import json
 import os
 from difflib import SequenceMatcher
 
-from cik_resolver import resolve_cik, NEW_ALIASES
+from cik_resolver import NEW_ALIASES, resolve_cik as _resolve_cik_raw
 
 app = FastAPI(
     title="Get SEC Filings Data",
@@ -31,6 +31,14 @@ def validate_url(url):
 
 def similar(a, b):
     return SequenceMatcher(None, a.lower(), b.lower()).ratio()
+
+def resolve_cik_safe(company_name):
+    cik, matched_name = _resolve_cik_raw(company_name)
+    threshold = 0.8
+    if cik and similar(company_name, matched_name) >= threshold:
+        return cik, matched_name
+    print(f"⚠️ Fuzzy match below threshold: '{company_name}' → '{matched_name}'")
+    return None, company_name
 
 def push_new_aliases_to_github():
     if not NEW_ALIASES or not GITHUB_TOKEN:
@@ -109,16 +117,10 @@ def get_latest_filing(cik, form_type):
 @app.get("/get_filings/{company_name}")
 def get_company_filings(company_name: str):
     input_key = company_name.lower().strip()
-    cik, matched_name = resolve_cik(input_key)
+    cik, matched_name = resolve_cik_safe(input_key)
 
-    if cik:
-        if input_key != matched_name.lower().strip():
-            if similar(input_key, matched_name) > 0.8:
-                NEW_ALIASES[input_key] = matched_name
-            else:
-                print(f"⚠️ Match for '{company_name}' → '{matched_name}' failed similarity check")
-        else:
-            NEW_ALIASES[input_key] = matched_name
+    if cik and input_key != matched_name.lower().strip():
+        NEW_ALIASES[input_key] = matched_name
 
     if not cik:
         return {"error": f"Unable to resolve CIK for {company_name}"}
