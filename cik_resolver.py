@@ -7,6 +7,7 @@ from io import StringIO
 from bs4 import BeautifulSoup
 import re
 from dotenv import load_dotenv
+from difflib import SequenceMatcher
 
 # === Load .env if present ===
 load_dotenv()
@@ -20,6 +21,7 @@ ALIAS_LOCAL_JSON = "alias_map.json"
 ALIAS_PUSH_URL = "https://api.github.com/repos/JeffyGITvault/ReopAPI/contents/alias_map.json"
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
+# === In-Memory Stores ===
 CIK_CACHE = {}
 ALIAS_MAP = {
     "meta": "Meta Platforms, Inc.",
@@ -33,8 +35,9 @@ ALIAS_MAP = {
 PROTECTED_ALIASES = {"meta", "facebook", "google", "alphabet", "fb"}
 NEW_ALIASES = {}
 ALIAS_TIMESTAMP = {}
-ALIAS_TTL = 60 * 60 * 24 * 7
+ALIAS_TTL = 60 * 60 * 24 * 7  # 1 week
 
+# === Loaders ===
 def load_company_tickers_json():
     try:
         resp = requests.get(SEC_TICKERS_JSON, headers=HEADERS)
@@ -45,22 +48,6 @@ def load_company_tickers_json():
             } for v in resp.json().values()}
     except Exception as e:
         print(f"⚠️ JSON CIK load error: {e}")
-    return {}
-
-def load_company_tickers_csv():
-    try:
-        resp = requests.get(SEC_TICKERS_CSV, headers=HEADERS)
-        if resp.status_code == 200:
-            content = resp.text
-            reader = csv.DictReader(StringIO(content))
-            return {
-                row['ticker'].lower().strip(): {
-                    "cik": str(row['cik_str']).zfill(10),
-                    "title": row['title'].strip()
-                } for row in reader
-            }
-    except Exception as e:
-        print(f"⚠️ CSV CIK load error: {e}")
     return {}
 
 def load_aliases():
@@ -92,69 +79,47 @@ def load_aliases():
     except Exception as e:
         print(f"⚠️ Alias fetch error: {e}")
 
-def push_new_aliases_to_github():
-    if not NEW_ALIASES or not GITHUB_TOKEN:
-        return
-
-    try:
-        headers = {
-            "Authorization": f"token {GITHUB_TOKEN}",
-            "Accept": "application/vnd.github+json"
-        }
-        get_resp = requests.get(ALIAS_PUSH_URL, headers=headers)
-        if get_resp.status_code == 200:
-            sha = get_resp.json().get("sha")
-            current_content = json.loads(requests.get(ALIAS_GITHUB_JSON, headers=HEADERS).text)
-            updated = {**current_content, **NEW_ALIASES}
-            encoded = json.dumps(updated, indent=4).encode("utf-8").decode("utf-8").encode("base64").decode()
-            commit_msg = {
-                "message": "🔁 Update alias_map.json with learned aliases",
-                "content": encoded,
-                "sha": sha
-            }
-            put_resp = requests.put(ALIAS_PUSH_URL, headers=headers, json=commit_msg)
-            if put_resp.status_code in [200, 201]:
-                print("✅ GitHub alias_map.json updated successfully")
-            else:
-                print(f"❌ GitHub update failed: {put_resp.status_code}")
-    except Exception as e:
-        print(f"❌ Alias push error: {e}")
-
 def init_cache():
     global CIK_CACHE
     CIK_CACHE = load_company_tickers_json()
-    if not CIK_CACHE:
-        print("⚠️ Falling back to CSV CIK cache...")
-        CIK_CACHE = load_company_tickers_csv()
     load_aliases()
 
+# === Fuzzy Matcher ===
+def similar(a, b):
+    return SequenceMatcher(None, a.lower(), b.lower()).ratio()
+
+# === Alias Recorder ===
 def record_alias(user_input: str, resolved_name: str):
-    alias_key = user_input.lower().strip()
-    resolved_clean = resolved_name.strip()
+    alias_key = user_input.lower()
     if alias_key in PROTECTED_ALIASES:
-        return
-    if alias_key == resolved_clean.lower():
         return
     now = time.time()
     if alias_key not in ALIAS_MAP or (alias_key in ALIAS_TIMESTAMP and now - ALIAS_TIMESTAMP[alias_key] > ALIAS_TTL):
-        NEW_ALIASES[alias_key] = resolved_clean
+        NEW_ALIASES[alias_key] = resolved_name
         ALIAS_TIMESTAMP[alias_key] = now
-        print(f"🆕 Learned alias: {alias_key} → {resolved_clean}")
+        print(f"🆕 Learned alias: {alias_key} → {resolved_name}")
 
+# === Core Resolver ===
 def resolve_cik(company_name: str):
     name_key = company_name.lower().strip()
+
+    # Priority 1: Exact ticker match
+    if name_key in CIK_CACHE:
+        data = CIK_CACHE[name_key]
+        record_alias(company_name, data['title'])
+        return data['cik'], data['title']
+
+    # Priority 2: Alias map lookup
     resolved_name = ALIAS_MAP.get(name_key, company_name)
 
-    if name_key in CIK_CACHE:
-        record_alias(company_name, CIK_CACHE[name_key]['title'])
-        return CIK_CACHE[name_key]['cik'], CIK_CACHE[name_key]['title']
-
-    for ticker, data in CIK_CACHE.items():
-        if data['title'].lower() == name_key:
+    # Priority 3: Fuzzy match against SEC titles
+    for data in CIK_CACHE.values():
+        if similar(name_key, data['title']) >= 0.8:
             record_alias(company_name, data['title'])
             return data['cik'], data['title']
 
-    cleaned = re.sub(r'(,?\s+(Inc|Corp|Corporation|LLC|Ltd)\.?)$', '', resolved_name, flags=re.IGNORECASE)
+    # Priority 4: Last-resort web scrape fallback
+    cleaned = re.sub(r'(,?\s+(Inc|Corp|Corporation|LLC|Ltd)\.?$)', '', resolved_name, flags=re.IGNORECASE)
     query = cleaned.replace(" ", "+")
     url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={query}&match=contains&action=getcompany"
     try:
@@ -169,6 +134,7 @@ def resolve_cik(company_name: str):
     except Exception as e:
         print(f"⚠️ Web fallback failed: {e}")
 
-    return None, resolved_name
+    return None, company_name
 
+# === Initialize Cache on Import ===
 init_cache()
