@@ -82,6 +82,7 @@ def load_aliases():
 def init_cache():
     global CIK_CACHE
     CIK_CACHE = load_company_tickers_json()
+    print(f"✅ CIK_CACHE loaded with {len(CIK_CACHE)} entries")   
     load_aliases()
 
 # === Fuzzy Matcher ===
@@ -139,3 +140,4 @@ def resolve_cik(company_name: str):
 
 # === Initialize Cache on Import ===
 init_cache()
+
