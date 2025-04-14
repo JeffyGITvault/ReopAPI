@@ -3,6 +3,7 @@ import os
 import time
 import csv
 import requests
+import base64
 from io import StringIO
 from bs4 import BeautifulSoup
 import re
