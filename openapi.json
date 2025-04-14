@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Get SEC Filings Data",
-    "description": "Fetches latest 10-Q and 10-K filings. Learns aliases with validation. Returns direct links in markdown format.",
+    "description": "Fetches latest 10-Q and 10-K filings. Supports alias learning, GitHub persistence, and clean CIK resolution.",
     "version": "v4.2.4"
   },
   "servers": [
@@ -13,7 +13,7 @@
   "paths": {
     "/get_filings/{company_name}": {
       "get": {
-        "description": "Returns the latest 10-Q HTML and 10-K Excel links for a public company or ticker. Learns aliases only if matched with high confidence.",
+        "description": "Returns the latest 10-Q HTML report and 10-K Excel link for a public company or ticker.",
         "operationId": "GetSECFilings",
         "parameters": [
           {
@@ -36,28 +36,33 @@
                   "properties": {
                     "Matched Company Name": {
                       "type": "string",
-                      "description": "Matched company name from SEC"
+                      "description": "Matched company name from SEC."
                     },
                     "CIK": {
                       "type": "string",
-                      "description": "Central Index Key used to pull filings"
+                      "description": "Central Index Key used to pull filings."
                     },
                     "10-Q Filing": {
-                      "type": "string",
-                      "description": "Markdown link to latest 10-Q filing or fallback text"
+                      "type": ["string", "null"],
+                      "description": "Direct URL to latest 10-Q HTML report (if any)."
                     },
                     "10-K Excel": {
-                      "type": "string",
-                      "description": "Markdown link to latest 10-K Excel or fallback text"
+                      "type": ["string", "null"],
+                      "description": "Direct URL to Excel financials from 10-K (if any)."
                     }
                   },
-                  "required": ["Matched Company Name", "CIK", "10-Q Filing", "10-K Excel"]
+                  "required": [
+                    "Matched Company Name",
+                    "CIK",
+                    "10-Q Filing",
+                    "10-K Excel"
+                  ]
                 }
               }
             }
           },
           "404": {
-            "description": "No match or filings found"
+            "description": "No match or filings found."
           }
         }
       }
