@@ -15,7 +15,6 @@ load_dotenv()
 # === Configuration ===
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 SEC_TICKERS_JSON = "https://www.sec.gov/files/company_tickers.json"
-SEC_TICKERS_CSV = "https://www.sec.gov/files/company_tickers.csv"
 ALIAS_GITHUB_JSON = "https://raw.githubusercontent.com/JeffyGITvault/ReopAPI/main/alias_map.json"
 ALIAS_LOCAL_JSON = "alias_map.json"
 ALIAS_PUSH_URL = "https://api.github.com/repos/JeffyGITvault/ReopAPI/contents/alias_map.json"
@@ -23,16 +22,7 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
 # === In-Memory Stores ===
 CIK_CACHE = {}
-ALIAS_MAP = {
-    "meta": "Meta Platforms, Inc.",
-    "goog": "Alphabet Inc.",
-    "google": "Alphabet Inc.",
-    "fb": "Meta Platforms, Inc.",
-    "rh": "RH",
-    "cent": "Central Garden & Pet Company",
-    "ball": "Ball Corporation"
-}
-PROTECTED_ALIASES = {"meta", "facebook", "google", "alphabet", "fb"}
+ALIAS_MAP = {}
 NEW_ALIASES = {}
 ALIAS_TIMESTAMP = {}
 ALIAS_TTL = 60 * 60 * 24 * 7  # 1 week
@@ -52,13 +42,14 @@ def load_company_tickers_json():
 
 def load_aliases():
     def apply_aliases(source_name, aliases):
+        count = 0
         for key, val in aliases.items():
-            if key in PROTECTED_ALIASES:
-                print(f"🔒 Skipping protected alias: '{key}' from {source_name}")
-                continue
-            if key in ALIAS_MAP and ALIAS_MAP[key] != val:
-                print(f"⚠️ {source_name} alias override: '{key}' was '{ALIAS_MAP[key]}', now '{val}'")
-            ALIAS_MAP[key] = val
+            key = key.strip().lower()
+            val = val.strip()
+            if key not in ALIAS_MAP:
+                ALIAS_MAP[key] = val
+                count += 1
+        print(f"✅ Loaded {count} aliases from {source_name}")
 
     try:
         if os.path.exists(ALIAS_LOCAL_JSON):
@@ -72,8 +63,7 @@ def load_aliases():
         response = requests.get(ALIAS_GITHUB_JSON, headers=HEADERS, timeout=5)
         if response.status_code == 200:
             remote_aliases = response.json()
-            apply_aliases("Remote", remote_aliases)
-            print(f"🔁 Loaded {len(remote_aliases)} remote aliases")
+            apply_aliases("GitHub", remote_aliases)
         else:
             print("⚠️ Failed to fetch alias_map.json from GitHub")
     except Exception as e:
@@ -82,7 +72,7 @@ def load_aliases():
 def init_cache():
     global CIK_CACHE
     CIK_CACHE = load_company_tickers_json()
-    print(f"✅ CIK_CACHE loaded with {len(CIK_CACHE)} entries")   
+    print(f"✅ CIK_CACHE loaded with {len(CIK_CACHE)} entries")
     load_aliases()
 
 # === Fuzzy Matcher ===
@@ -91,11 +81,11 @@ def similar(a, b):
 
 # === Alias Recorder ===
 def record_alias(user_input: str, resolved_name: str):
-    alias_key = user_input.lower()
-    if alias_key in PROTECTED_ALIASES:
-        return
+    alias_key = user_input.lower().strip()
+    if alias_key in ALIAS_MAP:
+        return  # Do not overwrite existing alias
     now = time.time()
-    if alias_key not in ALIAS_MAP or (alias_key in ALIAS_TIMESTAMP and now - ALIAS_TIMESTAMP[alias_key] > ALIAS_TTL):
+    if alias_key not in ALIAS_TIMESTAMP or (now - ALIAS_TIMESTAMP[alias_key] > ALIAS_TTL):
         NEW_ALIASES[alias_key] = resolved_name
         ALIAS_TIMESTAMP[alias_key] = now
         print(f"🆕 Learned alias: {alias_key} → {resolved_name}")
@@ -110,17 +100,30 @@ def resolve_cik(company_name: str):
         record_alias(company_name, data['title'])
         return data['cik'], data['title']
 
-    # Priority 2: Alias map lookup
-    resolved_name = ALIAS_MAP.get(name_key, company_name)
+    # Priority 2: Alias map resolution
+    resolved_name = ALIAS_MAP.get(name_key, company_name).strip()
+    resolved_key = resolved_name.lower()
 
-    # Priority 3: Fuzzy match with validation (title must differ from input and be similar)
+    # Priority 3: Exact SEC title match
     for data in CIK_CACHE.values():
-        title = data['title']
-        if name_key != title.lower().strip() and similar(name_key, title) >= 0.8:
-            record_alias(company_name, title)
-            return data['cik'], title
+        if data['title'].lower() == resolved_key:
+            record_alias(company_name, data['title'])
+            return data['cik'], data['title']
 
-    # Priority 4: Last-resort web scrape fallback
+    # Priority 4: Fuzzy match on SEC titles ≥ 0.85
+    best_match = None
+    best_score = 0.0
+    for data in CIK_CACHE.values():
+        score = similar(resolved_name, data['title'])
+        if score >= 0.85 and score > best_score:
+            best_match = data
+            best_score = score
+
+    if best_match:
+        record_alias(company_name, best_match['title'])
+        return best_match['cik'], best_match['title']
+
+    # Priority 5: Last-resort web scrape fallback
     cleaned = re.sub(r'(,?\s+(Inc|Corp|Corporation|LLC|Ltd)\.?$)', '', resolved_name, flags=re.IGNORECASE)
     query = cleaned.replace(" ", "+")
     url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={query}&match=contains&action=getcompany"
@@ -140,4 +143,3 @@ def resolve_cik(company_name: str):
 
 # === Initialize Cache on Import ===
 init_cache()
-
