@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Get SEC Filings Data",
-    "description": "Fetches latest 10-Q and 10-K filings. Supports alias learning, GitHub persistence, and clean CIK resolution.",
+    "description": "Fetches the latest 10-Q and 10-K filings. Prioritizes HTML reports and uses Excel as a fallback. Includes CIK resolution, alias learning, and GitHub persistence.",
     "version": "v4.2.5"
   },
   "servers": [
@@ -13,13 +13,13 @@
   "paths": {
     "/get_filings/{company_name}": {
       "get": {
-        "description": "Returns the latest 10-Q HTML report and 10-K HTML or Excel link for a public company or ticker.",
+        "description": "Returns 10-Q and 10-K filing URLs for a public company. Resolves aliases and prioritizes HTML report delivery.",
         "operationId": "GetSECFilings",
         "parameters": [
           {
             "name": "company_name",
             "in": "path",
-            "description": "Public company name or ticker (e.g. Apple, AAPL, Meta, RH).",
+            "description": "Public company name or ticker (e.g., Apple, AAPL, Meta).",
             "required": true,
             "schema": {
               "type": "string"
@@ -28,7 +28,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Filing links and matched metadata",
+            "description": "Matched company metadata and direct links to recent SEC filings.",
             "content": {
               "application/json": {
                 "schema": {
@@ -36,19 +36,21 @@
                   "properties": {
                     "Matched Company Name": {
                       "type": "string",
-                      "description": "Matched company name from SEC."
+                      "description": "Resolved company name from SEC dataset."
                     },
                     "CIK": {
                       "type": "string",
-                      "description": "Central Index Key used to pull filings."
+                      "description": "Central Index Key (CIK) used to retrieve filings."
                     },
                     "10-Q Filing": {
                       "type": ["string", "null"],
-                      "description": "Direct URL to latest 10-Q HTML report (if any)."
+                      "format": "uri",
+                      "description": "Most recent 10-Q HTML report URL."
                     },
                     "10-K Filing": {
                       "type": ["string", "null"],
-                      "description": "Direct URL to latest 10-K HTML report, or Excel financials if HTML is not available."
+                      "format": "uri",
+                      "description": "Most recent 10-K HTML or Excel report URL."
                     }
                   },
                   "required": [
@@ -62,7 +64,7 @@
             }
           },
           "404": {
-            "description": "No match or filings found."
+            "description": "Company not found or no recent filings."
           }
         }
       }
