@@ -9,7 +9,7 @@ from cik_resolver import resolve_cik, push_new_aliases_to_github
 app = FastAPI(
     title="Get SEC Filings Data",
     description="Retrieves the latest 10-Q and 10-K financials using SEC data. Utilizes alias map, ticker normalization, and CIK resolution.",
-    version="v4.2.4"
+    version="v4.2.5"
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
@@ -27,7 +27,7 @@ def get_actual_filing_urls(cik, accession, primary_doc):
     report_url = base_url + primary_doc if primary_doc and primary_doc.endswith(".htm") else None
     excel_url = None
 
-    index_url = base_url + "index.html"  # still used internally for parsing
+    index_url = base_url + "index.html"
     resp = requests.get(index_url, headers=HEADERS)
     if resp.status_code == 200:
         soup = BeautifulSoup(resp.text, "html.parser")
@@ -36,14 +36,13 @@ def get_actual_filing_urls(cik, accession, primary_doc):
             full_url = f"https://www.sec.gov{href}" if href.startswith("/") else href
             if not report_url and href.endswith(".htm") and ("10q" in href or "10-k" in href):
                 report_url = full_url
-            if href.endswith(".xlsx"):
-                if validate_url(full_url):
-                    excel_url = full_url
-                    break
+            if href.endswith(".xlsx") and validate_url(full_url):
+                excel_url = full_url
+                break
 
     return {
-        "Full HTML Filing Report": report_url,
-        "Financial Report (Excel)": excel_url
+        "Full HTML Filing Report": report_url if report_url and report_url.startswith("http") else None,
+        "Financial Report (Excel)": excel_url if excel_url and excel_url.startswith("http") else None
     }
 
 def get_latest_filing(cik, form_type, fallback=False):
@@ -84,7 +83,6 @@ def get_latest_filing(cik, form_type, fallback=False):
 
     return None, None
 
-# === API Route ===
 @app.get("/get_filings/{company_name}")
 def get_company_filings(company_name: str):
     cik, matched_name = resolve_cik(company_name)
@@ -102,6 +100,6 @@ def get_company_filings(company_name: str):
     return {
         "Matched Company Name": matched_name,
         "CIK": cik,
-        "10-Q Filing": q_urls.get("Full HTML Filing Report") if q_urls else None,
-        "10-K Excel": k_urls.get("Financial Report (Excel)") if k_urls else None
+        "10-Q Filing": q_urls.get("Full HTML Filing Report") if q_urls.get("Full HTML Filing Report") else None,
+        "10-K Excel": k_urls.get("Financial Report (Excel)") if k_urls.get("Financial Report (Excel)") else None
     }
