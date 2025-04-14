@@ -90,6 +90,48 @@ def record_alias(user_input: str, resolved_name: str):
         ALIAS_TIMESTAMP[alias_key] = now
         print(f"🆕 Learned alias: {alias_key} → {resolved_name}")
 
+# === Push Alias Deltas to GitHub ===
+def push_new_aliases_to_github():
+    if not NEW_ALIASES:
+        print("🔇 No new aliases to push.")
+        return
+    if not GITHUB_TOKEN:
+        print("⚠️ No GitHub token available — skipping alias push.")
+        return
+
+    try:
+        headers = {
+            "Authorization": f"Bearer {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github+json"
+        }
+
+        # Get current file SHA and contents
+        get_resp = requests.get(ALIAS_PUSH_URL, headers=headers)
+        if get_resp.status_code != 200:
+            print(f"⚠️ Could not retrieve alias_map.json: {get_resp.status_code}")
+            return
+
+        sha = get_resp.json().get("sha")
+        current_content = requests.get(ALIAS_GITHUB_JSON, headers=HEADERS).json()
+
+        # Merge and build commit payload
+        updated = {**current_content, **NEW_ALIASES}
+        encoded = base64.b64encode(json.dumps(updated, indent=2).encode("utf-8")).decode("utf-8")
+        commit_payload = {
+            "message": "🔁 Update alias_map.json with learned aliases",
+            "content": encoded,
+            "sha": sha
+        }
+
+        put_resp = requests.put(ALIAS_PUSH_URL, headers=headers, json=commit_payload)
+        if put_resp.status_code in [200, 201]:
+            print("✅ GitHub alias_map.json updated successfully")
+        else:
+            print(f"❌ GitHub update failed: {put_resp.status_code}")
+
+    except Exception as e:
+        print(f"❌ Alias push error: {e}")
+
 # === Core Resolver ===
 def resolve_cik(company_name: str):
     name_key = company_name.lower().strip()
