@@ -22,23 +22,29 @@ def validate_url(url):
     except:
         return False
 
-def get_actual_filing_urls(cik, accession, primary_doc):
+def get_actual_filing_urls(cik, accession, primary_doc, form_type):
     base_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/"
     index_url = base_url + "index.html"
-    report_url = None
+    html_url = None
     excel_url = None
 
     try:
+        if form_type == "10-Q" and primary_doc and primary_doc.endswith(".htm"):
+            html_url = base_url + primary_doc
+
         resp = requests.get(index_url, headers=HEADERS)
         if resp.status_code == 200:
             soup = BeautifulSoup(resp.text, "html.parser")
 
-            for a in soup.find_all("a"):
-                href = a.get("href", "").lower()
-                if href.endswith(".htm") and "10-k" in href and not report_url:
-                    candidate = f"https://www.sec.gov{href}"
-                    if validate_url(candidate):
-                        report_url = candidate
+            # If no primary_doc match, fallback to file list search
+            if not html_url:
+                for a in soup.find_all("a"):
+                    href = a.get("href", "").lower()
+                    if href.endswith(".htm") and form_type.lower() in href:
+                        candidate = f"https://www.sec.gov{href}"
+                        if validate_url(candidate):
+                            html_url = candidate
+                            break
 
             for a in soup.find_all("a"):
                 href = a.get("href", "").lower()
@@ -51,9 +57,9 @@ def get_actual_filing_urls(cik, accession, primary_doc):
         pass
 
     return {
-        "10-K/10-Q Index Page": index_url,
-        "Full HTML Filing Report": report_url,
-        "Financial Report (Excel)": excel_url
+        "Index Page": index_url,
+        "HTML Report": html_url,
+        "Excel Report": excel_url
     }
 
 def get_latest_filing(cik, form_type):
@@ -95,14 +101,14 @@ def get_company_filings(company_name: str):
     q_accession, q_primary_doc = get_latest_filing(cik, "10-Q")
     k_accession, k_primary_doc = get_latest_filing(cik, "10-K")
 
-    q_urls = get_actual_filing_urls(cik, q_accession, q_primary_doc) if q_accession else {}
-    k_urls = get_actual_filing_urls(cik, k_accession, k_primary_doc) if k_accession else {}
+    q_urls = get_actual_filing_urls(cik, q_accession, q_primary_doc, "10-Q") if q_accession else {}
+    k_urls = get_actual_filing_urls(cik, k_accession, k_primary_doc, "10-K") if k_accession else {}
 
     push_new_aliases_to_github()
 
     return {
         "Matched Company Name": matched_name,
         "CIK": cik,
-        "10-Q Filing": q_urls.get("Full HTML Filing Report") or "No recent 10-Q found",
-        "10-K Excel": k_urls.get("Financial Report (Excel)") or k_urls.get("Full HTML Filing Report") or "No recent 10-K found"
+        "10-Q Filing": q_urls.get("HTML Report") or "No recent 10-Q found",
+        "10-K Filing": k_urls.get("HTML Report") or k_urls.get("Excel Report") or "No recent 10-K found"
     }
