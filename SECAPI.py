@@ -46,7 +46,7 @@ def get_actual_filing_urls(cik, accession, primary_doc):
         "Financial Report (Excel)": excel_url
     }
 
-def get_latest_filing(cik, form_type):
+def get_latest_filing(cik, form_type, fallback=False):
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
     resp = requests.get(url, headers=HEADERS)
     if resp.status_code != 200:
@@ -60,6 +60,8 @@ def get_latest_filing(cik, form_type):
     filing_dates = filings.get("filingDate", [])
 
     cutoff = datetime.now() - timedelta(days=5*365)
+    candidates = []
+
     for i, form in enumerate(form_types):
         try:
             filing_date = datetime.strptime(filing_dates[i], "%Y-%m-%d")
@@ -67,9 +69,19 @@ def get_latest_filing(cik, form_type):
                 continue
             if form == form_type:
                 accession = accession_numbers[i].replace("-", "")
-                return accession, primary_docs[i]
+                primary_doc = primary_docs[i]
+                if not fallback:
+                    return accession, primary_doc
+                candidates.append((accession, primary_doc))
         except:
             continue
+
+    if fallback:
+        for accession, doc in candidates:
+            urls = get_actual_filing_urls(cik, accession, doc)
+            if urls.get("Financial Report (Excel)"):
+                return accession, doc
+
     return None, None
 
 # === API Route ===
@@ -80,7 +92,7 @@ def get_company_filings(company_name: str):
         return {"error": f"Unable to resolve CIK for {company_name}"}
 
     q_accession, q_doc = get_latest_filing(cik, "10-Q")
-    k_accession, k_doc = get_latest_filing(cik, "10-K")
+    k_accession, k_doc = get_latest_filing(cik, "10-K", fallback=True)
 
     q_urls = get_actual_filing_urls(cik, q_accession, q_doc) if q_accession else {}
     k_urls = get_actual_filing_urls(cik, k_accession, k_doc) if k_accession else {}
