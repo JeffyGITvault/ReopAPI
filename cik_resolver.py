@@ -3,12 +3,12 @@ import os
 import time
 import csv
 import requests
-import base64
 from io import StringIO
 from bs4 import BeautifulSoup
 import re
 from dotenv import load_dotenv
 from difflib import SequenceMatcher
+import base64
 
 # === Load .env if present ===
 load_dotenv()
@@ -85,6 +85,8 @@ def record_alias(user_input: str, resolved_name: str):
     alias_key = user_input.lower().strip()
     if alias_key in ALIAS_MAP:
         return  # Do not overwrite existing alias
+    if alias_key == resolved_name.lower().strip():
+        return  # Prevent self-alias loops
     now = time.time()
     if alias_key not in ALIAS_TIMESTAMP or (now - ALIAS_TIMESTAMP[alias_key] > ALIAS_TTL):
         NEW_ALIASES[alias_key] = resolved_name
