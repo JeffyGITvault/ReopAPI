@@ -36,7 +36,7 @@ def get_actual_filing_urls(cik, accession, primary_doc):
             full_url = f"https://www.sec.gov{href}" if href.startswith("/") else href
             if not report_url and href.endswith(".htm") and ("10q" in href or "10-k" in href):
                 report_url = full_url
-            if href.endswith(".xlsx") and "financial" in href:
+            if href.endswith(".xlsx"):
                 if validate_url(full_url):
                     excel_url = full_url
                     break
