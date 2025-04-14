@@ -8,18 +8,19 @@ from cik_resolver import resolve_cik, push_new_aliases_to_github
 
 app = FastAPI(
     title="Get SEC Filings Data",
-    description="Fetches the latest 10-Q and 10-K filings, prioritizing HTML documents with Excel as a fallback. Uses CIK resolution, alias mapping, and GitHub-based alias updates.",
-    version="v4.2.5"
+    description="Fetches the latest 10-Q and 10-K filings, with logging for better debugging.",
+    version="v4.2.6-debug"
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 
-# === Utilities ===
 def validate_url(url):
     try:
         resp = requests.head(url, headers=HEADERS)
+        print(f"🔎 Validating URL: {url} → {resp.status_code}")
         return resp.status_code == 200
-    except:
+    except Exception as e:
+        print(f"❌ URL validation error: {e}")
         return False
 
 def get_actual_filing_urls(cik, accession, primary_doc, form_type):
@@ -28,40 +29,37 @@ def get_actual_filing_urls(cik, accession, primary_doc, form_type):
     html_url = None
     excel_url = None
 
+    print(f"🔗 Accessing index page: {index_url}")
+
     try:
-        # Always try to use the primary document first
-        if primary_doc and primary_doc.endswith(".htm"):
-            candidate = base_url + primary_doc
-            if validate_url(candidate):
-                html_url = candidate
+        if form_type == "10-Q" and primary_doc and primary_doc.endswith(".htm"):
+            html_url = base_url + primary_doc
+            print(f"✅ Primary doc HTML set from SEC JSON: {html_url}")
 
-        # If primary_doc failed or was not set, scan index page
-        if not html_url:
-            resp = requests.get(index_url, headers=HEADERS)
-            if resp.status_code == 200:
-                soup = BeautifulSoup(resp.text, "html.parser")
+        resp = requests.get(index_url, headers=HEADERS)
+        if resp.status_code == 200:
+            soup = BeautifulSoup(resp.text, "html.parser")
 
+            if not html_url:
                 for a in soup.find_all("a"):
                     href = a.get("href", "").lower()
                     if href.endswith(".htm") and form_type.lower() in href:
                         candidate = f"https://www.sec.gov{href}"
                         if validate_url(candidate):
                             html_url = candidate
+                            print(f"🔁 HTML fallback match: {html_url}")
                             break
 
-        # Look for .xlsx financials
-        resp = requests.get(index_url, headers=HEADERS)
-        if resp.status_code == 200:
-            soup = BeautifulSoup(resp.text, "html.parser")
             for a in soup.find_all("a"):
                 href = a.get("href", "").lower()
                 if href.endswith(".xlsx") and "financial" in href:
                     candidate = f"https://www.sec.gov{href}"
                     if validate_url(candidate):
                         excel_url = candidate
+                        print(f"📊 Excel match found: {excel_url}")
                         break
-    except:
-        pass
+    except Exception as e:
+        print(f"❌ Error parsing index page: {e}")
 
     return {
         "Index Page": index_url,
@@ -71,9 +69,11 @@ def get_actual_filing_urls(cik, accession, primary_doc, form_type):
 
 def get_latest_filing(cik, form_type):
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
+    print(f"📥 Fetching JSON: {url}")
     try:
         response = requests.get(url, headers=HEADERS)
         if response.status_code != 200:
+            print(f"❌ SEC JSON fetch failed: {response.status_code}")
             return None, None
 
         data = response.json()
@@ -92,11 +92,14 @@ def get_latest_filing(cik, form_type):
                     continue
                 if form == form_type:
                     accession = accession_numbers[i].replace("-", "")
+                    print(f"📄 Found {form_type}: accession={accession}, doc={primary_docs[i]}")
                     return accession, primary_docs[i]
-            except:
+            except Exception as e:
+                print(f"⚠️ Error reading filing {i}: {e}")
                 continue
-    except:
-        pass
+    except Exception as e:
+        print(f"❌ SEC filing parse error: {e}")
+
     return None, None
 
 @app.get("/get_filings/{company_name}")
