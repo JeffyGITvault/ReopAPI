@@ -29,15 +29,18 @@ def get_actual_filing_urls(cik, accession, primary_doc, form_type):
     excel_url = None
 
     try:
-        if form_type == "10-Q" and primary_doc and primary_doc.endswith(".htm"):
-            html_url = base_url + primary_doc
+        # Always try to use the primary document first
+        if primary_doc and primary_doc.endswith(".htm"):
+            candidate = base_url + primary_doc
+            if validate_url(candidate):
+                html_url = candidate
 
-        resp = requests.get(index_url, headers=HEADERS)
-        if resp.status_code == 200:
-            soup = BeautifulSoup(resp.text, "html.parser")
+        # If primary_doc failed or was not set, scan index page
+        if not html_url:
+            resp = requests.get(index_url, headers=HEADERS)
+            if resp.status_code == 200:
+                soup = BeautifulSoup(resp.text, "html.parser")
 
-            # If no primary_doc match, fallback to file list search
-            if not html_url:
                 for a in soup.find_all("a"):
                     href = a.get("href", "").lower()
                     if href.endswith(".htm") and form_type.lower() in href:
@@ -46,6 +49,10 @@ def get_actual_filing_urls(cik, accession, primary_doc, form_type):
                             html_url = candidate
                             break
 
+        # Look for .xlsx financials
+        resp = requests.get(index_url, headers=HEADERS)
+        if resp.status_code == 200:
+            soup = BeautifulSoup(resp.text, "html.parser")
             for a in soup.find_all("a"):
                 href = a.get("href", "").lower()
                 if href.endswith(".xlsx") and "financial" in href:
