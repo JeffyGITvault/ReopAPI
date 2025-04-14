@@ -1,105 +1,188 @@
-from fastapi import FastAPI
+import json
+import os
+import time
+import csv
 import requests
+from io import StringIO
 from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
 import re
+from dotenv import load_dotenv
+from difflib import SequenceMatcher
+import base64
 
-from cik_resolver import resolve_cik, push_new_aliases_to_github
+# === Load .env if present ===
+load_dotenv()
 
-app = FastAPI(
-    title="Get SEC Filings Data",
-    description="Retrieves the latest 10-Q and 10-K financials using SEC data. Utilizes alias map, ticker normalization, and CIK resolution.",
-    version="v4.2.5"
-)
+# === Configuration ===
+HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guentner@gmail.com)"}
+SEC_TICKERS_JSON = "https://www.sec.gov/files/company_tickers.json"
+ALIAS_GITHUB_JSON = "https://raw.githubusercontent.com/JeffyGITvault/ReopAPI/main/alias_map.json"
+ALIAS_LOCAL_JSON = "alias_map.json"
+ALIAS_PUSH_URL = "https://api.github.com/repos/JeffyGITvault/ReopAPI/contents/alias_map.json"
+GITHUB_TOKEN = os.getenv("GITHUB")
 
-HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
+# === In-Memory Stores ===
+CIK_CACHE = {}
+ALIAS_MAP = {}
+NEW_ALIASES = {}
+ALIAS_TIMESTAMP = {}
+ALIAS_TTL = 60 * 60 * 24 * 7  # 1 week
 
-# === Utilities ===
-def validate_url(url):
+# === Loaders ===
+def load_company_tickers_json():
     try:
-        resp = requests.head(url, headers=HEADERS)
-        return resp.status_code == 200
-    except:
-        return False
+        resp = requests.get(SEC_TICKERS_JSON, headers=HEADERS)
+        if resp.status_code == 200:
+            return {v['ticker'].lower(): {
+                "cik": str(v['cik_str']).zfill(10),
+                "title": v['title']
+            } for v in resp.json().values()}
+    except Exception as e:
+        print(f"⚠️ JSON CIK load error: {e}")
+    return {}
 
-def get_actual_filing_urls(cik, accession, primary_doc):
-    base_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/"
-    report_url = base_url + primary_doc if primary_doc and primary_doc.endswith(".htm") else None
-    excel_url = None
+def load_aliases():
+    def apply_aliases(source_name, aliases):
+        count = 0
+        for key, val in aliases.items():
+            key = key.strip().lower()
+            val = val.strip()
+            if key not in ALIAS_MAP:
+                ALIAS_MAP[key] = val
+                count += 1
+        print(f"✅ Loaded {count} aliases from {source_name}")
 
-    index_url = base_url + "index.html"
-    resp = requests.get(index_url, headers=HEADERS)
-    if resp.status_code == 200:
-        soup = BeautifulSoup(resp.text, "html.parser")
-        for a in soup.find_all("a"):
-            href = a.get("href", "").lower()
-            full_url = f"https://www.sec.gov{href}" if href.startswith("/") else href
-            if not report_url and href.endswith(".htm") and ("10q" in href or "10-k" in href):
-                report_url = full_url
-            if href.endswith(".xlsx") and validate_url(full_url):
-                excel_url = full_url
-                break
+    try:
+        if os.path.exists(ALIAS_LOCAL_JSON):
+            with open(ALIAS_LOCAL_JSON, "r") as f:
+                local_aliases = json.load(f)
+                apply_aliases("Local", local_aliases)
+    except Exception as e:
+        print(f"⚠️ Failed to load local alias_map.json: {e}")
 
-    return {
-        "Full HTML Filing Report": report_url if report_url and report_url.startswith("http") else None,
-        "Financial Report (Excel)": excel_url if excel_url and excel_url.startswith("http") else None
-    }
+    try:
+        response = requests.get(ALIAS_GITHUB_JSON, headers=HEADERS, timeout=5)
+        if response.status_code == 200:
+            remote_aliases = response.json()
+            apply_aliases("GitHub", remote_aliases)
+        else:
+            print("⚠️ Failed to fetch alias_map.json from GitHub")
+    except Exception as e:
+        print(f"⚠️ Alias fetch error: {e}")
 
-def get_latest_filing(cik, form_type, fallback=False):
-    url = f"https://data.sec.gov/submissions/CIK{cik}.json"
-    resp = requests.get(url, headers=HEADERS)
-    if resp.status_code != 200:
-        return None, None
+def init_cache():
+    global CIK_CACHE
+    CIK_CACHE = load_company_tickers_json()
+    print(f"✅ CIK_CACHE loaded with {len(CIK_CACHE)} entries")
+    load_aliases()
 
-    data = resp.json()
-    filings = data.get("filings", {}).get("recent", {})
-    form_types = filings.get("form", [])
-    accession_numbers = filings.get("accessionNumber", [])
-    primary_docs = filings.get("primaryDocument", [])
-    filing_dates = filings.get("filingDate", [])
+# === Fuzzy Matcher ===
+def similar(a, b):
+    return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
-    cutoff = datetime.now() - timedelta(days=5*365)
-    candidates = []
+# === Alias Recorder ===
+def record_alias(user_input: str, resolved_name: str):
+    alias_key = user_input.lower().strip()
+    if alias_key in ALIAS_MAP:
+        return  # Do not overwrite existing alias
+    now = time.time()
+    if alias_key not in ALIAS_TIMESTAMP or (now - ALIAS_TIMESTAMP[alias_key] > ALIAS_TTL):
+        NEW_ALIASES[alias_key] = resolved_name
+        ALIAS_TIMESTAMP[alias_key] = now
+        print(f"🆕 Learned alias: {alias_key} → {resolved_name}")
 
-    for i, form in enumerate(form_types):
-        try:
-            filing_date = datetime.strptime(filing_dates[i], "%Y-%m-%d")
-            if filing_date < cutoff:
-                continue
-            if form == form_type:
-                accession = accession_numbers[i].replace("-", "")
-                primary_doc = primary_docs[i]
-                if not fallback:
-                    return accession, primary_doc
-                candidates.append((accession, primary_doc))
-        except:
-            continue
+# === Push Alias Deltas to GitHub ===
+def push_new_aliases_to_github():
+    if not NEW_ALIASES:
+        print("🔇 No new aliases to push.")
+        return
+    if not GITHUB_TOKEN:
+        print("⚠️ No GitHub token available — skipping alias push.")
+        return
 
-    if fallback:
-        for accession, doc in candidates:
-            urls = get_actual_filing_urls(cik, accession, doc)
-            if urls.get("Financial Report (Excel)"):
-                return accession, doc
+    try:
+        headers = {
+            "Authorization": f"Bearer {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github+json"
+        }
 
-    return None, None
+        # Get current file SHA and contents
+        get_resp = requests.get(ALIAS_PUSH_URL, headers=headers)
+        if get_resp.status_code != 200:
+            print(f"⚠️ Could not retrieve alias_map.json: {get_resp.status_code}")
+            return
 
-@app.get("/get_filings/{company_name}")
-def get_company_filings(company_name: str):
-    cik, matched_name = resolve_cik(company_name)
-    if not cik:
-        return {"error": f"Unable to resolve CIK for {company_name}"}
+        sha = get_resp.json().get("sha")
+        current_content = requests.get(ALIAS_GITHUB_JSON, headers=HEADERS).json()
 
-    q_accession, q_doc = get_latest_filing(cik, "10-Q")
-    k_accession, k_doc = get_latest_filing(cik, "10-K", fallback=True)
+        # Merge and build commit payload
+        updated = {**current_content, **NEW_ALIASES}
+        encoded = base64.b64encode(json.dumps(updated, indent=2).encode("utf-8")).decode("utf-8")
+        commit_payload = {
+            "message": "🔁 Update alias_map.json with learned aliases",
+            "content": encoded,
+            "sha": sha
+        }
 
-    q_urls = get_actual_filing_urls(cik, q_accession, q_doc) if q_accession else {}
-    k_urls = get_actual_filing_urls(cik, k_accession, k_doc) if k_accession else {}
+        put_resp = requests.put(ALIAS_PUSH_URL, headers=headers, json=commit_payload)
+        if put_resp.status_code in [200, 201]:
+            print("✅ GitHub alias_map.json updated successfully")
+        else:
+            print(f"❌ GitHub update failed: {put_resp.status_code}")
 
-    push_new_aliases_to_github()
+    except Exception as e:
+        print(f"❌ Alias push error: {e}")
 
-    return {
-        "Matched Company Name": matched_name,
-        "CIK": cik,
-        "10-Q Filing": q_urls.get("Full HTML Filing Report") if q_urls.get("Full HTML Filing Report") else None,
-        "10-K Excel": k_urls.get("Financial Report (Excel)") if k_urls.get("Financial Report (Excel)") else None
-    }
+# === Core Resolver ===
+def resolve_cik(company_name: str):
+    name_key = company_name.lower().strip()
+
+    # Priority 1: Exact ticker match
+    if name_key in CIK_CACHE:
+        data = CIK_CACHE[name_key]
+        record_alias(company_name, data['title'])
+        return data['cik'], data['title']
+
+    # Priority 2: Alias map resolution
+    resolved_name = ALIAS_MAP.get(name_key, company_name).strip()
+    resolved_key = resolved_name.lower()
+
+    # Priority 3: Exact SEC title match
+    for data in CIK_CACHE.values():
+        if data['title'].lower() == resolved_key:
+            record_alias(company_name, data['title'])
+            return data['cik'], data['title']
+
+    # Priority 4: Fuzzy match on SEC titles ≥ 0.85
+    best_match = None
+    best_score = 0.0
+    for data in CIK_CACHE.values():
+        score = similar(resolved_name, data['title'])
+        if score >= 0.85 and score > best_score:
+            best_match = data
+            best_score = score
+
+    if best_match:
+        record_alias(company_name, best_match['title'])
+        return best_match['cik'], best_match['title']
+
+    # Priority 5: Last-resort web scrape fallback
+    cleaned = re.sub(r'(,?\s+(Inc|Corp|Corporation|LLC|Ltd)\.?$)', '', resolved_name, flags=re.IGNORECASE)
+    query = cleaned.replace(" ", "+")
+    url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={query}&match=contains&action=getcompany"
+    try:
+        resp = requests.get(url, headers=HEADERS)
+        if resp.status_code == 200:
+            soup = BeautifulSoup(resp.text, "html.parser")
+            cik_tag = soup.find("a", href=True, string=lambda x: x and x.isdigit())
+            if cik_tag:
+                cik = cik_tag.text.strip().zfill(10)
+                record_alias(company_name, resolved_name)
+                return cik, resolved_name
+    except Exception as e:
+        print(f"⚠️ Web fallback failed: {e}")
+
+    return None, company_name
+
+# === Initialize Cache on Import ===
+init_cache()
