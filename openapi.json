@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Get SEC Filings Data",
-    "description": "Fetches latest 10-Q and 10-K filings. Supports alias learning, GitHub persistence, and clean CIK resolution.",
-    "version": "v4.2.4"
+    "description": "Fetches latest 10-Q and 10-K filings. Supports alias learning, GitHub persistence, fallback Excel detection, and clean CIK resolution.",
+    "version": "v4.2.5"
   },
   "servers": [
     {
@@ -13,7 +13,7 @@
   "paths": {
     "/get_filings/{company_name}": {
       "get": {
-        "description": "Returns the latest 10-Q HTML report and 10-K Excel link for a public company or ticker.",
+        "description": "Returns the latest 10-Q HTML report and fallback 10-K Excel link for a public company or ticker.",
         "operationId": "GetSECFilings",
         "parameters": [
           {
@@ -48,7 +48,7 @@
                     },
                     "10-K Excel": {
                       "type": ["string", "null"],
-                      "description": "Direct URL to Excel financials from 10-K (if any)."
+                      "description": "Fallback Excel financials from 10-K (if any)."
                     }
                   },
                   "required": [
