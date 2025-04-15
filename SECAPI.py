@@ -58,7 +58,8 @@ def get_actual_filing_urls(cik, accession, primary_doc, form_type):
     except:
         pass
 
-    return {\        "Index Page": index_url,
+    return {        
+        "Index Page": index_url,
         "HTML Report": html_url,
         "Excel Report": excel_url
     }
