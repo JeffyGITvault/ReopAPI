@@ -8,19 +8,18 @@ from cik_resolver import resolve_cik, push_new_aliases_to_github
 
 app = FastAPI(
     title="Get SEC Filings Data",
-    description="Fetches the latest 10-Q and 10-K filings, with logging for better debugging.",
-    version="v4.2.6-debug"
+    description="Fetches the latest 10-Q and 10-K filings, prioritizing HTML documents with Excel as a fallback. Uses CIK resolution, alias mapping, and GitHub-based alias updates.",
+    version="v4.2.6"
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 
+# === Utilities ===
 def validate_url(url):
     try:
         resp = requests.head(url, headers=HEADERS)
-        print(f"🔎 Validating URL: {url} → {resp.status_code}")
         return resp.status_code == 200
-    except Exception as e:
-        print(f"❌ URL validation error: {e}")
+    except:
         return False
 
 def get_actual_filing_urls(cik, accession, primary_doc, form_type):
@@ -29,17 +28,16 @@ def get_actual_filing_urls(cik, accession, primary_doc, form_type):
     html_url = None
     excel_url = None
 
-    print(f"🔗 Accessing index page: {index_url}")
-
     try:
-        if form_type == "10-Q" and primary_doc and primary_doc.endswith(".htm"):
+        # Use primary_doc if available and valid
+        if primary_doc and primary_doc.endswith(".htm"):
             html_url = base_url + primary_doc
-            print(f"✅ Primary doc HTML set from SEC JSON: {html_url}")
 
         resp = requests.get(index_url, headers=HEADERS)
         if resp.status_code == 200:
             soup = BeautifulSoup(resp.text, "html.parser")
 
+            # Fallback for HTML link if primary_doc is missing
             if not html_url:
                 for a in soup.find_all("a"):
                     href = a.get("href", "").lower()
@@ -47,33 +45,29 @@ def get_actual_filing_urls(cik, accession, primary_doc, form_type):
                         candidate = f"https://www.sec.gov{href}"
                         if validate_url(candidate):
                             html_url = candidate
-                            print(f"🔁 HTML fallback match: {html_url}")
                             break
 
+            # Excel fallback search
             for a in soup.find_all("a"):
                 href = a.get("href", "").lower()
                 if href.endswith(".xlsx") and "financial" in href:
                     candidate = f"https://www.sec.gov{href}"
                     if validate_url(candidate):
                         excel_url = candidate
-                        print(f"📊 Excel match found: {excel_url}")
                         break
-    except Exception as e:
-        print(f"❌ Error parsing index page: {e}")
+    except:
+        pass
 
-    return {
-        "Index Page": index_url,
+    return {\        "Index Page": index_url,
         "HTML Report": html_url,
         "Excel Report": excel_url
     }
 
 def get_latest_filing(cik, form_type):
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
-    print(f"📥 Fetching JSON: {url}")
     try:
         response = requests.get(url, headers=HEADERS)
         if response.status_code != 200:
-            print(f"❌ SEC JSON fetch failed: {response.status_code}")
             return None, None
 
         data = response.json()
@@ -92,14 +86,11 @@ def get_latest_filing(cik, form_type):
                     continue
                 if form == form_type:
                     accession = accession_numbers[i].replace("-", "")
-                    print(f"📄 Found {form_type}: accession={accession}, doc={primary_docs[i]}")
                     return accession, primary_docs[i]
-            except Exception as e:
-                print(f"⚠️ Error reading filing {i}: {e}")
+            except:
                 continue
-    except Exception as e:
-        print(f"❌ SEC filing parse error: {e}")
-
+    except:
+        pass
     return None, None
 
 @app.get("/get_filings/{company_name}")
