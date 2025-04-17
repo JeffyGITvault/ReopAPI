@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Get SEC Filings Data",
-    "description": "Fetches the latest 10-Q and 10-K filings. Prioritizes HTML filings and falls back to Excel reports if available. Includes alias learning, GitHub persistence, and CIK resolution.",
+    "description": "Fetches the latest 10-Q and 10-K filings. Prioritizes HTML filings and falls back to Excel reports if available. Includes alias learning, GitHub persistence, and CIK resolution. Adds fallback transparency with a 10-K Source field.",
     "version": "v4.2.6"
   },
   "servers": [
@@ -13,7 +13,7 @@
   "paths": {
     "/get_filings/{company_name}": {
       "get": {
-        "description": "Returns the most recent 10-Q and 10-K filings for a public company, based on name or ticker symbol.",
+        "description": "Returns the most recent 10-Q and 10-K filings for a public company, based on name or ticker symbol. Applies smart fallback logic for 10-Ks when needed.",
         "operationId": "GetSECFilings",
         "parameters": [
           {
@@ -49,13 +49,18 @@
                     "10-K Filing": {
                       "type": ["string", "null"],
                       "description": "URL to most recent 10-K HTML or Excel report (prefers HTML)."
+                    },
+                    "10-K Source": {
+                      "type": "string",
+                      "description": "Indicates the source used for the 10-K report: 'HTML', 'Excel', or 'None'."
                     }
                   },
                   "required": [
                     "Matched Company Name",
                     "CIK",
                     "10-Q Filing",
-                    "10-K Filing"
+                    "10-K Filing",
+                    "10-K Source"
                   ]
                 }
               }
@@ -72,3 +77,4 @@
     "schemas": {}
   }
 }
+
