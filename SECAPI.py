@@ -7,7 +7,7 @@ from cik_resolver import resolve_cik, push_new_aliases_to_github
 
 app = FastAPI(
     title="Get SEC Filings Data",
-    description="Fetches the latest 10-Q filings for a company. Uses CIK resolution, alias mapping, and GitHub-based alias updates. Returns the 4 most recent 10-Q HTML reports.",
+    description="Fetches the latest 10-Q filings for a company. Uses CIK resolution, alias mapping, and GitHub-based alias updates. Returns the most recent 10-Q HTML reports.",
     version="v4.3.0"
 )
 
@@ -57,7 +57,7 @@ def get_actual_filing_url(cik, accession, primary_doc):
 
 # === Endpoints ===
 @app.get("/get_quarterlies/{company_name}")
-def get_quarterly_filings(company_name: str):
+def get_quarterly_filings(company_name: str, count: int = 4):
     cik, matched_name = resolve_cik(company_name)
     if not cik:
         return {"error": f"Unable to resolve CIK for {company_name}"}
@@ -87,7 +87,7 @@ def get_quarterly_filings(company_name: str):
                 "Filing Date": filing_date,
                 "HTML Report": html_url
             })
-            if len(quarterly_reports) == 4:
+            if len(quarterly_reports) == count:
                 break
 
         push_new_aliases_to_github()
