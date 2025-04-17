@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Get SEC Filings Data",
-    "description": "Fetches the latest 10-Q and 10-K filings. Prioritizes HTML filings and falls back to Excel reports if available. Includes alias learning, GitHub persistence, and CIK resolution. Adds fallback transparency with a 10-K Source field.",
-    "version": "v4.2.6"
+    "description": "Fetches the latest 10-Q filings for a company. Uses CIK resolution, alias mapping, and GitHub-based alias updates. Returns the 4 most recent 10-Q HTML reports.",
+    "version": "v4.3.0"
   },
   "servers": [
     {
@@ -11,10 +11,10 @@
     }
   ],
   "paths": {
-    "/get_filings/{company_name}": {
+    "/get_quarterlies/{company_name}": {
       "get": {
-        "description": "Returns the most recent 10-Q and 10-K filings for a public company, based on name or ticker symbol. Applies smart fallback logic for 10-Ks when needed.",
-        "operationId": "GetSECFilings",
+        "description": "Returns the most recent four 10-Q filings for a public company, including filing dates and validated HTML report links.",
+        "operationId": "GetQuarterlyFilings",
         "parameters": [
           {
             "name": "company_name",
@@ -28,7 +28,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Filing links and matched metadata",
+            "description": "Quarterly filings data",
             "content": {
               "application/json": {
                 "schema": {
@@ -36,38 +36,45 @@
                   "properties": {
                     "Matched Company Name": {
                       "type": "string",
-                      "description": "Matched company name from SEC."
+                      "description": "Resolved company name using alias and fuzzy matching."
                     },
                     "CIK": {
                       "type": "string",
-                      "description": "Central Index Key used to pull filings."
+                      "description": "SEC Central Index Key for the matched company."
                     },
-                    "10-Q Filing": {
-                      "type": ["string", "null"],
-                      "description": "URL to most recent 10-Q HTML report (or message if not found)."
-                    },
-                    "10-K Filing": {
-                      "type": ["string", "null"],
-                      "description": "URL to most recent 10-K HTML or Excel report (prefers HTML)."
-                    },
-                    "10-K Source": {
-                      "type": "string",
-                      "description": "Indicates the source used for the 10-K report: 'HTML', 'Excel', or 'None'."
+                    "10-Q Filings": {
+                      "type": "array",
+                      "description": "A list of the latest 10-Q reports with filing dates and HTML URLs.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "Filing Date": {
+                            "type": "string",
+                            "description": "The official SEC filing date (YYYY-MM-DD)."
+                          },
+                          "HTML Report": {
+                            "type": "string",
+                            "description": "Validated URL to the HTML version of the 10-Q report."
+                          }
+                        },
+                        "required": [
+                          "Filing Date",
+                          "HTML Report"
+                        ]
+                      }
                     }
                   },
                   "required": [
                     "Matched Company Name",
                     "CIK",
-                    "10-Q Filing",
-                    "10-K Filing",
-                    "10-K Source"
+                    "10-Q Filings"
                   ]
                 }
               }
             }
           },
           "404": {
-            "description": "No match or filings found."
+            "description": "Company not found or no filings available"
           }
         }
       }
@@ -77,4 +84,3 @@
     "schemas": {}
   }
 }
-
