@@ -19,13 +19,15 @@ app = FastAPI(
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
+MAX_PARALLEL = 10  # Limit concurrent threads per request
 
 # === Utilities ===
 def validate_url(url):
     try:
         resp = requests.head(url, headers=HEADERS, timeout=2)
         return resp.status_code == 200
-    except:
+    except Exception as e:
+        print(f"[Warning] HEAD request failed for {url}: {e}")
         return False
 
 def get_actual_filing_url(cik, accession, primary_doc):
@@ -42,23 +44,24 @@ def get_actual_filing_url(cik, accession, primary_doc):
 
         # Fallback to best .htm from index
         resp = requests.get(index_url, headers=HEADERS)
-        if resp.status_code == 200:
-            soup = BeautifulSoup(resp.text, "html.parser")
-            candidates = []
-            for a in soup.find_all("a"):
-                href = a.get("href", "").lower()
-                if href.endswith(".htm"):
-                    score = 0
-                    if "10q" in href: score += 3
-                    if "form" in href or "main" in href: score += 2
-                    if "index" in href or "cover" in href or "summary" in href: score -= 1
-                    candidates.append((score, href))
-            candidates.sort(reverse=True)
-            for _, href in candidates:
-                candidate_url = f"https://www.sec.gov{href}"
-                if validate_url(candidate_url):
-                    html_url = candidate_url
-                    break
+        resp.raise_for_status()  # ✅ Raises on non-200 responses
+
+        soup = BeautifulSoup(resp.text, "html.parser")
+        candidates = []
+        for a in soup.find_all("a"):
+            href = a.get("href", "").lower()
+            if href.endswith(".htm"):
+                score = 0
+                if "10q" in href: score += 3
+                if "form" in href or "main" in href: score += 2
+                if "index" in href or "cover" in href or "summary" in href: score -= 1
+                candidates.append((score, href))
+        candidates.sort(reverse=True)
+        for _, href in candidates:
+            candidate_url = f"https://www.sec.gov{href}"
+            if validate_url(candidate_url):
+                html_url = candidate_url
+                break
     except Exception as e:
         print(f"[ERROR] Exception while fetching filing URL: {e}")
 
@@ -106,8 +109,8 @@ def get_quarterly_filings(company_name: str, count: int = 4):
                 "HTML Report": html_url
             }
 
-        # Prepare and run concurrent tasks
-        with ThreadPoolExecutor(max_workers=count) as executor:
+        # === Parallel execution with cap on max_workers ===
+        with ThreadPoolExecutor(max_workers=min(count, MAX_PARALLEL)) as executor:
             futures = []
             for i, form in enumerate(form_types):
                 if form == "10-Q":
@@ -117,6 +120,8 @@ def get_quarterly_filings(company_name: str, count: int = 4):
 
             quarterly_reports = []
             for future in as_completed(futures):
+                if len(quarterly_reports) == count:
+                    break
                 try:
                     result = future.result(timeout=3)
                     if result["HTML Report"] and result["HTML Report"] != "Unavailable":
