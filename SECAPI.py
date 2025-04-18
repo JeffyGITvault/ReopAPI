@@ -154,7 +154,7 @@ def get_quarterly_filings(company_name: str, count: int = 4):
 
         print(f"[TIMING] Total duration: {round(time.time() - start_time, 2)}s for {company_name}")
 
-        time.sleep(1)  # Simulated delay for markdown rendering reliability
+        time.sleep(index * 0.1)  # Simulated delay for markdown rendering reliability
 
         return {
             "Matched Company Name": matched_name,
