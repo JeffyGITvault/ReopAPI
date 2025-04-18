@@ -1,7 +1,7 @@
 # === Standard Library ===
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # === Third-Party Libraries ===
@@ -111,19 +111,15 @@ def get_quarterly_filings(company_name: str, count: int = 4):
             accession = accession_numbers[index].replace("-", "")
             primary_doc = primary_docs[index]
             filing_date = filing_dates[index]
-
             html_url = get_actual_filing_url(cik, accession, primary_doc)
             status = "Validated" if html_url and html_url != "Unavailable" else "Unavailable"
-
-            result = {
+            return {
                 "Filing Date": filing_date,
                 "HTML Report": html_url,
-                "Status": status
+                "Status": status,
+                "Sort Key": filing_date  # Used by GPT to sort in descending order
             }
-            print(f"[DEBUG] Filing {filing_date} → {html_url} ({status})")
-            return result
 
-        # === Parallel execution with cap on max_workers ===
         with ThreadPoolExecutor(max_workers=min(count, MAX_PARALLEL)) as executor:
             futures = []
             for i, form in enumerate(form_types):
@@ -134,22 +130,21 @@ def get_quarterly_filings(company_name: str, count: int = 4):
 
             quarterly_reports = []
             for future in as_completed(futures):
+                if len(quarterly_reports) == count:
+                    break
                 try:
                     result = future.result(timeout=3)
                     quarterly_reports.append(result)
                 except Exception as e:
                     print(f"[ERROR] Filing fetch failed: {e}")
 
-        # ✅ Sort results by most recent filing date (string sort)
-        quarterly_reports.sort(key=lambda x: x["Filing Date"], reverse=True)
-
-        if quarterly_reports:
-            print(f"[DEBUG] Raw first result: {repr(quarterly_reports[0])}")
-
         try:
             push_new_aliases_to_github()
         except Exception as e:
             print(f"[Warning] Alias push failed: {e}")
+
+        if quarterly_reports:
+            print(f"[DEBUG] Raw first result: {repr(quarterly_reports[0])}")
 
         print(f"[TIMING] Total duration: {round(time.time() - start_time, 2)}s for {company_name}")
 
