@@ -153,11 +153,12 @@ def get_quarterly_filings(company_name: str, count: int = 4):
         #Sort results by most recent filing date
         quarterly_reports.sort(
             key=lambda x: datetime.strptime(x["Filing Date"], "%Y-%m-%d"),
-            reverse=True
         )
 
         for i, report in enumerate(quarterly_reports, start=1):
             report["DisplayIndex"] = f"{i}."
+
+        quarterly_reports.reverse()
         if quarterly_reports:
             print(f"[DEBUG] Raw first result: {repr(quarterly_reports[0])}")
 
