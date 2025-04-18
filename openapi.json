@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Get SEC Filings Data",
-    "description": "Fetches the latest 10-Q filings for a company. Uses CIK resolution, alias mapping, and GitHub-based alias updates. Returns up to the most recent 10-Q HTML reports, with optional control over how many filings to retrieve.",
-    "version": "v4.3.1"
+    "description": "Fetches the latest 10-Q filings for a company. Uses CIK resolution, alias mapping, and GitHub-based alias updates. HTML URLs are validated using a resilient two-step method (HEAD request with fallback GET for reliability). Returns up to the most recent 10-Q HTML reports, with optional control over how many filings to retrieve.",
+    "version": "v4.3.2"
   },
   "servers": [
     {
@@ -13,7 +13,7 @@
   "paths": {
     "/get_quarterlies/{company_name}": {
       "get": {
-        "description": "Returns the most recent 10-Q filings for a public company, including filing dates and validated HTML report links. Defaults to 4 filings unless 'count' query param is specified (max recommended: 8; internal cap: 10).",
+        "description": "Returns the most recent 10-Q filings for a public company, including filing dates and validated HTML report links. Links are tested using HEAD and fallback GET-stream to ensure SEC.gov availability. Defaults to 4 filings unless 'count' query param is specified (max recommended: 8, internal cap: 10).",
         "operationId": "GetQuarterlyFilings",
         "parameters": [
           {
