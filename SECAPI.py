@@ -24,10 +24,19 @@ MAX_PARALLEL = 10  # Limit concurrent threads per request
 # === Utilities ===
 def validate_url(url):
     try:
+        # Try HEAD first
         resp = requests.head(url, headers=HEADERS, timeout=2)
+        if resp.status_code == 200:
+            return True
+    except Exception as e:
+        print(f"[HEAD FAIL] {url} — {e}")
+
+    # Fallback to GET with stream
+    try:
+        resp = requests.get(url, headers=HEADERS, stream=True, timeout=3)
         return resp.status_code == 200
     except Exception as e:
-        print(f"[Warning] HEAD request failed for {url}: {e}")
+        print(f"[GET FAIL] {url} — {e}")
         return False
 
 def get_actual_filing_url(cik, accession, primary_doc):
