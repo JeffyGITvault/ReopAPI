@@ -150,8 +150,14 @@ def get_quarterly_filings(company_name: str, count: int = 4):
         except Exception as e:
             print(f"[Warning] Alias push failed: {e}")
 
-        # ✅ Sort results by most recent filing date
-        quarterly_reports.sort(key=lambda x: x["Filing Date"], reverse=True)
+        #Sort results by most recent filing date
+        quarterly_reports.sort(
+            key=lambda x: datetime.strptime(x["Filing Date"], "%Y-%m-%d"),
+            reverse=True
+        )
+
+        if quarterly_reports:
+            print(f"[DEBUG] Raw first result: {repr(quarterly_reports[0])}")
 
         print(f"[TIMING] Total duration: {round(time.time() - start_time, 2)}s for {company_name}")
 
@@ -160,6 +166,7 @@ def get_quarterly_filings(company_name: str, count: int = 4):
             "CIK": cik,
             "10-Q Filings": quarterly_reports
         }
+
 
     except Exception as e:
         print(f"[ERROR] /get_quarterlies failed for {company_name}: {e}")
