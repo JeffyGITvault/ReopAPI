@@ -3,7 +3,7 @@
   "info": {
     "title": "Get SEC Filings Data",
     "description": "Fetches the latest 10-Q filings for a company. Uses CIK resolution, alias mapping, and GitHub-based alias updates. Returns up to the most recent 10-Q HTML reports, with optional control over how many filings to retrieve.",
-    "version": "v4.3.0"
+    "version": "v4.3.1"
   },
   "servers": [
     {
@@ -13,7 +13,7 @@
   "paths": {
     "/get_quarterlies/{company_name}": {
       "get": {
-        "description": "Returns the most recent 10-Q filings for a public company, including filing dates and validated HTML report links. Defaults to 4 filings unless 'count' query param is specified.",
+        "description": "Returns the most recent 10-Q filings for a public company, including filing dates and validated HTML report links. Defaults to 4 filings unless 'count' query param is specified (max recommended: 8; internal cap: 10).",
         "operationId": "GetQuarterlyFilings",
         "parameters": [
           {
@@ -28,7 +28,7 @@
           {
             "name": "count",
             "in": "query",
-            "description": "Optional. Number of most recent 10-Q filings to return (default is 4, max recommended is 8).",
+            "description": "Optional. Number of most recent 10-Q filings to return (default is 4, max is 8, internal hard cap is 10).",
             "required": false,
             "schema": {
               "type": "integer",
@@ -71,28 +71,3 @@
                         },
                         "required": [
                           "Filing Date",
-                          "HTML Report"
-                        ]
-                      }
-                    }
-                  },
-                  "required": [
-                    "Matched Company Name",
-                    "CIK",
-                    "10-Q Filings"
-                  ]
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Company not found or no filings available"
-          }
-        }
-      }
-    }
-  },
-  "components": {
-    "schemas": {}
-  }
-}
