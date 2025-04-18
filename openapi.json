@@ -71,3 +71,28 @@
                         },
                         "required": [
                           "Filing Date",
+                          "HTML Report"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "Matched Company Name",
+                    "CIK",
+                    "10-Q Filings"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Company not found or no filings available"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {}
+  }
+}
