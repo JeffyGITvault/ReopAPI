@@ -1,4 +1,4 @@
-# === Standard Library ===
+t # === Standard Library ===
 import json
 import time
 from datetime import datetime, timedelta
@@ -125,7 +125,6 @@ def get_quarterly_filings(company_name: str, count: int = 4):
                 "Status": status
             }
 
-
         # === Parallel execution with cap on max_workers ===
         with ThreadPoolExecutor(max_workers=min(count, MAX_PARALLEL)) as executor:
             futures = []
@@ -151,6 +150,9 @@ def get_quarterly_filings(company_name: str, count: int = 4):
             push_new_aliases_to_github()
         except Exception as e:
             print(f"[Warning] Alias push failed: {e}")
+
+        # ✅ Sort results by most recent filing date
+        quarterly_reports.sort(key=lambda x: x["Filing Date"], reverse=True)
 
         print(f"[TIMING] Total duration: {round(time.time() - start_time, 2)}s for {company_name}")
 
