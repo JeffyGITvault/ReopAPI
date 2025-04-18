@@ -114,8 +114,9 @@ def get_quarterly_filings(company_name: str, count: int = 4):
             filing_date = filing_dates[index]
 
             html_url = get_actual_filing_url(cik,accession,primary_doc)
-            status = "Validated" 
-            if html_url and html_url != "Unavailable" else "Unavailable"
+            status = "Validated" if html_url and html_url != "Unavailable" else "Unavailable"
+
+            print(f"[DEBUG] Filing {filing_date} → {html_url} ({status})") 
 
             return {
                 "Filing Date": filing_date,
