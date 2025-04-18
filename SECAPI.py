@@ -108,15 +108,22 @@ def get_quarterly_filings(company_name: str, count: int = 4):
         filing_dates = filings.get("filingDate", [])
 
         # === Helper function for parallel execution ===
-        def fetch_filing(index):
-            accession = accession_numbers[index].replace("-", "")
-            primary_doc = primary_docs[index]
-            filing_date = filing_dates[index]
-            html_url = get_actual_filing_url(cik, accession, primary_doc)
-            return {
-                "Filing Date": filing_date,
-                "HTML Report": html_url
-            }
+       def fetch_filing(index):
+    accession = accession_numbers[index].replace("-", "")
+    primary_doc = primary_docs[index]
+    filing_date = filing_dates[index]
+
+    status = "Validated"
+    html_url = get_actual_filing_url(cik, accession, primary_doc)
+
+    if html_url == "Unavailable":
+        status = "Unavailable"
+
+    return {
+        "Filing Date": filing_date,
+        "HTML Report": html_url,
+        "Status": status
+    }
 
         # === Parallel execution with cap on max_workers ===
         with ThreadPoolExecutor(max_workers=min(count, MAX_PARALLEL)) as executor:
