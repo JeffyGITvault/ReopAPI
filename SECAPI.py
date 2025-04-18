@@ -108,7 +108,7 @@ def get_quarterly_filings(company_name: str, count: int = 4):
         filing_dates = filings.get("filingDate", [])
 
         # === Helper function for parallel execution ===
-       def fetch_filing(index):
+def fetch_filing(index):
     accession = accession_numbers[index].replace("-", "")
     primary_doc = primary_docs[index]
     filing_date = filing_dates[index]
