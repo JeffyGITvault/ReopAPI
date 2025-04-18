@@ -139,34 +139,41 @@ def push_new_aliases_to_github(retries=2):
 def resolve_cik(company_name: str):
     name_key = company_name.lower().strip()
 
+    # Priority 1: Exact ticker match
     if name_key in CIK_CACHE:
         data = CIK_CACHE[name_key]
         print(f"[CIK] Exact ticker match: {company_name} → {data['title']}")
         record_alias(company_name, data['title'])
         return data['cik'], data['title']
 
+    # Priority 2: Alias resolution
     resolved_name = ALIAS_MAP.get(name_key, company_name).strip()
     resolved_key = resolved_name.lower()
 
+    # Priority 3: Exact SEC title match
     for data in CIK_CACHE.values():
         if data['title'].lower() == resolved_key:
             print(f"[CIK] Exact title match: {company_name} → {data['title']}")
             record_alias(company_name, data['title'])
             return data['cik'], data['title']
 
-    best_match = None
-    best_score = 0.0
+    # Priority 4: Enhanced fuzzy match logic
+    fuzzy_matches = []
     for data in CIK_CACHE.values():
         score = similar(resolved_name, data['title'])
-        if score >= 0.85 and score > best_score:
-            best_match = data
-            best_score = score
+        if score >= 0.85:
+            fuzzy_matches.append((score, data))
 
-    if best_match:
+    if fuzzy_matches:
+        # Sort by score (desc), prioritize entries with tickers
+        fuzzy_matches.sort(key=lambda x: (x[0], "ticker" in x[1]), reverse=True)
+        best_match = fuzzy_matches[0][1]
+        best_score = fuzzy_matches[0][0]
         print(f"[CIK] Fuzzy match: {company_name} → {best_match['title']} (score: {best_score:.2f})")
         record_alias(company_name, best_match['title'])
         return best_match['cik'], best_match['title']
 
+    # Priority 5: Web scrape fallback
     cleaned = re.sub(r'(,?\s+(Inc|Corp|Corporation|LLC|Ltd)\.?$)', '', resolved_name, flags=re.IGNORECASE)
     query = cleaned.replace(" ", "+")
     url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={query}&match=contains&action=getcompany"
