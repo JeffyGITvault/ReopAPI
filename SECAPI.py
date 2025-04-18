@@ -3,12 +3,13 @@ import requests
 from bs4 import BeautifulSoup
 import json
 from datetime import datetime, timedelta
+import time
 from cik_resolver import resolve_cik, push_new_aliases_to_github
 
 app = FastAPI(
     title="Get SEC Filings Data",
-    description="Fetches the latest 10-Q filings for a company. Uses CIK resolution, alias mapping, and GitHub-based alias updates. Returns the most recent 10-Q HTML reports.",
-    version="v4.3.0"
+    description="Fetches the latest 10-Q filings for a company. Uses CIK resolution, alias mapping, and GitHub-based alias updates. Returns up to the most recent 10-Q HTML reports, with optional control over how many filings to retrieve.",
+    version="v4.3.1"
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
@@ -16,7 +17,7 @@ HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 # === Utilities ===
 def validate_url(url):
     try:
-        resp = requests.head(url, headers=HEADERS)
+        resp = requests.head(url, headers=HEADERS, timeout=2)
         return resp.status_code == 200
     except:
         return False
@@ -27,13 +28,15 @@ def get_actual_filing_url(cik, accession, primary_doc):
     html_url = None
 
     try:
-        # Prefer the primary_doc if it's valid
+        # Try primary_doc first
         if primary_doc and primary_doc.endswith(".htm"):
             html_url = base_url + primary_doc
+            if validate_url(html_url):
+                return html_url
 
-        # Validate or fallback to best .htm from index
+        # Fallback to best .htm from index
         resp = requests.get(index_url, headers=HEADERS)
-        if resp.status_code == 200 and not validate_url(html_url):
+        if resp.status_code == 200:
             soup = BeautifulSoup(resp.text, "html.parser")
             candidates = []
             for a in soup.find_all("a"):
@@ -58,15 +61,25 @@ def get_actual_filing_url(cik, accession, primary_doc):
 # === Endpoints ===
 @app.get("/get_quarterlies/{company_name}")
 def get_quarterly_filings(company_name: str, count: int = 4):
+    start_time = time.time()
+
     cik, matched_name = resolve_cik(company_name)
     if not cik:
-        return {"error": f"Unable to resolve CIK for {company_name}"}
+        return {
+            "Matched Company Name": company_name,
+            "CIK": None,
+            "10-Q Filings": []
+        }
 
     url = f"https://data.sec.gov/submissions/CIK{cik}.json"
     try:
         response = requests.get(url, headers=HEADERS)
         if response.status_code != 200:
-            return {"error": f"Failed to fetch filings for {matched_name}"}
+            return {
+                "Matched Company Name": matched_name,
+                "CIK": cik,
+                "10-Q Filings": []
+            }
 
         data = response.json()
         filings = data.get("filings", {}).get("recent", {})
@@ -90,7 +103,12 @@ def get_quarterly_filings(company_name: str, count: int = 4):
             if len(quarterly_reports) == count:
                 break
 
-        push_new_aliases_to_github()
+        try:
+            push_new_aliases_to_github()
+        except Exception as e:
+            print(f"[Warning] Alias push failed: {e}")
+
+        print(f"[TIMING] Total duration: {round(time.time() - start_time, 2)}s for {company_name}")
 
         return {
             "Matched Company Name": matched_name,
@@ -99,4 +117,9 @@ def get_quarterly_filings(company_name: str, count: int = 4):
         }
 
     except Exception as e:
-        return {"error": f"Exception while fetching data: {e}"}
+        print(f"[ERROR] /get_quarterlies failed for {company_name}: {e}")
+        return {
+            "Matched Company Name": company_name,
+            "CIK": cik,
+            "10-Q Filings": []
+        }
