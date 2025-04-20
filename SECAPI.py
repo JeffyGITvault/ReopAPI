@@ -1,8 +1,8 @@
 # === Standard Library ===
 import json
 import time
-from datetime import datetime, timedelta
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 
 # === Third-Party Libraries ===
 import requests
@@ -14,29 +14,25 @@ from cik_resolver import resolve_cik, push_new_aliases_to_github
 
 app = FastAPI(
     title="Get SEC Filings Data",
-    description="Fetches the latest 10-Q filings for a company. Uses CIK resolution, alias mapping, and GitHub-based alias updates. Returns up to the most recent 10-Q HTML reports, with optional control over how many filings to retrieve.",
-    version="v4.3.1"
+    description="Fetches the latest 10-Q filings for a company. Uses CIK resolution, alias mapping, and GitHub-based alias updates. Returns the most recent 10-Q HTML reports.",
+    version="v4.3.3"
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
-MAX_PARALLEL = 10  # Limit concurrent threads per request
+MAX_PARALLEL = 10
 
-# === Utilities ===
 def validate_url(url):
     try:
-        # Try HEAD first
         resp = requests.head(url, headers=HEADERS, timeout=2)
         if resp.status_code == 200:
             return True
-    except Exception as e:
-        print(f"[HEAD FAIL] {url} — {e}")
+    except:
+        pass
 
-    # Fallback to GET with stream
     try:
         resp = requests.get(url, headers=HEADERS, stream=True, timeout=3)
         return resp.status_code == 200
-    except Exception as e:
-        print(f"[GET FAIL] {url} — {e}")
+    except:
         return False
 
 def get_actual_filing_url(cik, accession, primary_doc):
@@ -45,16 +41,13 @@ def get_actual_filing_url(cik, accession, primary_doc):
     html_url = None
 
     try:
-        # Try primary_doc first
         if primary_doc and primary_doc.endswith(".htm"):
             html_url = base_url + primary_doc
             if validate_url(html_url):
                 return html_url
 
-        # Fallback to best .htm from index
         resp = requests.get(index_url, headers=HEADERS)
         resp.raise_for_status()
-
         soup = BeautifulSoup(resp.text, "html.parser")
         candidates = []
         for a in soup.find_all("a"):
@@ -76,10 +69,8 @@ def get_actual_filing_url(cik, accession, primary_doc):
 
     return html_url or "Unavailable"
 
-# === Endpoints ===
 @app.get("/get_quarterlies/{company_name}")
-def get_quarterly_filings(company_name: str, count: int = 4):
-    count = max(1, min(count, 4)) 
+def get_quarterly_filings(company_name: str, count: int = 2):
     start_time = time.time()
 
     cik, matched_name = resolve_cik(company_name)
@@ -107,6 +98,18 @@ def get_quarterly_filings(company_name: str, count: int = 4):
         primary_docs = filings.get("primaryDocument", [])
         filing_dates = filings.get("filingDate", [])
 
+        all_10q = []
+        for i, form in enumerate(form_types):
+            if form == "10-Q":
+                try:
+                    filing_date = datetime.strptime(filing_dates[i], "%Y-%m-%d")
+                    all_10q.append((filing_date, i))
+                except:
+                    continue
+
+        all_10q.sort(reverse=True)
+        top_indices = [i for _, i in all_10q[:count]]
+
         def fetch_filing(index):
             accession = accession_numbers[index].replace("-", "")
             primary_doc = primary_docs[index]
@@ -119,35 +122,24 @@ def get_quarterly_filings(company_name: str, count: int = 4):
                 "Status": status
             }
 
-        with ThreadPoolExecutor(max_workers=min(count, MAX_PARALLEL)) as executor:
-            futures = []
-            for i, form in enumerate(form_types):
-                if form == "10-Q":
-                    futures.append(executor.submit(fetch_filing, i))
-                if len(futures) == count:
-                    break
+        quarterly_reports = []
+        with ThreadPoolExecutor(max_workers=min(len(top_indices), MAX_PARALLEL)) as executor:
+            results = list(executor.map(fetch_filing, top_indices))
+            quarterly_reports.extend(results)
 
-            quarterly_reports = []
-            for future in as_completed(futures):
-                if len(quarterly_reports) == count:
-                    break
-                try:
-                    result = future.result(timeout=3)
-                    if result["HTML Report"] and result["HTML Report"] != "Unavailable":
-                        quarterly_reports.append(result)
-                    time.sleep(1.0)    
-                except Exception as e:
-                    print(f"[ERROR] Filing fetch failed: {e}")
-
-        # Add display index for GPT templating (1️⃣, 2️⃣, etc.)
         for i, report in enumerate(quarterly_reports, start=1):
-            report["DisplayIndex"] = f"{i}️⃣"
+            report["DisplayIndex"] = f"{i}⃣"
             report["Marker"] = "📌 Most Recent" if i == 1 else "🕓 Older"
 
         if quarterly_reports:
             print(f"[DEBUG] Raw first result: {repr(quarterly_reports[0])}")
 
         print(f"[TIMING] Total duration: {round(time.time() - start_time, 2)}s for {company_name}")
+
+        try:
+            push_new_aliases_to_github()
+        except Exception as e:
+            print(f"[Warning] Alias push failed: {e}")
 
         return {
             "Matched Company Name": matched_name,
