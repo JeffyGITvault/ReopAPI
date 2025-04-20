@@ -13,6 +13,7 @@
   "paths": {
     "/get_quarterlies/{company_name}": {
       "get": {
+        "operationId": "getQuarterlies",
         "summary": "Fetch recent 10-Q filings",
         "parameters": [
           {
@@ -43,8 +44,12 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "company_name": { "type": "string" },
-                    "cik": { "type": "string" },
+                    "company_name": {
+                      "type": "string"
+                    },
+                    "cik": {
+                      "type": "string"
+                    },
                     "quarterly_reports": {
                       "type": "array",
                       "description": "The latest two 10-Q filings (default view)",
@@ -73,9 +78,16 @@
       "Filing": {
         "type": "object",
         "properties": {
-          "filing_date": { "type": "string", "format": "date" },
-          "report_url": { "type": "string" },
-          "excel_url": { "type": "string" }
+          "filing_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "report_url": {
+            "type": "string"
+          },
+          "excel_url": {
+            "type": "string"
+          }
         }
       }
     }
