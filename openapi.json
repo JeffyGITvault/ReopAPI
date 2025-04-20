@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Get SEC Filings Data",
-    "description": "Fetches the latest 10-Q filings for a company. Uses CIK resolution, alias mapping, and GitHub-based alias updates. HTML URLs are validated using a resilient two-step method (HEAD request with fallback GET for reliability). Returns up to the most recent 10-Q HTML reports, with optional control over how many filings to retrieve.",
-    "version": "v4.3.2"
+    "description": "Gets recent 10-Q filings for a public company, including filing dates and validated HTML links. Defaults to 2 filings unless 'count' is set (1–4 allowed). Link validation uses HEAD requests with GET fallback for reliability.",
+    "version": "v4.3.3"
   },
   "servers": [
     {
@@ -13,7 +13,7 @@
   "paths": {
     "/get_quarterlies/{company_name}": {
       "get": {
-        "description": "Returns the most recent 10-Q filings for a public company, including filing dates and validated HTML report links. Links are tested using HEAD and fallback GET-stream to ensure SEC.gov availability. Defaults to 2 filings unless the 'count' query parameter is specified. The maximum allowed is 4, and the minimum is 1.",
+        "description": "Gets recent 10-Q filings for a public company, including filing dates and validated HTML links. Defaults to 2 filings unless 'count' is set (1–4 allowed). Link validation uses HEAD requests with GET fallback for reliability.",
         "operationId": "GetQuarterlyFilings",
         "parameters": [
           {
@@ -67,11 +67,24 @@
                           "HTML Report": {
                             "type": "string",
                             "description": "Validated URL to the HTML version of the 10-Q report."
+                          },
+                          "Status": {
+                            "type": "string",
+                            "description": "Validation status (e.g., Validated, Unavailable)."
+                          },
+                          "DisplayIndex": {
+                            "type": "string",
+                            "description": "Optional visual index for display (e.g., 1️⃣, 2️⃣)."
+                          },
+                          "Marker": {
+                            "type": "string",
+                            "description": "Optional label (e.g., 📌 Most Recent, 🕓 Older)."
                           }
                         },
                         "required": [
                           "Filing Date",
-                          "HTML Report"
+                          "HTML Report",
+                          "Status"
                         ]
                       }
                     }
