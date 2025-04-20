@@ -15,11 +15,12 @@ from cik_resolver import resolve_cik, push_new_aliases_to_github
 app = FastAPI(
     title="Get SEC Filings Data",
     description="Fetches the latest 10-Q filings for a company. Uses CIK resolution, alias mapping, and GitHub-based alias updates. Returns the most recent 10-Q HTML reports.",
-    version="v4.3.3"
+    version="v5.0.0"
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 MAX_PARALLEL = 10
+
 
 def validate_url(url):
     try:
@@ -34,6 +35,7 @@ def validate_url(url):
         return resp.status_code == 200
     except:
         return False
+
 
 def get_actual_filing_url(cik, accession, primary_doc):
     base_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/"
@@ -68,6 +70,7 @@ def get_actual_filing_url(cik, accession, primary_doc):
         print(f"[ERROR] Exception while fetching filing URL: {e}")
 
     return html_url or "Unavailable"
+
 
 @app.get("/get_quarterlies/{company_name}")
 def get_quarterly_filings(company_name: str, count: int = 2):
@@ -115,11 +118,9 @@ def get_quarterly_filings(company_name: str, count: int = 2):
             primary_doc = primary_docs[index]
             filing_date = filing_dates[index]
             html_url = get_actual_filing_url(cik, accession, primary_doc)
-            status = "Validated" if html_url and html_url != "Unavailable" else "Unavailable"
             return {
                 "Filing Date": filing_date,
-                "HTML Report": html_url,
-                "Status": status
+                "HTML Report": html_url
             }
 
         quarterly_reports = []
@@ -129,7 +130,7 @@ def get_quarterly_filings(company_name: str, count: int = 2):
 
         for i, report in enumerate(quarterly_reports, start=1):
             report["DisplayIndex"] = f"{i}⃣"
-            report["Marker"] = "📌 Most Recent" if i == 1 else "🕓 Older"
+            report["Marker"] = "📌 Most Recent" if i == 1 else "🖓 Older"
 
         if quarterly_reports:
             print(f"[DEBUG] Raw first result: {repr(quarterly_reports[0])}")
