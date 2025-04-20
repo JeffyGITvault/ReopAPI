@@ -134,6 +134,7 @@ def get_quarterly_filings(company_name: str, count: int = 4):
                     result = future.result(timeout=3)
                     if result["HTML Report"] and result["HTML Report"] != "Unavailable":
                         quarterly_reports.append(result)
+                    time.sleep(0.5)    
                 except Exception as e:
                     print(f"[ERROR] Filing fetch failed: {e}")
 
