@@ -79,7 +79,7 @@ def get_actual_filing_url(cik, accession, primary_doc):
 # === Endpoints ===
 @app.get("/get_quarterlies/{company_name}")
 def get_quarterly_filings(company_name: str, count: int = 4):
-    count = max(2, min(count, 4)) 
+    count = max(1, min(count, 4)) 
     start_time = time.time()
 
     cik, matched_name = resolve_cik(company_name)
