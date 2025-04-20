@@ -2,19 +2,20 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SECAPI",
-    "version": "1.0.0"
+    "version": "4.3.4",
+    "description": "Fetch the latest 10-Q filings for any public company using CIK resolution, alias mapping, and SEC integration. Supports agentic workflows with up to four 10-Qs."
   },
   "servers": [
     {
       "url": "https://secapi.onrender.com",
-      "description": "Base URL for the SECAPI"
+      "description": "Primary Render deployment of SECAPI"
     }
   ],
   "paths": {
     "/get_quarterlies/{company_name}": {
       "get": {
         "operationId": "getQuarterlies",
-        "summary": "Fetch recent 10-Q filings",
+        "summary": "Retrieve the most recent 10-Q filings for a public company",
         "parameters": [
           {
             "name": "company_name",
@@ -23,7 +24,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "The name or ticker of the company"
+            "description": "Company name or ticker symbol (e.g., RH, AAPL, Meta)"
           },
           {
             "name": "agent_mode",
@@ -33,12 +34,12 @@
               "type": "boolean",
               "default": false
             },
-            "description": "Set to true to include up to 4 quarterly filings instead of 2"
+            "description": "If true, returns up to 4 quarterly filings instead of 2 (for agentic workflows)"
           }
         ],
         "responses": {
           "200": {
-            "description": "Quarterly filings retrieved",
+            "description": "Successful response containing company info and 10-Q reports",
             "content": {
               "application/json": {
                 "schema": {
@@ -52,14 +53,14 @@
                     },
                     "quarterly_reports": {
                       "type": "array",
-                      "description": "The latest two 10-Q filings (default view)",
+                      "description": "The most recent two 10-Q reports",
                       "items": {
                         "$ref": "#/components/schemas/Filing"
                       }
                     },
                     "cached_quarterlies": {
                       "type": "array",
-                      "description": "Additional 10-Q filings (up to 2 more), included when agent_mode is true or for backend use.",
+                      "description": "Additional 10-Q reports (up to 2 more) returned only in agent mode",
                       "items": {
                         "$ref": "#/components/schemas/Filing"
                       }
@@ -78,14 +79,17 @@
       "Filing": {
         "type": "object",
         "properties": {
-          "filing_date": {
+          "Filing Date": {
             "type": "string",
             "format": "date"
           },
-          "report_url": {
+          "HTML Report": {
             "type": "string"
           },
-          "excel_url": {
+          "DisplayIndex": {
+            "type": "string"
+          },
+          "Marker": {
             "type": "string"
           }
         }
