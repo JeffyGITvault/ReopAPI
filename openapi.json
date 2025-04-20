@@ -13,7 +13,7 @@
   "paths": {
     "/get_quarterlies/{company_name}": {
       "get": {
-        "description": "Returns the most recent 10-Q filings for a public company, including filing dates and validated HTML report links. Links are tested using HEAD and fallback GET-stream to ensure SEC.gov availability. Defaults to 4 filings unless 'count' query param is specified (max recommended: 8, internal cap: 10).",
+        "description": "Returns the most recent 10-Q filings for a public company, including filing dates and validated HTML report links. Links are tested using HEAD and fallback GET-stream to ensure SEC.gov availability. Defaults to 2 filings unless the 'count' query parameter is specified. The maximum allowed is 4, and the minimum is 1.",
         "operationId": "GetQuarterlyFilings",
         "parameters": [
           {
@@ -67,16 +67,11 @@
                           "HTML Report": {
                             "type": "string",
                             "description": "Validated URL to the HTML version of the 10-Q report."
-                          },
-                          "Status": {
-                            "type": "string",
-                            "description": "Validation status of the HTML report link (e.g., Validated or Unavailable)."
                           }
                         },
                         "required": [
                           "Filing Date",
-                          "HTML Report",
-                          "Status"
+                          "HTML Report"
                         ]
                       }
                     }
