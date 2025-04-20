@@ -67,11 +67,16 @@
                           "HTML Report": {
                             "type": "string",
                             "description": "Validated URL to the HTML version of the 10-Q report."
+                          },
+                          "Status": {
+                            "type": "string",
+                            "description": "Validation status of the HTML report link (e.g., Validated or Unavailable)."
                           }
                         },
                         "required": [
                           "Filing Date",
-                          "HTML Report"
+                          "HTML Report",
+                          "Status"
                         ]
                       }
                     }
