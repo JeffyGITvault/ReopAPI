@@ -77,7 +77,6 @@ def get_actual_filing_url(cik, accession, primary_doc):
     return html_url or "Unavailable"
 
 # === Endpoints ===
-
 @app.get("/get_quarterlies/{company_name}")
 def get_quarterly_filings(company_name: str, count: int = 4):
     start_time = time.time()
@@ -113,7 +112,6 @@ def get_quarterly_filings(company_name: str, count: int = 4):
             filing_date = filing_dates[index]
             html_url = get_actual_filing_url(cik, accession, primary_doc)
             status = "Validated" if html_url and html_url != "Unavailable" else "Unavailable"
-            print(f"[DEBUG] Filing {filing_date} → {html_url} ({status})")
             return {
                 "Filing Date": filing_date,
                 "HTML Report": html_url,
@@ -139,22 +137,20 @@ def get_quarterly_filings(company_name: str, count: int = 4):
                 except Exception as e:
                     print(f"[ERROR] Filing fetch failed: {e}")
 
+        # Sort results by most recent filing date
         quarterly_reports.sort(
             key=lambda x: datetime.strptime(x["Filing Date"], "%Y-%m-%d"),
             reverse=True
         )
 
+        # Add display index for GPT templating (1️⃣, 2️⃣, etc.)
+        for i, report in enumerate(quarterly_reports, start=1):
+            report["DisplayIndex"] = f"{i}️⃣"
+
         if quarterly_reports:
             print(f"[DEBUG] Raw first result: {repr(quarterly_reports[0])}")
 
-        try:
-            push_new_aliases_to_github()
-        except Exception as e:
-            print(f"[Warning] Alias push failed: {e}")
-
         print(f"[TIMING] Total duration: {round(time.time() - start_time, 2)}s for {company_name}")
-
-        time.sleep(index * 0.1)  # Simulated delay for markdown rendering reliability
 
         return {
             "Matched Company Name": matched_name,
