@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SECAPI",
-    "version": "4.3.4",
-    "description": "Fetch the latest 10-Q filings for any public company using CIK resolution, alias mapping, and SEC integration. Supports agentic workflows with up to four 10-Qs."
+    "version": "4.3.5",
+    "description": "Fetch the latest 10-Q filings for any public company using CIK resolution and SEC EDGAR integration. Returns validated HTML report links."
   },
   "servers": [
     {
@@ -27,14 +27,16 @@
             "description": "Company name or ticker symbol (e.g., RH, AAPL, Meta)"
           },
           {
-            "name": "agent_mode",
+            "name": "count",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "boolean",
-              "default": false
+              "type": "integer",
+              "default": 2,
+              "minimum": 1,
+              "maximum": 4
             },
-            "description": "If true, returns up to 4 quarterly filings instead of 2 (for agentic workflows)"
+            "description": "Number of recent 10-Q filings to return (max 4)"
           }
         ],
         "responses": {
@@ -45,22 +47,21 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "company_name": {
+                    "Matched Company Name": {
                       "type": "string"
                     },
-                    "cik": {
+                    "CIK": {
                       "type": "string"
                     },
-                    "quarterly_reports": {
+                    "10-Q Filings": {
                       "type": "array",
-                      "description": "The most recent two 10-Q reports",
                       "items": {
                         "$ref": "#/components/schemas/Filing"
                       }
                     },
                     "cached_quarterlies": {
                       "type": "array",
-                      "description": "Additional 10-Q reports (up to 2 more) returned only in agent mode",
+                      "description": "Reserved for future use",
                       "items": {
                         "$ref": "#/components/schemas/Filing"
                       }
@@ -84,6 +85,9 @@
             "format": "date"
           },
           "HTML Report": {
+            "type": "string"
+          },
+          "Status": {
             "type": "string"
           },
           "DisplayIndex": {
