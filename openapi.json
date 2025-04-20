@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Get SEC Filings Data",
-    "description": "Gets recent 10-Q filings for a public company, including filing dates and validated HTML links. Defaults to 2 filings unless 'count' is set (1–4 allowed). Link validation uses HEAD requests with GET fallback for reliability.",
+    "description": "Fetches up to the latest 10-Q filings for a public company. Uses alias mapping, fuzzy matching, and CIK resolution. Validates HTML URLs with HEAD + GET fallback. Returns filings in descending order by date, defaulting to 2.",
     "version": "v4.3.3"
   },
   "servers": [
@@ -13,7 +13,7 @@
   "paths": {
     "/get_quarterlies/{company_name}": {
       "get": {
-        "description": "Gets recent 10-Q filings for a public company, including filing dates and validated HTML links. Defaults to 2 filings unless 'count' is set (1–4 allowed). Link validation uses HEAD requests with GET fallback for reliability.",
+        "description": "Returns the most recent 10-Q filings for a public company. Includes validated HTML URLs and supports count param (default: 2, min: 1, max: 4).",
         "operationId": "GetQuarterlyFilings",
         "parameters": [
           {
@@ -70,30 +70,22 @@
                           },
                           "Status": {
                             "type": "string",
-                            "description": "Validation status (e.g., Validated, Unavailable)."
+                            "description": "Validation status of the HTML report URL."
                           },
                           "DisplayIndex": {
                             "type": "string",
-                            "description": "Optional visual index for display (e.g., 1️⃣, 2️⃣)."
+                            "description": "Emoji-style numeric label for GPT UI display."
                           },
                           "Marker": {
                             "type": "string",
-                            "description": "Optional label (e.g., 📌 Most Recent, 🕓 Older)."
+                            "description": "Indicates whether the filing is most recent or older."
                           }
                         },
-                        "required": [
-                          "Filing Date",
-                          "HTML Report",
-                          "Status"
-                        ]
+                        "required": ["Filing Date", "HTML Report"]
                       }
                     }
                   },
-                  "required": [
-                    "Matched Company Name",
-                    "CIK",
-                    "10-Q Filings"
-                  ]
+                  "required": ["Matched Company Name", "CIK", "10-Q Filings"]
                 }
               }
             }
