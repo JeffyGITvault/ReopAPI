@@ -4,6 +4,12 @@
     "title": "SECAPI",
     "version": "1.0.0"
   },
+  "servers": [
+    {
+      "url": "https://secapi.onrender.com",
+      "description": "Base URL for the SECAPI"
+    }
+  ],
   "paths": {
     "/get_quarterlies/{company_name}": {
       "get": {
