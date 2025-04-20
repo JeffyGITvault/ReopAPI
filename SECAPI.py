@@ -7,141 +7,64 @@ from concurrent.futures import ThreadPoolExecutor
 # === Third-Party Libraries ===
 import requests
 from bs4 import BeautifulSoup
-from fastapi import FastAPI
+from fastapi import FastAPI, Query, Path
+from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional
 
 # === Local Modules ===
-from cik_resolver import resolve_cik, push_new_aliases_to_github
+from cik_resolver import resolve_company_name, push_new_aliases_to_github
+from utils import get_actual_filing_urls
 
 app = FastAPI(
-    title="Get SEC Filings Data",
-    description="Fetches the latest 10-Q filings for a company. Uses CIK resolution, alias mapping, and GitHub-based alias updates. Returns the most recent 10-Q HTML reports.",
-    version="v4.3.4"
+    title="SECAPI",
+    version="4.3.4",
+    description="API to retrieve SEC 10-Q filings with GPT/agent support"
 )
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 MAX_PARALLEL = 10
 
+# Enable CORS for external use
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-def validate_url(url):
-    try:
-        resp = requests.head(url, headers=HEADERS, timeout=2)
-        if resp.status_code == 200:
-            return True
-    except:
-        pass
-
-    try:
-        resp = requests.get(url, headers=HEADERS, stream=True, timeout=3)
-        return resp.status_code == 200
-    except:
-        return False
-
-
-def get_actual_filing_url(cik, accession, primary_doc):
-    base_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/"
-    index_url = base_url + "index.html"
-    html_url = None
-
-    try:
-        if primary_doc and primary_doc.endswith(".htm"):
-            html_url = base_url + primary_doc
-            if validate_url(html_url):
-                return html_url
-
-        resp = requests.get(index_url, headers=HEADERS)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "html.parser")
-        candidates = []
-        for a in soup.find_all("a"):
-            href = a.get("href", "").lower()
-            if href.endswith(".htm"):
-                score = 0
-                if "10q" in href: score += 3
-                if "form" in href or "main" in href: score += 2
-                if "index" in href or "cover" in href or "summary" in href: score -= 1
-                candidates.append((score, href))
-        candidates.sort(reverse=True)
-        for _, href in candidates:
-            candidate_url = f"https://www.sec.gov{href}"
-            if validate_url(candidate_url):
-                html_url = candidate_url
-                break
-    except Exception as e:
-        print(f"[ERROR] Exception while fetching filing URL: {e}")
-
-    return html_url or "Unavailable"
-
+@app.get("/")
+def root():
+    return {"status": "SECAPI is live"}
 
 @app.get("/get_quarterlies/{company_name}")
-def get_quarterly_filings(company_name: str, count: int = 2):
+def get_quarterlies(
+    company_name: str = Path(..., description="Company name or stock ticker"),
+    agent_mode: Optional[bool] = Query(False, description="Return 4 filings instead of 2")
+):
     start_time = time.time()
 
-    cik, matched_name = resolve_cik(company_name)
-    if not cik:
-        return {
-            "Matched Company Name": company_name,
-            "CIK": None,
-            "10-Q Filings": []
-        }
-
-    url = f"https://data.sec.gov/submissions/CIK{cik}.json"
     try:
-        response = requests.get(url, headers=HEADERS)
-        if response.status_code != 200:
-            return {
-                "Matched Company Name": matched_name,
-                "CIK": cik,
-                "10-Q Filings": []
-            }
-
-        data = response.json()
-        filings = data.get("filings", {}).get("recent", {})
-        form_types = filings.get("form", [])
-        accession_numbers = filings.get("accessionNumber", [])
-        primary_docs = filings.get("primaryDocument", [])
-        filing_dates = filings.get("filingDate", [])
-
-        all_10q = []
-        for i, form in enumerate(form_types):
-            if form == "10-Q":
-                try:
-                    filing_date = datetime.strptime(filing_dates[i], "%Y-%m-%d")
-                    all_10q.append((filing_date, i))
-                except:
-                    continue
-
-        all_10q.sort(reverse=True)
-        top_indices = [i for _, i in all_10q[:count]]
-
-        def fetch_filing(index):
-            accession = accession_numbers[index].replace("-", "")
-            primary_doc = primary_docs[index]
-            filing_date = filing_dates[index]
-            html_url = get_actual_filing_url(cik, accession, primary_doc)
-            return {
-                "Filing Date": filing_date,
-                "HTML Report": html_url,
-            }
-
-        results = []
-        with ThreadPoolExecutor(max_workers=min(len(top_indices), MAX_PARALLEL)) as executor:
-            results = list(executor.map(fetch_filing, top_indices))
-
-        # Dummy header to pad GPT rendering
-        header = {
-            "Filing Date": "This is a dummy header line to help GPT render properly.",
-            "HTML Report": "https://example.com/dummy-link"
+        resolved_name, cik = resolve_company_name(company_name)
+    except Exception as e:
+        return {
+            "error": f"Could not resolve company name: {company_name}",
+            "details": str(e)
         }
 
-        quarterly_reports = [header] + results
+    try:
+        filings = get_actual_filing_urls(cik, form_type="10-Q")
+        sorted_filings = sorted(filings, key=lambda x: x.get("filing_date", ""), reverse=True)
+        top_four = sorted_filings[:4]
 
-        for i, report in enumerate(quarterly_reports[1:], start=1):
+        primary = top_four[:2]
+        cached = top_four[2:] if agent_mode else []
+
+        for i, report in enumerate(primary, start=1):
             report["DisplayIndex"] = str(i)
             report["Marker"] = "📌 Most Recent" if i == 1 else "🕓 Older"
 
-        if results:
-            print(f"[DEBUG] Raw first result: {repr(results[0])}")
-
+        print(f"[DEBUG] First filing: {repr(primary[0]) if primary else 'None'}")
         print(f"[TIMING] Total duration: {round(time.time() - start_time, 2)}s for {company_name}")
 
         try:
@@ -150,15 +73,14 @@ def get_quarterly_filings(company_name: str, count: int = 2):
             print(f"[Warning] Alias push failed: {e}")
 
         return {
-            "Matched Company Name": matched_name,
-            "CIK": cik,
-            "10-Q Filings": quarterly_reports[1:]  # return actual filings only
+            "company_name": resolved_name,
+            "cik": cik,
+            "quarterly_reports": primary,
+            "cached_quarterlies": cached
         }
 
     except Exception as e:
-        print(f"[ERROR] /get_quarterlies failed for {company_name}: {e}")
         return {
-            "Matched Company Name": company_name,
-            "CIK": cik,
-            "10-Q Filings": []
+            "error": f"Could not fetch 10-Q filings for CIK: {cik}",
+            "details": str(e)
         }
