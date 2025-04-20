@@ -1,103 +1,77 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Get SEC Filings Data",
-    "description": "Fetches up to the latest 10-Q filings for a public company. Uses alias mapping, fuzzy matching, and CIK resolution. Validates HTML URLs with HEAD + GET fallback. Returns filings in descending order by date, defaulting to 2.",
-    "version": "v5.0.0"
+    "title": "SECAPI",
+    "version": "1.0.0"
   },
-  "servers": [
-    {
-      "url": "https://secapi-5s5x.onrender.com"
-    }
-  ],
   "paths": {
     "/get_quarterlies/{company_name}": {
       "get": {
-        "description": "Returns the most recent 10-Q filings for a public company. Includes validated HTML URLs and supports count param (default: 2, min: 1, max: 4).",
-        "operationId": "GetQuarterlyFilings",
+        "summary": "Fetch recent 10-Q filings",
         "parameters": [
           {
             "name": "company_name",
             "in": "path",
-            "description": "Public company name or ticker (e.g., Apple, AAPL, Meta, RH).",
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "description": "The name or ticker of the company"
           },
           {
-            "name": "count",
+            "name": "agent_mode",
             "in": "query",
-            "description": "Optional. Number of most recent 10-Q filings to return (default is 2, max is 4).",
             "required": false,
             "schema": {
-              "type": "integer",
-              "default": 2,
-              "minimum": 1,
-              "maximum": 4
-            }
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Set to true to include up to 4 quarterly filings instead of 2"
           }
         ],
         "responses": {
           "200": {
-            "description": "Quarterly filings data",
+            "description": "Quarterly filings retrieved",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "Matched Company Name": {
-                      "type": "string",
-                      "description": "Resolved company name using alias and fuzzy matching."
-                    },
-                    "CIK": {
-                      "type": "string",
-                      "description": "SEC Central Index Key for the matched company."
-                    },
-                    "10-Q Filings": {
+                    "company_name": { "type": "string" },
+                    "cik": { "type": "string" },
+                    "quarterly_reports": {
                       "type": "array",
-                      "description": "A list of the latest 10-Q reports with filing dates and HTML URLs.",
+                      "description": "The latest two 10-Q filings (default view)",
                       "items": {
-                        "type": "object",
-                        "properties": {
-                          "Filing Date": {
-                            "type": "string",
-                            "description": "The official SEC filing date (YYYY-MM-DD)."
-                          },
-                          "HTML Report": {
-                            "type": "string",
-                            "description": "Validated URL to the HTML version of the 10-Q report."
-                          },
-                          "Status": {
-                            "type": "string",
-                            "description": "Validation status of the HTML report URL."
-                          },
-                          "DisplayIndex": {
-                            "type": "string",
-                            "description": "Emoji-style numeric label for GPT UI display."
-                          },
-                          "Marker": {
-                            "type": "string",
-                            "description": "Indicates whether the filing is most recent or older."
-                          }
-                        },
-                        "required": ["Filing Date", "HTML Report"]
+                        "$ref": "#/components/schemas/Filing"
+                      }
+                    },
+                    "cached_quarterlies": {
+                      "type": "array",
+                      "description": "Additional 10-Q filings (up to 2 more), included when agent_mode is true or for backend use.",
+                      "items": {
+                        "$ref": "#/components/schemas/Filing"
                       }
                     }
-                  },
-                  "required": ["Matched Company Name", "CIK", "10-Q Filings"]
+                  }
                 }
               }
             }
-          },
-          "404": {
-            "description": "Company not found or no filings available"
           }
         }
       }
     }
   },
   "components": {
-    "schemas": {}
+    "schemas": {
+      "Filing": {
+        "type": "object",
+        "properties": {
+          "filing_date": { "type": "string", "format": "date" },
+          "report_url": { "type": "string" },
+          "excel_url": { "type": "string" }
+        }
+      }
+    }
   }
 }
