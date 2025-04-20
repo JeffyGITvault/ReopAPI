@@ -46,12 +46,15 @@ def resolve_cik(name: str) -> Tuple[str, str]:
 
 # === Main Resolver ===
 def resolve_company_name(name: str) -> Tuple[str, str]:
-    aliases = load_alias_map()
     name_lower = name.lower()
+    aliases = load_alias_map()
+
+    # Normalize alias keys to lowercase
+    alias_map = {k.lower(): v for k, v in aliases.items()}
 
     # Check aliases (case insensitive)
-    if name_lower in aliases:
-        resolved = aliases[name_lower]
+    if name_lower in alias_map:
+        resolved = alias_map[name_lower]
         cik, _ = resolve_cik(resolved)
         if cik:
             return resolved, cik.zfill(10)
@@ -59,15 +62,14 @@ def resolve_company_name(name: str) -> Tuple[str, str]:
     # Fuzzy match fallback from SEC ticker list
     try:
         sec_data = requests.get(SEC_TICKER_CIK_URL, headers=HEADERS, timeout=5).json()
-        candidates = [(entry["ticker"].lower(), entry["title"], str(entry["cik_str"]).zfill(10)) for entry in sec_data.values()]
+        candidates = [
+            (entry["ticker"].lower(), entry["title"], str(entry["cik_str"]).zfill(10))
+            for entry in sec_data.values()
+        ]
 
-        names_to_match = [t for t, _, _ in candidates] + [n.lower() for _, n, _ in candidates]
-        match = SequenceMatcher(None, name_lower, " ".join(names_to_match)).find_longest_match(0, len(name_lower), 0, len(" ".join(names_to_match)))
-
-        if match.size > 3:
-            for t, title, cik in candidates:
-                if t == name_lower or title.lower() == name_lower:
-                    return title, cik
+        for ticker, title, cik in candidates:
+            if name_lower == ticker or name_lower == title.lower():
+                return title, cik
     except Exception as e:
         print(f"[Warning] Fuzzy SEC match failed: {e}")
 
