@@ -3,7 +3,7 @@
   "info": {
     "title": "Get SEC Filings Data",
     "description": "Fetches up to the latest 10-Q filings for a public company. Uses alias mapping, fuzzy matching, and CIK resolution. Validates HTML URLs with HEAD + GET fallback. Returns filings in descending order by date, defaulting to 2.",
-    "version": "v4.3.3"
+    "version": "v5.0.0"
   },
   "servers": [
     {
@@ -35,8 +35,7 @@
               "default": 2,
               "minimum": 1,
               "maximum": 4
-            },
-            "x-gpt-default":2
+            }
           }
         ],
         "responses": {
