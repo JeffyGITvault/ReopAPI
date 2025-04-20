@@ -28,13 +28,13 @@
           {
             "name": "count",
             "in": "query",
-            "description": "Optional. Number of most recent 10-Q filings to return (default is 4, max is 8, internal hard cap is 10).",
+            "description": "Optional. Number of most recent 10-Q filings to return (default is 2, max is 4).",
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 4,
+              "default": 2,
               "minimum": 1,
-              "maximum": 8
+              "maximum": 4
             }
           }
         ],
