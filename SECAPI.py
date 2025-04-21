@@ -99,9 +99,9 @@ def get_quarterly_filings(
     company_name: str = Path(..., description="Company name or stock ticker"),
     count: int = Query(2, description="Number of 10-Q filings to return"),
 ):
-    print(f"[GPT DEBUG] API called with: company_name={company_name}, count={count}")
-    print(f"[GPT DEBUG] Request headers: {request.headers}")
     
+    print(f"[INFO] SECAPI called: {company_name}, count={count}")
+
     start_time = time.time()
     cached = []
 
@@ -184,7 +184,7 @@ def get_quarterly_filings(
             report["marker"] = "📌 Most Recent" if i == 1 else "🕓 Older"
 
         if quarterly_reports:
-            print(f"[DEBUG] Raw first result: {repr(quarterly_reports[0])}")
+            print(f"[INFO] First filing: {quarterly_reports[0]['filing_date']} — {quarterly_reports[0]['html_url']}")
 
         print(f"[TIMING] Total duration: {round(time.time() - start_time, 2)}s for {company_name}")
 
