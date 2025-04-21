@@ -13,9 +13,8 @@ from typing import Optional
 # === Local Modules ===
 from cik_resolver import resolve_company_name, push_new_aliases_to_github, load_alias_map
 
-try:
-    alias_map_startup = load_alias_map()
-    print(f"[BOOT] Loaded {len(alias_map_startup)} aliases at startup")
+load_alias_map()
+
 except Exception as e:
     print(f"[BOOT ERROR] Could not load alias map: {e}")
 
