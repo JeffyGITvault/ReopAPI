@@ -25,8 +25,8 @@ HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 # === Load alias map from local and remote ===
 def load_alias_map():
     try:
-        response = requests.get(GITHUB_ALIAS_JSON, headers=HEADERS, timeout=5)
         print(f"[DEBUG] Attempting to fetch alias map from GitHub: {GITHUB_ALIAS_JSON}")
+        response = requests.get(GITHUB_ALIAS_JSON, headers=HEADERS, timeout=5)
         if response.status_code == 200:
             alias_map = response.json()
             print(f"[INFO] Loaded {len(alias_map)} aliases from GitHub")
@@ -47,6 +47,7 @@ def load_alias_map():
 
     print("[ERROR] No alias map loaded from GitHub or local fallback")
     return {}
+
 
 # === Main Resolver ===
 def resolve_company_name(name: str) -> Tuple[str, str]:
