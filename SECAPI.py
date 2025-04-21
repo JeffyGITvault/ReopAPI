@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 # === Third-Party Libraries ===
 import requests
 from bs4 import BeautifulSoup
-from fastapi import FastAPI, Query, Path
+from fastapi import Request, FastAPI, Query, Path
 from typing import Optional
 
 # === Local Modules ===
@@ -95,6 +95,7 @@ def get_actual_filing_url(cik, accession, primary_doc):
 def get_quarterly_filings(
     company_name: str = Path(..., description="Company name or stock ticker"),
     count: int = Query(2, description="Number of 10-Q filings to return")
+    request: Request
 ):
     print(f"[GPT DEBUG] API called with: company_name={company_name}, count={count}")
     print(f"[GPT DEBUG] Request headers: {request.headers}")
