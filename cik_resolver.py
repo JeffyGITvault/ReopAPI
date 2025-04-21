@@ -37,13 +37,6 @@ def load_alias_map():
 
     return {}
 
-# === Legacy CIK Resolver Wrapper ===
-def resolve_cik(name: str) -> Tuple[str, str]:
-    """Dummy legacy fallback."""
-    if name.lower() == "rh":
-        return ("1528849", "RH")
-    return (None, name)
-
 # === Main Resolver ===
 def resolve_company_name(name: str) -> Tuple[str, str]:
     name_lower = name.lower()
@@ -52,31 +45,24 @@ def resolve_company_name(name: str) -> Tuple[str, str]:
     # Normalize alias keys to lowercase
     alias_map = {k.lower(): v for k, v in aliases.items()}
 
-    # Check aliases (case insensitive)
+    # 1. Direct alias match
     if name_lower in alias_map:
         resolved = alias_map[name_lower]
-        cik, _ = resolve_cik(resolved)
-        if cik:
-            return resolved, cik.zfill(10)
+    else:
+        resolved = name  # fallback to raw input
 
-    # Fuzzy match fallback from SEC ticker list
+    # 2. Try SEC-provided company_tickers.json to resolve CIK
     try:
         sec_data = requests.get(SEC_TICKER_CIK_URL, headers=HEADERS, timeout=5).json()
-        candidates = [
-            (entry["ticker"].lower(), entry["title"], str(entry["cik_str"]).zfill(10))
-            for entry in sec_data.values()
-        ]
+        for entry in sec_data.values():
+            ticker = entry["ticker"].lower()
+            title = entry["title"]
+            cik = str(entry["cik_str"]).zfill(10)
 
-        for ticker, title, cik in candidates:
-            if name_lower == ticker or name_lower == title.lower():
+            if resolved.lower() == ticker or resolved.lower() == title.lower():
                 return title, cik
     except Exception as e:
-        print(f"[Warning] Fuzzy SEC match failed: {e}")
-
-    # Legacy fallback
-    cik, resolved = resolve_cik(name)
-    if cik:
-        return resolved, cik.zfill(10)
+        print(f"[Warning] SEC CIK match failed for '{resolved}': {e}")
 
     raise ValueError(f"Unable to resolve name: {name}")
 
