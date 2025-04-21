@@ -18,7 +18,7 @@ from typing import Tuple
 
 # === Constants ===
 SEC_TICKER_CIK_URL = "https://www.sec.gov/files/company_tickers.json"
-GITHUB_ALIAS_JSON = "https://raw.githubusercontent.com/JeffyGITvault/sec-alias-map/main/alias_map.json"
+GITHUB_ALIAS_JSON = "https://raw.githubusercontent.com/JeffyGITvault/ReopAPI/refs/heads/main/alias_map.json"
 LOCAL_ALIAS_FILE = "alias_map.json"
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 
