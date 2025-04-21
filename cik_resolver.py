@@ -81,5 +81,4 @@ def resolve_company_name(name: str) -> Tuple[str, str]:
 # === GitHub Alias Sync ===
 def push_new_aliases_to_github():
     """Placeholder: in prod, you'd use GitHub API or git push via subprocess."""
-    print("[Info] push_new_aliases_to_github() called – no-op in dev mode")
     # You can implement GitHub push logic here using PyGitHub or subprocess git
