@@ -92,11 +92,11 @@ def get_quarterly_filings(
     cached = []
 
     try:
-        cik, matched_name = resolve_cik(company_name)
+        matched_name, cik = resolve_company_name(company_name)
     except Exception as e:
         return {
             "Matched Company Name": company_name,
-            "CIK": None,
+            "CIK": cik,
             "10-Q Filings": [],
             "cached_quarterlies": cached,
             "Error": f"CIK resolution failed: {e}"
