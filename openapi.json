@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SECAPI",
-    "version": "4.3.5",
+    "version": "4.3.6",
     "description": "Fetch the latest 10-Q filings for any public company using CIK resolution and SEC EDGAR integration. Returns validated HTML report links."
   },
   "servers": [
@@ -87,6 +87,10 @@
           "HTML Report": {
             "type": "string"
           },
+          "HTML Link": {
+            "type": "string",
+            "description": "Markdown-formatted version of the HTML Report for GPT display (e.g., [10-Q Report](...))"
+          },  
           "Status": {
             "type": "string"
           },
