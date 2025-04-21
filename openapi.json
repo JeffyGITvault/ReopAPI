@@ -2,8 +2,12 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SECAPI",
-    "version": "4.3.6",
-    "description": "Fetch the latest 10-Q filings for any public company using CIK resolution and SEC EDGAR integration. Returns validated HTML report links."
+    "version": "4.3.7",
+    "description": "Fetch the latest 10-Q filings for any public company using CIK resolution and SEC EDGAR integration. Returns validated SEC report links with GPT-friendly formatting."
+  },
+  "x-openai-function": {
+    "name": "get_filings_for_company",
+    "description": "Retrieve the latest 10-Q filings for a public company. Returns structured metadata and validated HTML links."
   },
   "servers": [
     {
@@ -47,13 +51,13 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "Matched Company Name": {
+                    "company_name": {
                       "type": "string"
                     },
-                    "CIK": {
+                    "cik": {
                       "type": "string"
                     },
-                    "10-Q Filings": {
+                    "filings": {
                       "type": "array",
                       "items": {
                         "$ref": "#/components/schemas/Filing"
@@ -80,24 +84,24 @@
       "Filing": {
         "type": "object",
         "properties": {
-          "Filing Date": {
+          "filing_date": {
             "type": "string",
             "format": "date"
           },
-          "HTML Report": {
+          "html_url": {
             "type": "string"
           },
-          "HTML Link": {
+          "html_link": {
             "type": "string",
-            "description": "Markdown-formatted version of the HTML Report for GPT display (e.g., [10-Q Report](...))"
-          },  
-          "Status": {
+            "description": "Markdown-formatted version of the HTML report for GPT display"
+          },
+          "status": {
             "type": "string"
           },
-          "DisplayIndex": {
+          "display_index": {
             "type": "string"
           },
-          "Marker": {
+          "marker": {
             "type": "string"
           }
         }
