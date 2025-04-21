@@ -99,7 +99,7 @@ def get_quarterly_filings(
             "cik": None,
             "filings": [],
             "cached_quarterlies": cached,
-            "Error": f"CIK resolution failed: {e}"
+            "error": f"CIK resolution failed: {e}"
         }
 
     url = f"https://data.sec.gov/submissions/CIK{int(cik):010}.json"
@@ -111,7 +111,7 @@ def get_quarterly_filings(
                 "cik": cik,
                 "filings": [],
                 "cached_quarterlies": cached,
-                "Error": "CIK JSON not found or request failed"
+                "error": "CIK JSON not found or request failed"
             }
 
         data = response.json()
@@ -135,11 +135,11 @@ def get_quarterly_filings(
 
         if not top_indices:
             return {
-                "Matched Company Name": matched_name,
-                "CIK": cik,
-                "10-Q Filings": [],
+                "company_name": matched_name,
+                "cik": cik,
+                "filings": [],
                 "cached_quarterlies": cached,
-                "Note": "No recent 10-Qs found"
+                "note": "No recent 10-Qs found"
             }
 
         def fetch_filing(index):
@@ -152,12 +152,12 @@ def get_quarterly_filings(
             markdown_link = f"[10-Q Report]({html_url})" if html_url and html_url != "Unavailable" else "Unavailable"
 
             return {
-                "DisplayIndex": f"{index + 1}",
-                "Marker": "📌 Most Recent" if index == 0 else "🕓 Older",
-                "Filing Date": filing_date,
-                "HTML Report": html_url,
-                "HTML Link": markdown_link,
-                "Status": status
+                "display_index": f"{index + 1}",
+                "marker": "📌 Most Recent" if index == 0 else "🕓 Older",
+                "filing_date": filing_date,
+                "html_url": html_url,
+                "html_link": markdown_link,
+                "status": status
             }
 
         quarterly_reports = []
@@ -166,8 +166,8 @@ def get_quarterly_filings(
             quarterly_reports.extend(results)
 
         for i, report in enumerate(quarterly_reports, start=1):
-            report["DisplayIndex"] = f"{i}"
-            report["Marker"] = "📌 Most Recent" if i == 1 else "🕓 Older"
+            report["display_index"] = f"{i}"
+            report["marker"] = "📌 Most Recent" if i == 1 else "🕓 Older"
 
         if quarterly_reports:
             print(f"[DEBUG] Raw first result: {repr(quarterly_reports[0])}")
@@ -180,18 +180,18 @@ def get_quarterly_filings(
             print(f"[Warning] Alias push failed: {e}")
 
         return {
-            "Matched Company Name": matched_name,
-            "CIK": cik,
-            "10-Q Filings": quarterly_reports,
+            "company_name": matched_name,
+            "cik": cik,
+            "filings": quarterly_reports,
             "cached_quarterlies": cached
         }
 
     except Exception as e:
         print(f"[ERROR] /get_quarterlies failed for {company_name}: {e}")
         return {
-            "Matched Company Name": company_name,
-            "CIK": cik,
-            "10-Q Filings": [],
+            "company_name": company_name,
+            "cik": cik,
+            "filings": [],
             "cached_quarterlies": cached,
-            "Error": str(e)
+            "error": str(e)
         }
