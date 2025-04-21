@@ -15,9 +15,6 @@ from cik_resolver import resolve_company_name, push_new_aliases_to_github, load_
 
 load_alias_map()
 
-except Exception as e:
-    print(f"[BOOT ERROR] Could not load alias map: {e}")
-
 app = FastAPI(
     title="SECAPI",
     version="4.3.8",
