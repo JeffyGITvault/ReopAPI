@@ -96,6 +96,9 @@ def get_quarterly_filings(
     company_name: str = Path(..., description="Company name or stock ticker"),
     count: int = Query(2, description="Number of 10-Q filings to return")
 ):
+    print(f"[GPT DEBUG] API called with: company_name={company_name}, count={count}")
+    print(f"[GPT DEBUG] Request headers: {request.headers}")
+    
     start_time = time.time()
     cached = []
 
