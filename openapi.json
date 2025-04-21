@@ -3,11 +3,11 @@
   "info": {
     "title": "SECAPI",
     "version": "4.3.8",
-    "description": "Fetch the latest 10-Q filings for any public company using CIK resolution and SEC EDGAR integration. Returns validated SEC report links with GPT-friendly formatting."
+    "description": "Fetch the latest 10-Q filings for any public company using CIK resolution, alias mapping, and SEC EDGAR integration. Returns validated SEC HTML links for GPT-compatible use."
   },
   "x-openai-function": {
-    "name": "get_filings_for_company",
-    "description": "Retrieve the latest 10-Q filings for a public company. Returns structured metadata and validated HTML links."
+    "name": "getQuarterlies",
+    "description": "Retrieve the most recent 10-Q filings for a public company. Supports alias resolution, validated filing URLs, and optional caching."
   },
   "servers": [
     {
@@ -45,7 +45,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful response containing company info and 10-Q reports",
+            "description": "Structured response with CIK and validated 10-Q filing links",
             "content": {
               "application/json": {
                 "schema": {
@@ -69,6 +69,14 @@
                       "items": {
                         "$ref": "#/components/schemas/Filing"
                       }
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Optional error string if resolution or retrieval failed"
+                    },
+                    "note": {
+                      "type": "string",
+                      "description": "Optional note when no filings are found"
                     }
                   }
                 }
@@ -93,7 +101,7 @@
           },
           "html_link": {
             "type": "string",
-            "description": "Markdown-formatted version of the HTML report for GPT display"
+            "description": "Markdown-formatted version of the HTML report"
           },
           "status": {
             "type": "string"
