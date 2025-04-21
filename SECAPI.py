@@ -28,24 +28,38 @@ def root():
 
 def validate_url(url):
     try:
-        resp = requests.head(url, headers=HEADERS, timeout=2)
+        resp = requests.head(url, headers=HEADERS, timeout=3)
+        if resp.status_code == 200:
+            return True
+    except Exception:
+        pass
+
+    try:
+        resp = requests.get(url, headers=HEADERS, stream=True, timeout=5)
         return resp.status_code == 200
-    except:
+    except Exception:
         return False
 
 def get_actual_filing_url(cik, accession, primary_doc):
     base_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/"
     index_url = base_url + "index.html"
-
-    if primary_doc and primary_doc.endswith(".htm"):
-        html_url = base_url + primary_doc
-        if validate_url(html_url):
-            return html_url
+    html_url = None
 
     try:
+        # First attempt: use primary .htm doc
+        if primary_doc and primary_doc.endswith(".htm"):
+            html_url = base_url + primary_doc
+            if validate_url(html_url):
+                return html_url
+            else:
+                print(f"[WARN] Primary document failed validation: {html_url}")
+                html_url = None  # Reset for fallback
+
+        # Fallback: parse index.html for best candidate
         resp = requests.get(index_url, headers=HEADERS)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "html.parser")
+
         candidates = []
         for a in soup.find_all("a"):
             href = a.get("href", "").lower()
@@ -55,16 +69,23 @@ def get_actual_filing_url(cik, accession, primary_doc):
                 if "form" in href or "main" in href: score += 2
                 if "index" in href or "cover" in href or "summary" in href: score -= 1
                 candidates.append((score, href))
+
+        # Sort and validate candidates in order of score
         candidates.sort(reverse=True)
+
         for _, href in candidates:
             candidate_url = f"https://www.sec.gov{href}"
             if validate_url(candidate_url):
-                return candidate_url
+                html_url = candidate_url
+                break
+            else:
+                print(f"[INFO] Rejected candidate due to failed validation: {candidate_url}")
+
     except Exception as e:
-        print(f"[ERROR] Exception while fetching filing URL: {e}")
+        print(f"[ERROR] Exception while resolving filing URL for CIK {cik}: {e}")
 
-    return "Unavailable"
-
+    return html_url or "Unavailable"
+    
 @app.get("/get_quarterlies/{company_name}")
 def get_quarterly_filings(
     company_name: str = Path(..., description="Company name or stock ticker"),
