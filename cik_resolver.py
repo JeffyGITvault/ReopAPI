@@ -26,15 +26,26 @@ HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 def load_alias_map():
     try:
         response = requests.get(GITHUB_ALIAS_JSON, headers=HEADERS, timeout=5)
+        print(f"[DEBUG] Attempting to fetch alias map from GitHub: {GITHUB_ALIAS_JSON}")
         if response.status_code == 200:
-            return response.json()
+            alias_map = response.json()
+            print(f"[INFO] Loaded {len(alias_map)} aliases from GitHub")
+            return alias_map
+        else:
+            print(f"[WARNING] GitHub alias map fetch failed with status: {response.status_code}")
     except Exception as e:
-        print(f"[Warning] Failed to load GitHub alias map: {e}")
+        print(f"[ERROR] Exception loading alias map from GitHub: {e}")
 
     if os.path.exists(LOCAL_ALIAS_FILE):
-        with open(LOCAL_ALIAS_FILE, "r") as f:
-            return json.load(f)
+        try:
+            with open(LOCAL_ALIAS_FILE, "r") as f:
+                alias_map = json.load(f)
+                print(f"[INFO] Loaded {len(alias_map)} aliases from local file")
+                return alias_map
+        except Exception as e:
+            print(f"[ERROR] Failed to load local alias map: {e}")
 
+    print("[ERROR] No alias map loaded from GitHub or local fallback")
     return {}
 
 # === Main Resolver ===
