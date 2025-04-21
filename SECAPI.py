@@ -11,7 +11,7 @@ from fastapi import FastAPI, Query, Path
 from typing import Optional
 
 # === Local Modules ===
-from cik_resolver import resolve_company_name, push_new_aliases_to_github, laod_alias_map
+from cik_resolver import resolve_company_name, push_new_aliases_to_github, load_alias_map
 
 app = FastAPI(
     title="SECAPI",
