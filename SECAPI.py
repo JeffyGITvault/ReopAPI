@@ -145,7 +145,7 @@ def get_quarterly_filings(
                 "Note": "No recent 10-Qs found"
             }
 
-        def fetch_filing(index):
+def fetch_filing(index):
     accession = accession_numbers[index].replace("-", "")
     primary_doc = primary_docs[index]
     filing_date = filing_dates[index]
