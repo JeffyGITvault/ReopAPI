@@ -15,7 +15,7 @@ from cik_resolver import resolve_cik, push_new_aliases_to_github
 
 app = FastAPI(
     title="SECAPI",
-    version="4.3.5",
+    version="4.3.6",
     description="Fetches the latest 10-Q filings for a company. Uses CIK resolution, alias mapping, and GitHub-based alias updates. Returns validated SEC HTML reports."
 )
 
