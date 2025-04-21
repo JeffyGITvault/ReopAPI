@@ -94,7 +94,7 @@ def get_actual_filing_url(cik, accession, primary_doc):
 @app.get("/get_quarterlies/{company_name}")
 def get_quarterly_filings(
     company_name: str = Path(..., description="Company name or stock ticker"),
-    count: int = Query(2, description="Number of 10-Q filings to return")
+    count: int = Query(2, description="Number of 10-Q filings to return"),
     request: Request
 ):
     print(f"[GPT DEBUG] API called with: company_name={company_name}, count={count}")
