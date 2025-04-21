@@ -1,0 +1,19 @@
+# Exported from Render on 2025-04-21T05:01:51Z
+services:
+- type: web
+  name: SECAPI-trusted
+  runtime: python
+  repo: https://github.com/JeffyGITvault/ReopAPI
+  plan: starter
+  envVars:
+  - key: GITHUB_TOKEN
+    sync: false
+  - key: Key_1
+    sync: false
+  - key: Edgar
+    sync: false
+  region: oregon
+  buildCommand: pip install -r requirements.txt
+  startCommand: uvicorn SECAPI:app --host 0.0.0.0 --port $PORT
+  numInstances: 2
+version: "1"
