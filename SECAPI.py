@@ -46,16 +46,14 @@ def get_actual_filing_url(cik, accession, primary_doc):
     html_url = None
 
     try:
-        # First attempt: use primary .htm doc
         if primary_doc and primary_doc.endswith(".htm"):
             html_url = base_url + primary_doc
             if validate_url(html_url):
                 return html_url
             else:
                 print(f"[WARN] Primary document failed validation: {html_url}")
-                html_url = None  # Reset for fallback
+                html_url = None
 
-        # Fallback: parse index.html for best candidate
         resp = requests.get(index_url, headers=HEADERS)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "html.parser")
@@ -70,7 +68,6 @@ def get_actual_filing_url(cik, accession, primary_doc):
                 if "index" in href or "cover" in href or "summary" in href: score -= 1
                 candidates.append((score, href))
 
-        # Sort and validate candidates in order of score
         candidates.sort(reverse=True)
 
         for _, href in candidates:
@@ -85,7 +82,7 @@ def get_actual_filing_url(cik, accession, primary_doc):
         print(f"[ERROR] Exception while resolving filing URL for CIK {cik}: {e}")
 
     return html_url or "Unavailable"
-    
+
 @app.get("/get_quarterlies/{company_name}")
 def get_quarterly_filings(
     company_name: str = Path(..., description="Company name or stock ticker"),
@@ -145,24 +142,23 @@ def get_quarterly_filings(
                 "Note": "No recent 10-Qs found"
             }
 
-def fetch_filing(index):
-    accession = accession_numbers[index].replace("-", "")
-    primary_doc = primary_docs[index]
-    filing_date = filing_dates[index]
-    html_url = get_actual_filing_url(cik, accession, primary_doc)
+        def fetch_filing(index):
+            accession = accession_numbers[index].replace("-", "")
+            primary_doc = primary_docs[index]
+            filing_date = filing_dates[index]
+            html_url = get_actual_filing_url(cik, accession, primary_doc)
 
-    # GPT-safe fields
-    status = "Validated" if html_url and html_url != "Unavailable" else "Unavailable"
-    markdown_link = f"[10-Q Report]({html_url})" if html_url and html_url != "Unavailable" else "Unavailable"
+            status = "Validated" if html_url and html_url != "Unavailable" else "Unavailable"
+            markdown_link = f"[10-Q Report]({html_url})" if html_url and html_url != "Unavailable" else "Unavailable"
 
-    return {
-        "DisplayIndex": f"{index + 1}",
-        "Marker": "📌 Most Recent" if index == 0 else "🕓 Older",
-        "Filing Date": filing_date,
-        "HTML Report": html_url,
-        "HTML Link": markdown_link,
-        "Status": status
-    }
+            return {
+                "DisplayIndex": f"{index + 1}",
+                "Marker": "📌 Most Recent" if index == 0 else "🕓 Older",
+                "Filing Date": filing_date,
+                "HTML Report": html_url,
+                "HTML Link": markdown_link,
+                "Status": status
+            }
 
         quarterly_reports = []
         with ThreadPoolExecutor(max_workers=min(len(top_indices), MAX_PARALLEL)) as executor:
