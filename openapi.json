@@ -11,7 +11,7 @@
   },
   "servers": [
     {
-      "url": "https://secapi.5s5xonrender.com",
+      "url": "https://secapi.5s5x.onrender.com",
       "description": "Primary Render deployment of SECAPI"
     }
   ],
