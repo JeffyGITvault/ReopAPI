@@ -106,7 +106,7 @@ def get_quarterly_filings(
             "company_name": company_name,
             "cik": None,
             "filings": [],
-            "cached_quarterlies": cached,
+            "cached_quarterlies": [],
             "error": f"CIK resolution failed: {e}"
         }
 
@@ -118,7 +118,7 @@ def get_quarterly_filings(
                 "company_name": matched_name,
                 "cik": cik,
                 "filings": [],
-                "cached_quarterlies": cached,
+                "cached_quarterlies": [],
                 "error": "CIK JSON not found or request failed"
             }
 
@@ -146,7 +146,7 @@ def get_quarterly_filings(
                 "company_name": matched_name,
                 "cik": cik,
                 "filings": [],
-                "cached_quarterlies": cached,
+                "cached_quarterlies": [],
                 "note": "No recent 10-Qs found"
             }
 
@@ -191,7 +191,7 @@ def get_quarterly_filings(
             "company_name": matched_name,
             "cik": cik,
             "filings": quarterly_reports,
-            "cached_quarterlies": cached
+            "cached_quarterlies": []
         }
 
     except Exception as e:
@@ -200,6 +200,6 @@ def get_quarterly_filings(
             "company_name": company_name,
             "cik": cik,
             "filings": [],
-            "cached_quarterlies": cached,
+            "cached_quarterlies": [],
             "error": str(e)
         }
