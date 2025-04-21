@@ -11,7 +11,7 @@ from fastapi import FastAPI, Query, Path
 from typing import Optional
 
 # === Local Modules ===
-from cik_resolver import resolve_company_name, push_new_aliases_to_github
+from cik_resolver import resolve_company_name, push_new_aliases_to_github, laod_alias_map
 
 app = FastAPI(
     title="SECAPI",
@@ -21,6 +21,14 @@ app = FastAPI(
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 MAX_PARALLEL = 10
+
+@app.get("/debug_alias_map")
+def debug_alias_map():
+    alias_map = load_alias_map()
+    return {
+        "alias_count": len(alias_map),
+        "example_keys": list(alias_map.keys())[:5]  # optional sanity check
+    }
 
 @app.get("/")
 def root():
