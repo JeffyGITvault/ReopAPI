@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SECAPI",
-    "version": "4.3.7",
+    "version": "4.3.8",
     "description": "Fetch the latest 10-Q filings for any public company using CIK resolution and SEC EDGAR integration. Returns validated SEC report links with GPT-friendly formatting."
   },
   "x-openai-function": {
