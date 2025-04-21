@@ -15,7 +15,7 @@ from cik_resolver import resolve_cik, push_new_aliases_to_github
 
 app = FastAPI(
     title="SECAPI",
-    version="4.3.6",
+    version="4.3.8",
     description="Fetches the latest 10-Q filings for a company. Uses CIK resolution, alias mapping, and GitHub-based alias updates. Returns validated SEC HTML reports."
 )
 
@@ -102,7 +102,7 @@ def get_quarterly_filings(
             "Error": f"CIK resolution failed: {e}"
         }
 
-    url = f"https://data.sec.gov/submissions/CIK{cik}.json"
+    url = f"https://data.sec.gov/submissions/CIK{int(cik):010}.json"
     try:
         response = requests.get(url, headers=HEADERS)
         if response.status_code != 200:
