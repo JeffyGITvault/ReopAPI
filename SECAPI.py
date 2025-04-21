@@ -146,16 +146,23 @@ def get_quarterly_filings(
             }
 
         def fetch_filing(index):
-            accession = accession_numbers[index].replace("-", "")
-            primary_doc = primary_docs[index]
-            filing_date = filing_dates[index]
-            html_url = get_actual_filing_url(cik, accession, primary_doc)
-            status = "Validated" if html_url and html_url != "Unavailable" else "Unavailable"
-            return {
-                "Filing Date": filing_date,
-                "HTML Report": html_url,
-                "Status": status
-            }
+    accession = accession_numbers[index].replace("-", "")
+    primary_doc = primary_docs[index]
+    filing_date = filing_dates[index]
+    html_url = get_actual_filing_url(cik, accession, primary_doc)
+
+    # GPT-safe fields
+    status = "Validated" if html_url and html_url != "Unavailable" else "Unavailable"
+    markdown_link = f"[10-Q Report]({html_url})" if html_url and html_url != "Unavailable" else "Unavailable"
+
+    return {
+        "DisplayIndex": f"{index + 1}",
+        "Marker": "📌 Most Recent" if index == 0 else "🕓 Older",
+        "Filing Date": filing_date,
+        "HTML Report": html_url,
+        "HTML Link": markdown_link,
+        "Status": status
+    }
 
         quarterly_reports = []
         with ThreadPoolExecutor(max_workers=min(len(top_indices), MAX_PARALLEL)) as executor:
