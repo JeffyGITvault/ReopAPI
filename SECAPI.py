@@ -95,9 +95,9 @@ def get_quarterly_filings(
         matched_name, cik = resolve_company_name(company_name)
     except Exception as e:
         return {
-            "Matched Company Name": company_name,
-            "CIK": cik,
-            "10-Q Filings": [],
+            "company_name": company_name,
+            "cik": None,
+            "filings": [],
             "cached_quarterlies": cached,
             "Error": f"CIK resolution failed: {e}"
         }
@@ -107,9 +107,9 @@ def get_quarterly_filings(
         response = requests.get(url, headers=HEADERS)
         if response.status_code != 200:
             return {
-                "Matched Company Name": matched_name,
-                "CIK": cik,
-                "10-Q Filings": [],
+                "company_name": matched_name,
+                "cik": cik,
+                "filings": [],
                 "cached_quarterlies": cached,
                 "Error": "CIK JSON not found or request failed"
             }
