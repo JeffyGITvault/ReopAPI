@@ -27,19 +27,19 @@ alias_map = {}
 
 # === Load alias map from local and remote ===
 def load_alias_map(force_reload=False):
-    global ALIAS_MAP
+    global alias_map 
 
     # Already loaded and no force? Return cached
-    if ALIAS_MAP and not force_reload:
-        return ALIAS_MAP
+    if alias_map and not force_reload:
+        return alias_map
 
     try:
         print(f"[DEBUG] Attempting to fetch alias map from GitHub: {GITHUB_ALIAS_JSON}")
         response = requests.get(GITHUB_ALIAS_JSON, headers=HEADERS, timeout=5)
         if response.status_code == 200:
-            ALIAS_MAP = {k.lower(): v for k, v in response.json().items()}
-            print(f"[INFO] Loaded {len(ALIAS_MAP)} aliases from GitHub")
-            return ALIAS_MAP
+            alias_map = {k.lower(): v for k, v in response.json().items()}
+            print(f"[INFO] Loaded {len(alias_map)} aliases from GitHub")
+            return alias_map
         else:
             print(f"[WARNING] GitHub alias map fetch failed with status: {response.status_code}")
     except Exception as e:
@@ -49,15 +49,15 @@ def load_alias_map(force_reload=False):
     if os.path.exists(LOCAL_ALIAS_FILE):
         try:
             with open(LOCAL_ALIAS_FILE, "r") as f:
-                ALIAS_MAP = {k.lower(): v for k, v in json.load(f).items()}
+                alias_map = {k.lower(): v for k, v in json.load(f).items()}
                 print(f"[INFO] Loaded {len(ALIAS_MAP)} aliases from local file")
-                return ALIAS_MAP
+                return alias_map
         except Exception as e:
             print(f"[ERROR] Failed to load local alias map: {e}")
 
     print("[ERROR] No alias map loaded from GitHub or local fallback")
-    ALIAS_MAP = {}
-    return ALIAS_MAP
+    alias_map = {}
+    return alias_map
 
 # === Main Resolver ===
 def resolve_company_name(name: str) -> Tuple[str, str]:
