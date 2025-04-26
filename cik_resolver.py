@@ -50,7 +50,7 @@ def load_alias_map(force_reload=False):
         except Exception as e:
             print(f"[ERROR] Failed to load local alias map: {e}")
 
- if os.path.exists(LOCAL_ALIAS_FILE):
+     if os.path.exists(LOCAL_ALIAS_FILE):
         try:
             with open(LOCAL_ALIAS_FILE, "r") as f:
                 alias_map = {k.lower(): v for k, v in json.load(f).items()}
