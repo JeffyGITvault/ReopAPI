@@ -1,16 +1,31 @@
 # app/api/agents/agent1_fetch_sec.py
 
-from app.api.SECAPI import fetch_quarterly_data  # Adjust based on your function names
+from app.api.SECAPI import get_quarterly_filings
+from fastapi import Request
+from starlette.requests import Request as StarletteRequest
+
+class DummyRequest(StarletteRequest):
+    def __init__(self):
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "/",
+            "headers": [],
+        }
+        super().__init__(scope)
 
 def fetch_10q(company_name: str) -> dict:
     """
-    Fetch latest 10-Q data for the company using SECAPI backend.
+    Agent 1: Fetch the latest 10-Q filings for a given company.
     """
     try:
-        quarterly_data = fetch_quarterly_data(company_name)
-        
-        # You could post-process here if needed (filter only 10-Q)
-        return quarterly_data
+        dummy_request = DummyRequest()
+        filings_data = get_quarterly_filings(
+            request=dummy_request,
+            company_name=company_name,
+            count=2
+        )
+        return filings_data
 
     except Exception as e:
-        return {"error": f"Failed to fetch SEC data: {str(e)}"}
+        return {"error": f"Agent 1 - SEC data fetch failed: {str(e)}"}
