@@ -23,7 +23,7 @@ LOCAL_ALIAS_FILE = "alias_map.json"
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 
 # === Load alias map from local and remote ===
-def load_alias_map(force_reload=False)):
+def load_alias_map(force_reload=False):
     global alias_map
 
     if alias_map and not force_reload:
