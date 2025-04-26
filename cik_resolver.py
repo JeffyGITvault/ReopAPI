@@ -22,60 +22,51 @@ GITHUB_ALIAS_JSON = "https://raw.githubusercontent.com/JeffyGITvault/ReopAPI/ref
 LOCAL_ALIAS_FILE = "alias_map.json"
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 
+# === Global Alias Map Cache ===
+alias_map = {}
+
 # === Load alias map from local and remote ===
 def load_alias_map(force_reload=False):
-    global alias_map
+    global ALIAS_MAP
 
-    if alias_map and not force_reload:
-        return alias_map
-        
+    # Already loaded and no force? Return cached
+    if ALIAS_MAP and not force_reload:
+        return ALIAS_MAP
+
     try:
         print(f"[DEBUG] Attempting to fetch alias map from GitHub: {GITHUB_ALIAS_JSON}")
         response = requests.get(GITHUB_ALIAS_JSON, headers=HEADERS, timeout=5)
         if response.status_code == 200:
-            alias_map = {k.lower(): v for k, v in response.json().items()}
-            print(f"[INFO] Loaded {len(alias_map)} aliases from GitHub")
-            return alias_map
+            ALIAS_MAP = {k.lower(): v for k, v in response.json().items()}
+            print(f"[INFO] Loaded {len(ALIAS_MAP)} aliases from GitHub")
+            return ALIAS_MAP
         else:
             print(f"[WARNING] GitHub alias map fetch failed with status: {response.status_code}")
     except Exception as e:
         print(f"[ERROR] Exception loading alias map from GitHub: {e}")
 
+    # Fallback to local file if GitHub fails
     if os.path.exists(LOCAL_ALIAS_FILE):
         try:
             with open(LOCAL_ALIAS_FILE, "r") as f:
-                alias_map = json.load(f)
-                print(f"[INFO] Loaded {len(alias_map)} aliases from local file")
-                return alias_map
-        except Exception as e:
-            print(f"[ERROR] Failed to load local alias map: {e}")
-
-     if os.path.exists(LOCAL_ALIAS_FILE):
-        try:
-            with open(LOCAL_ALIAS_FILE, "r") as f:
-                alias_map = {k.lower(): v for k, v in json.load(f).items()}
-                print(f"[INFO] Loaded {len(aLIAS_mAP)} aliases from local file")
-                return alias_map
+                ALIAS_MAP = {k.lower(): v for k, v in json.load(f).items()}
+                print(f"[INFO] Loaded {len(ALIAS_MAP)} aliases from local file")
+                return ALIAS_MAP
         except Exception as e:
             print(f"[ERROR] Failed to load local alias map: {e}")
 
     print("[ERROR] No alias map loaded from GitHub or local fallback")
-    alias_map = {}
-    return alias_map
-   
-
+    ALIAS_MAP = {}
+    return ALIAS_MAP
 
 # === Main Resolver ===
 def resolve_company_name(name: str) -> Tuple[str, str]:
-    name_lower = name.lower()
     aliases = load_alias_map()
-
-    # Normalize alias keys to lowercase
-    alias_map = aliases
+    name_lower = name.lower()
 
     # 1. Direct alias match
-    if name_lower in alias_map:
-        resolved = alias_map[name_lower]
+    if name_lower in aliases:
+        resolved = aliases[name_lower]
     else:
         resolved = name  # fallback to raw input
 
@@ -94,7 +85,8 @@ def resolve_company_name(name: str) -> Tuple[str, str]:
 
     raise ValueError(f"Unable to resolve name: {name}")
 
-# === GitHub Alias Sync ===
+# === GitHub Alias Sync (Placeholder) ===
 def push_new_aliases_to_github():
     """Placeholder: in prod, you'd use GitHub API or git push via subprocess."""
-    # You can implement GitHub push logic here using PyGitHub or subprocess git
+    # No-op for now
+    pass
