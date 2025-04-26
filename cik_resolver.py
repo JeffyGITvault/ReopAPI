@@ -23,12 +23,17 @@ LOCAL_ALIAS_FILE = "alias_map.json"
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 
 # === Load alias map from local and remote ===
-def load_alias_map():
+def load_alias_map(force_reload=False)):
+    global alias_map
+
+    if alias_map and not force_reload:
+        return alias_map
+        
     try:
         print(f"[DEBUG] Attempting to fetch alias map from GitHub: {GITHUB_ALIAS_JSON}")
         response = requests.get(GITHUB_ALIAS_JSON, headers=HEADERS, timeout=5)
         if response.status_code == 200:
-            alias_map = response.json()
+            alias_map = {k.lower(): v for k, v in response.json().items()}
             print(f"[INFO] Loaded {len(alias_map)} aliases from GitHub")
             return alias_map
         else:
@@ -45,8 +50,19 @@ def load_alias_map():
         except Exception as e:
             print(f"[ERROR] Failed to load local alias map: {e}")
 
+ if os.path.exists(LOCAL_ALIAS_FILE):
+        try:
+            with open(LOCAL_ALIAS_FILE, "r") as f:
+                alias_map = {k.lower(): v for k, v in json.load(f).items()}
+                print(f"[INFO] Loaded {len(aLIAS_mAP)} aliases from local file")
+                return alias_map
+        except Exception as e:
+            print(f"[ERROR] Failed to load local alias map: {e}")
+
     print("[ERROR] No alias map loaded from GitHub or local fallback")
-    return {}
+    alias_map = {}
+    return alias_map
+   
 
 
 # === Main Resolver ===
@@ -55,7 +71,7 @@ def resolve_company_name(name: str) -> Tuple[str, str]:
     aliases = load_alias_map()
 
     # Normalize alias keys to lowercase
-    alias_map = {k.lower(): v for k, v in aliases.items()}
+    alias_map = aliases
 
     # 1. Direct alias match
     if name_lower in alias_map:
