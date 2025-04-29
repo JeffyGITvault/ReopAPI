@@ -1,13 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "SECAPI",
-    "version": "4.3.8",
-    "description": "Fetch the latest 10-Q filings for any public company using CIK resolution, alias mapping, and SEC EDGAR integration. Returns validated SEC HTML links for GPT-compatible use."
-  },
-  "x-openai-function": {
-    "name": "getQuarterlies",
-    "description": "Retrieve the most recent 10-Q filings for a public company. Supports alias resolution, validated filing URLs, and optional caching."
+    "title": "SECAPI Multi-Agent System",
+    "version": "5.0.0",
+    "description": "Multi-agent system to fetch SEC filings, perform financial analysis, profile executives, and conduct market analysis."
   },
   "servers": [
     {
@@ -16,7 +12,7 @@
     }
   ],
   "paths": {
-    "/get_quarterlies/{company_name}": {
+    "/secapi/get_quarterlies/{company_name}": {
       "get": {
         "operationId": "getQuarterlies",
         "summary": "Retrieve the most recent 10-Q filings for a public company",
@@ -49,36 +45,35 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "company_name": {
-                      "type": "string"
-                    },
-                    "cik": {
-                      "type": "string"
-                    },
-                    "filings": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Filing"
-                      }
-                    },
-                    "cached_quarterlies": {
-                      "type": "array",
-                      "description": "Reserved for future use",
-                      "items": {
-                        "$ref": "#/components/schemas/Filing"
-                      }
-                    },
-                    "error": {
-                      "type": "string",
-                      "description": "Optional error string if resolution or retrieval failed"
-                    },
-                    "note": {
-                      "type": "string",
-                      "description": "Optional note when no filings are found"
-                    }
-                  }
+                  "$ref": "#/components/schemas/SecApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/run_pipeline": {
+      "post": {
+        "operationId": "runPipeline",
+        "summary": "Run full multi-agent analysis pipeline for a company",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PipelineRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Structured response from multi-agent analysis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineResponse"
                 }
               }
             }
@@ -92,26 +87,57 @@
       "Filing": {
         "type": "object",
         "properties": {
-          "filing_date": {
-            "type": "string",
-            "format": "date"
+          "filing_date": { "type": "string", "format": "date" },
+          "html_url": { "type": "string" },
+          "html_link": { "type": "string", "description": "Markdown link" },
+          "status": { "type": "string" },
+          "display_index": { "type": "string" },
+          "marker": { "type": "string" }
+        }
+      },
+      "SecApiResponse": {
+        "type": "object",
+        "properties": {
+          "company_name": { "type": "string" },
+          "cik": { "type": "string" },
+          "filings": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Filing" }
           },
-          "html_url": {
-            "type": "string"
+          "cached_quarterlies": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Filing" }
           },
-          "html_link": {
-            "type": "string",
-            "description": "Markdown-formatted version of the HTML report"
+          "error": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      },
+      "PipelineRequest": {
+        "type": "object",
+        "required": ["company", "people", "meeting_context"],
+        "properties": {
+          "company": { "type": "string" },
+          "people": {
+            "type": "array",
+            "items": { "type": "string" }
           },
-          "status": {
-            "type": "string"
+          "meeting_context": { "type": "string" }
+        }
+      },
+      "PipelineResponse": {
+        "type": "object",
+        "properties": {
+          "company": { "type": "string" },
+          "meeting_context": { "type": "string" },
+          "sec_data": {
+            "$ref": "#/components/schemas/SecApiResponse"
           },
-          "display_index": {
-            "type": "string"
+          "financial_analysis": { "type": "object" },
+          "people_profiles": {
+            "type": "array",
+            "items": { "type": "object" }
           },
-          "marker": {
-            "type": "string"
-          }
+          "market_analysis": { "type": "object" }
         }
       }
     }
