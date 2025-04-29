@@ -33,6 +33,7 @@ Provide:
 - Key opportunities in the industry
 - Key risks or threats affecting the company
 - Any macroeconomic factors relevant
+- smart, context-specific questions that an executive could ask during the meeting
 
 Respond in the following strict JSON format:
 
@@ -44,7 +45,14 @@ Respond in the following strict JSON format:
         {{"competitor": "", "positioning": ""}}
     ],
     "macroeconomic_factors": []
+    "questions_to_ask": []
 }}
+
+**Example questions to guide your thinking:**
+- "What contingency plans are in place if you have a security compromise in your supply chain?"
+- "How are you prioritizing technology and security investments versus operational cost control in the next 12 months?"
+- "What current cyber resilience strategies do you have in place today and what would you like to improve in the next 6-12 months?"
+- "How does the organization manage technical debt and how much technical debt do you have impacting your resilience?"
 """
     return prompt
 
