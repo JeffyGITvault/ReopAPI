@@ -9,18 +9,22 @@ def build_market_prompt(company: str, context: str) -> str:
     # Dynamic hint logic based on meeting context
     dynamic_hint = ""
     if "security" in lc_context or "cyber" in lc_context:
-        dynamic_hint = "- “What are your top 1–2 cyber resilience priorities now and going into next year?”"
+        dynamic_hint = '- "What are your top 1–2 cyber resilience priorities now and going into next year?"'
     elif "technology" in lc_context or "innovation" in lc_context:
-        dynamic_hint = "- “Where are you investing most aggressively in tech-enabled transformation?”"
+        dynamic_hint = '- "Where are you investing most aggressively in tech-enabled transformation?"'
     elif "technical debt" in lc_context:
-        dynamic_hint = "- “What’s your current strategy for managing or paying down technical debt?”"
+        dynamic_hint = '- "What’s your current strategy for managing or paying down technical debt?"'
     elif "managed service" in lc_context or "msp" in lc_context:
-        dynamic_hint = "- “Which managed services are you considering now and why?”"
-    elif "hybrid cloud" in lc_context or ("multi-cloud" in lc_context):
-        dynamic_hint = "- “How are you balancing on-prem and public cloud workloads today?”"
+        dynamic_hint = '- "Which managed services are you considering now and why?"'
+    elif "hybrid cloud" in lc_context or "multi-cloud" in lc_context:
+        dynamic_hint = '- "How are you balancing on-prem and public cloud workloads today?"'
 
+    # Optional context addition
+    additional_hint = f"\n**Additional example based on this specific meeting context:**\n{dynamic_hint}" if dynamic_hint else ""
+
+    # Prompt with escaped JSON and interpolated values
     prompt = f"""
-You are a market analyst.
+You are a market analyst...
 
 Given the company "{company}" and the following meeting context: "{context}",
 analyze the market and competitive landscape.
@@ -50,7 +54,6 @@ Respond in the following strict JSON format:
 - "How are you prioritizing technology and security investments versus operational cost control in the next 12 months?"
 - "What current cyber resilience strategies do you have in place today and what would you like to improve in the next 6-12 months?"
 - "How does the organization manage technical debt and how much technical debt do you have impacting your resilience?"
-
-{f"**Additional example based on this specific meeting context:**\n{dynamic_hint}" if dynamic_hint else ""}
+{additional_hint}
 """
     return prompt
