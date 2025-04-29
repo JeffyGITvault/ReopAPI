@@ -3,7 +3,8 @@
 from fastapi import APIRouter, HTTPException
 from app.api.agents.agent1_fetch_sec import fetch_10q
 from app.api.agents.agent2_analyze_financials import analyze_financials
-# Agent 3 and 4 will be imported later
+from app.api.agents.agent3_profile_people import profile_people
+# Agent 4 will be imported later
 
 router = APIRouter()
 
@@ -33,8 +34,17 @@ async def run_pipeline(company: str, people: list[str], meeting_context: str):
                 "error_details": financial_analysis["error"]
             }
 
-        # === Agent 3 and 4 (stubs for now) ===
-        people_profiles = {"status": "Agent 3 not implemented yet"}
+       # === Agent 3: People Profiling ===
+        people_profiles = profile_people(people)
+
+        # Soft fail if Agent 3 encounters an error
+        if isinstance(people_profiles, dict) and "error" in people_profiles:
+            people_profiles = {
+                "status": "Agent 3 (People Profiling) failed",
+                "error_details": people_profiles["error"]
+            }
+         
+        # === Agent 4: MArket Analysis ===
         market_analysis = {"status": "Agent 4 not implemented yet"}
 
         # === Package Final Output ===
