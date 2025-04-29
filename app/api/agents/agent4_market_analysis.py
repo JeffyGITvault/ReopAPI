@@ -1,13 +1,26 @@
+from app.api.groq_client import call_groq
+
+def analyze_market(company_name: str, meeting_context: str) -> dict:
+    """
+    Agent 4: Analyze the market and competitive landscape for a given company and context.
+    """
+    try:
+        prompt = build_market_prompt(company_name, meeting_context)
+        result = call_groq(prompt)
+        parsed_analysis = parse_groq_response(result)
+        return parsed_analysis
+    except Exception as e:
+        return {"error": f"Agent 4 - Market analysis failed: {str(e)}"}
+
+
 def build_market_prompt(company: str, context: str) -> str:
     """
     Build a prompt for Groq to perform market and competitive analysis,
     using baseline questions and dynamic context-driven hints.
     """
-    # Normalize context string for matching
     lc_context = context.lower()
-
-    # Dynamic hint logic based on meeting context
     dynamic_hint = ""
+
     if "security" in lc_context or "cyber" in lc_context:
         dynamic_hint = '- "What are your top 1–2 cyber resilience priorities now and going into next year?"'
     elif "technology" in lc_context or "innovation" in lc_context:
@@ -19,10 +32,8 @@ def build_market_prompt(company: str, context: str) -> str:
     elif "hybrid cloud" in lc_context or "multi-cloud" in lc_context:
         dynamic_hint = '- "How are you balancing on-prem and public cloud workloads today?"'
 
-    # Optional context addition
     additional_hint = f"\n**Additional example based on this specific meeting context:**\n{dynamic_hint}" if dynamic_hint else ""
 
-    # Prompt with escaped JSON and interpolated values
     prompt = f"""
 You are a market analyst...
 
@@ -57,3 +68,14 @@ Respond in the following strict JSON format:
 {additional_hint}
 """
     return prompt
+
+
+def parse_groq_response(response: dict) -> dict:
+    """
+    Parse Groq API response to extract structured JSON output.
+    """
+    try:
+        content = response["choices"][0]["message"]["content"]
+        return {"market_analysis": content}
+    except (KeyError, IndexError):
+        return {"error": "Invalid response from Groq during market analysis."}
