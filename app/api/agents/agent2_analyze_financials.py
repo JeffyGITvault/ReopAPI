@@ -4,11 +4,7 @@ import requests
 import os
 from app.api.groq_client import call_groq
 
-
 def analyze_financials(sec_data: dict) -> dict:
-    """
-    Agent 2: Analyze company's latest financials based on the most recent 10-Q and contextual signals.
-    """
     try:
         filings = sec_data.get("filings", [])
         if not filings:
@@ -20,65 +16,49 @@ def analyze_financials(sec_data: dict) -> dict:
         if not html_url or html_url == "Unavailable":
             return {"error": "No valid 10-Q URL available for financial analysis."}
 
-        # Fetch 10-Q HTML
         headers = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
         response = requests.get(html_url, headers=headers, timeout=10)
         response.raise_for_status()
         ten_q_html = response.text
 
-        # Fetch real news if Bing key exists, otherwise simulate via Groq
         company_name = sec_data.get("company_name", "the company")
-        if os.getenv("BING_API_KEY"):
+        if os.getenv("NEWSDATA_API_KEY"):
             external_signals = fetch_recent_signals(company_name)
         else:
             external_signals = generate_synthetic_signals(company_name)
 
-        # Build Groq prompt
         prompt = build_financial_prompt(ten_q_html, external_signals)
-
-        # Call Groq LLM
         result = call_groq(prompt)
-
         return parse_groq_response(result)
 
     except Exception as e:
         return {"error": f"Agent 2 - Financial analysis failed: {str(e)}"}
 
-
 def fetch_recent_signals(company_name: str) -> str:
-    """
-    Pull recent financial or strategic developments from news and professional sources using Bing.
-    """
     try:
-        headers = {"Ocp-Apim-Subscription-Key": os.getenv("BING_API_KEY")}
-        query = f"""
-            "{company_name}" (earnings OR revenue OR margin OR debt OR funding OR hiring OR layoff OR transformation)
-            site:reuters.com OR site:bloomberg.com OR site:wsj.com OR site:linkedin.com OR site:forbes.com OR site:techcrunch.com OR site:seekingalpha.com OR site:finance.yahoo.com OR site:x.com
-        """.replace("\n", " ")
-
+        headers = {"Content-Type": "application/json"}
         params = {
-            "q": query,
-            "count": 4
+            "apikey": os.getenv("NEWSDATA_API_KEY"),
+            "q": company_name,
+            "language": "en",
+            "category": "business",
+            "country": "us",
+            "page": 1
         }
-
-        response = requests.get("https://api.bing.microsoft.com/v7.0/news/search", headers=headers, params=params)
+        response = requests.get("https://newsdata.io/api/1/news", params=params, headers=headers, timeout=10)
         response.raise_for_status()
+        articles = response.json().get("results", [])
 
-        articles = response.json().get("value", [])
         if not articles:
-            return "No significant recent headlines found."
+            return "No recent news found."
 
-        summary = "\n".join([f"- {a['name']} ({a['url']})" for a in articles])
+        summary = "\n".join([f"- {a['title']} ({a['link']})" for a in articles[:5]])
         return summary
 
     except Exception as e:
         return f"Failed to fetch real signals: {str(e)}\n" + generate_synthetic_signals(company_name)
 
-
 def generate_synthetic_signals(company_name: str) -> str:
-    """
-    Uses Groq to simulate recent external signals when real news is unavailable.
-    """
     prompt = f"""
 You are simulating a market analyst reviewing financial news, social signals, and analyst coverage of "{company_name}".
 
@@ -95,11 +75,7 @@ Respond with a short bullet list.
     except Exception as e:
         return f"(Fallback failed: {str(e)})"
 
-
 def build_financial_prompt(html_content: str, external_signals: str) -> str:
-    """
-    Build a structured Groq prompt to analyze company financials and signal context.
-    """
     prompt = f"""
 You are a junior financial analyst building a fast-read briefing for consultants and sales leads.
 
@@ -140,11 +116,7 @@ Respond in the following JSON format:
 """
     return prompt
 
-
 def parse_groq_response(response: dict) -> dict:
-    """
-    Parse structured Groq response.
-    """
     try:
         content = response["choices"][0]["message"]["content"]
         return {"analysis": content}
