@@ -13,5 +13,3 @@ app.mount("/secapi", secapi_app)
 # Include new /run_pipeline route
 app.include_router(pipeline_router)
 
-# Include Groq test route
-app.include_router(groq_ping_router)
