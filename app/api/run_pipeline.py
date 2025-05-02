@@ -1,10 +1,7 @@
 # app/api/run_pipeline.py
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import List
 import asyncio
-
 from app.api.agents.agent1_fetch_sec import fetch_10q
 from app.api.agents.agent2_analyze_financials import analyze_financials
 from app.api.agents.agent3_profile_people import profile_people
@@ -12,13 +9,8 @@ from app.api.agents.agent4_market_analysis import analyze_market
 
 router = APIRouter()
 
-class PipelineRequest(BaseModel):
-    company: str
-    people: List[str]
-    meeting_context: str
-
 @router.post("/run_pipeline")
-async def run_pipeline(payload: PipelineRequest):
+async def run_pipeline(company: str, people: list[str], meeting_context: str):
     """
     Full multi-agent pipeline:
     Agent 1 -> SEC 10-Q Fetch (required)
@@ -28,21 +20,23 @@ async def run_pipeline(payload: PipelineRequest):
     """
     try:
         # === Agent 1: SEC 10-Q Fetch ===
-        sec_data = fetch_10q(payload.company)
+        sec_data = fetch_10q(company)
+
         if "error" in sec_data:
             raise Exception(f"Agent 1 failed: {sec_data['error']}")
 
-        # === Agents 2, 3, 4 in parallel ===
+        # === Launch Agent 2, 3, and 4 concurrently ===
         tasks = [
             asyncio.to_thread(analyze_financials, sec_data),
-            asyncio.to_thread(profile_people, payload.people),
-            asyncio.to_thread(analyze_market, payload.company, payload.meeting_context)
+            asyncio.to_thread(profile_people, people, company),
+            asyncio.to_thread(analyze_market, company, meeting_context)
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
+
         financial_analysis, people_profiles, market_analysis = results
 
-        # === Soft Failure Wrappers ===
+        # === Soft Failures Handling ===
         if isinstance(financial_analysis, dict) and "error" in financial_analysis:
             financial_analysis = {
                 "status": "Agent 2 (Financial Analysis) failed",
@@ -61,14 +55,17 @@ async def run_pipeline(payload: PipelineRequest):
                 "error_details": market_analysis["error"]
             }
 
-        return {
-            "company": payload.company,
-            "meeting_context": payload.meeting_context,
+        # === Final Output Packaging ===
+        final_output = {
+            "company": company,
+            "meeting_context": meeting_context,
             "sec_data": sec_data,
             "financial_analysis": financial_analysis,
             "people_profiles": people_profiles,
             "market_analysis": market_analysis
         }
+
+        return final_output
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
