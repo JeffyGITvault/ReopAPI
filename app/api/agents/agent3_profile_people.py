@@ -1,15 +1,12 @@
 # app/api/agents/agent3_profile_people.py
 
-import requests
 import os
+import requests
+from app.api.groq_client import call_groq
 
-# Eventually, store this safely — placeholder for now
-BING_API_KEY = os.getenv("BING_API_KEY")
-BING_SEARCH_URL = "https://api.bing.microsoft.com/v7.0/search"
-
-def profile_people(people: list[str]) -> list:
+def profile_people(people: list[str], company: str) -> list:
     """
-    Agent 3: Search for public LinkedIn profiles and basic summaries for a list of people.
+    Agent 3: Enhanced profile builder using role, company, Groq inference, and multiple inferred signals.
     """
     if not people:
         return {"error": "No people provided for profiling."}
@@ -18,49 +15,65 @@ def profile_people(people: list[str]) -> list:
 
     for person in people:
         try:
-            profile = search_linkedin_profile(person)
-            profiles.append(profile)
+            # === Simulated Aggregation + Inference ===
+            base_summary = infer_role_focus(person, company)
+            filings_mention = check_filings_mention(person, company)
+            toolchain = infer_stack_from_job_posts(company)
+            estimated_tenure = estimate_tenure(person)
+            risk_signals = infer_risk_signals(person)
+
+            profiles.append({
+                "name": person,
+                "summary": base_summary,
+                "filing_reference": filings_mention,
+                "likely_toolchain": toolchain,
+                "estimated_tenure": estimated_tenure,
+                "profile_signals": risk_signals
+            })
+
         except Exception as e:
             profiles.append({
                 "name": person,
-                "error": f"Failed to profile: {str(e)}"
+                "error": f"Agent 3 profiling failed: {str(e)}"
             })
 
     return profiles
 
-def search_linkedin_profile(name: str) -> dict:
-    """
-    Use Bing Search API to find public LinkedIn info about a person.
-    """
-    if not BING_API_KEY:
-        raise Exception("BING_API_KEY environment variable not set.")
+def infer_role_focus(person: str, company: str) -> str:
+    prompt = f"""
+Given the person's name "{person}" and the company "{company}", infer their likely executive focus areas.
+Assume this person holds a role like CIO, CISO, CMO, or COO.
+Describe 2–3 business or technical priorities based on their likely job function and industry context.
+"""
+    return call_groq(prompt)["choices"][0]["message"]["content"].strip()
 
-    headers = {"Ocp-Apim-Subscription-Key": BING_API_KEY}
-    params = {
-        "q": f"{name} site:linkedin.com",
-        "count": 1
-    }
+def check_filings_mention(person: str, company: str) -> str:
+    prompt = f"""
+Check the last two 10-Q or 10-K filings from {company}. Was {person} mentioned?
+If so, quote the sentence and summarize why.
+"""
+    return call_groq(prompt)["choices"][0]["message"]["content"].strip()
 
-    response = requests.get(BING_SEARCH_URL, headers=headers, params=params)
-    response.raise_for_status()
+def infer_stack_from_job_posts(company: str) -> str:
+    prompt = f"""
+Based on recent job listings and analyst insight, what security or IT tools is {company} likely using?
+Mention 3–5 platform or vendor names relevant to modern enterprise IT.
+"""
+    return call_groq(prompt)["choices"][0]["message"]["content"].strip()
 
-    results = response.json()
-    web_pages = results.get("webPages", {}).get("value", [])
+def estimate_tenure(person: str) -> str:
+    prompt = f"""
+Estimate how long "{person}" has been in their current executive role. Be realistic and plausible.
+If you can infer influence level (e.g., keynote speaker, thought leader), include that too.
+"""
+    return call_groq(prompt)["choices"][0]["message"]["content"].strip()
 
-    if not web_pages:
-        return {
-            "name": name,
-            "profile_summary": "No LinkedIn profile found."
-        }
-
-    first_result = web_pages[0]
-    title = first_result.get("name", "No title")
-    snippet = first_result.get("snippet", "No snippet")
-    url = first_result.get("url", "No URL")
-
-    return {
-        "name": name,
-        "title": title,
-        "profile_summary": snippet,
-        "linkedin_url": url
-    }
+def infer_risk_signals(person: str) -> str:
+    prompt = f"""
+What are possible soft signals about {person}'s leadership style or risk profile?
+Examples:
+- Recently joined → may be reshaping strategy
+- Long tenured → resistant to change
+- Public advocate → open to co-innovation
+"""
+    return call_groq(prompt)["choices"][0]["message"]["content"].strip()
