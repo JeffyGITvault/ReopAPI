@@ -1,143 +1,119 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "SECAPI Multi-Agent System",
-    "version": "5.0.0",
-    "description": "Multi-agent system to fetch SEC filings, perform financial analysis, profile executives, and conduct market analysis."
+    "title": "CustomGPT Multi-Agent API",
+    "version": "1.0.0",
+    "description": "Multi-agent intelligence pipeline for sales and strategy teams. Agents include SEC financial analysis, people profiling, and market analysis."
+  },
+  "x-openai-function": {
+    "name": "runPipeline",
+    "description": "Run a full executive briefing pipeline given a company name, meeting context, and people list. Returns structured analysis from multiple intelligent agents."
   },
   "servers": [
     {
       "url": "https://secapi-trusted.onrender.com",
-      "description": "Primary Render deployment of SECAPI"
+      "description": "Primary Render deployment"
     }
   ],
   "paths": {
-    "/secapi/get_quarterlies/{company_name}": {
-      "get": {
-        "operationId": "getQuarterlies",
-        "summary": "Retrieve the most recent 10-Q filings for a public company",
-        "parameters": [
-          {
-            "name": "company_name",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Company name or ticker symbol (e.g., RH, AAPL, Meta)"
-          },
-          {
-            "name": "count",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 2,
-              "minimum": 1,
-              "maximum": 4
-            },
-            "description": "Number of recent 10-Q filings to return (max 4)"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Structured response with CIK and validated 10-Q filing links",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SecApiResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/run_pipeline": {
       "post": {
         "operationId": "runPipeline",
-        "summary": "Run full multi-agent analysis pipeline for a company",
+        "summary": "Run a multi-agent executive briefing pipeline",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PipelineRequest"
+                "type": "object",
+                "properties": {
+                  "company": {
+                    "type": "string",
+                    "description": "The name of the company (e.g. iHeartMedia, Apple)"
+                  },
+                  "people": {
+                    "type": "array",
+                    "description": "A list of names of people you are meeting with",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "meeting_context": {
+                    "type": "string",
+                    "description": "Brief summary of the meeting topic (e.g. cloud resilience, cyber strategy)"
+                  }
+                },
+                "required": ["company", "people", "meeting_context"]
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Structured response from multi-agent analysis",
+            "description": "Successful multi-agent output",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PipelineResponse"
+                  "type": "object",
+                  "properties": {
+                    "company": { "type": "string" },
+                    "meeting_context": { "type": "string" },
+                    "sec_data": {
+                      "type": "object",
+                      "description": "SEC filings including 10-Q links",
+                      "properties": {
+                        "company_name": { "type": "string" },
+                        "cik": { "type": "string" },
+                        "filings": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "filing_date": { "type": "string", "format": "date" },
+                              "html_url": { "type": "string" },
+                              "html_link": { "type": "string" },
+                              "marker": { "type": "string" },
+                              "status": { "type": "string" }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "financial_analysis": {
+                      "type": "object",
+                      "description": "LLM-powered financial summary and signal analysis"
+                    },
+                    "people_profiles": {
+                      "type": "array",
+                      "description": "Profiles for each person provided",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": { "type": "string" },
+                          "title": { "type": "string" },
+                          "profile_summary": { "type": "string" },
+                          "linkedin_url": { "type": "string" },
+                          "role_inference": { "type": "string" },
+                          "strategic_focus": { "type": "string" },
+                          "tool_stack": { "type": "string" },
+                          "tenure_estimate": { "type": "string" },
+                          "risk_signals": { "type": "string" },
+                          "error": { "type": "string" }
+                        }
+                      }
+                    },
+                    "market_analysis": {
+                      "type": "object",
+                      "description": "Competitor, macro, and question generation analysis from Agent 4"
+                    }
+                  }
                 }
               }
             }
+          },
+          "500": {
+            "description": "Internal server error or one or more agents failed hard"
           }
-        }
-      }
-    }
-  },
-  "components": {
-    "schemas": {
-      "Filing": {
-        "type": "object",
-        "properties": {
-          "filing_date": { "type": "string", "format": "date" },
-          "html_url": { "type": "string" },
-          "html_link": { "type": "string", "description": "Markdown link" },
-          "status": { "type": "string" },
-          "display_index": { "type": "string" },
-          "marker": { "type": "string" }
-        }
-      },
-      "SecApiResponse": {
-        "type": "object",
-        "properties": {
-          "company_name": { "type": "string" },
-          "cik": { "type": "string" },
-          "filings": {
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/Filing" }
-          },
-          "cached_quarterlies": {
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/Filing" }
-          },
-          "error": { "type": "string" },
-          "note": { "type": "string" }
-        }
-      },
-      "PipelineRequest": {
-        "type": "object",
-        "required": ["company", "people", "meeting_context"],
-        "properties": {
-          "company": { "type": "string" },
-          "people": {
-            "type": "array",
-            "items": { "type": "string" }
-          },
-          "meeting_context": { "type": "string" }
-        }
-      },
-      "PipelineResponse": {
-        "type": "object",
-        "properties": {
-          "company": { "type": "string" },
-          "meeting_context": { "type": "string" },
-          "sec_data": {
-            "$ref": "#/components/schemas/SecApiResponse"
-          },
-          "financial_analysis": { "type": "object" },
-          "people_profiles": {
-            "type": "array",
-            "items": { "type": "object" }
-          },
-          "market_analysis": { "type": "object" }
         }
       }
     }
