@@ -121,7 +121,6 @@ Respond in the following JSON format:
 def parse_groq_response(response: dict) -> dict:
     try:
         content = response["content"]
-        return {"analysis": content}
+        return json.loads(content) if isinstance(content, str) else content
     except (KeyError, IndexError):
-        return {"error": "Invalid response from Groq during financial analysis."}
-
+        return {"error": f"Invalid response from Groq during financial analysis: {str(e)}"}
