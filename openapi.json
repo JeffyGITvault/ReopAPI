@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "CustomGPT Multi-Agent API",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Multi-agent intelligence pipeline for sales and strategy teams. Agents include SEC financial analysis, people profiling, and market analysis."
   },
   "x-openai-function": {
@@ -81,7 +81,17 @@
                     },
                     "financial_analysis": {
                       "type": "object",
-                      "description": "LLM-powered financial summary and signal analysis"
+                      "description": "LLM-powered financial summary and signal analysis",
+                      "properties": {
+                        "financial_summary": { "type": "string" },
+                        "key_metrics_table": { "type": "string" },
+                        "suggested_graph": { "type": "string" },
+                        "recent_events_summary": { "type": "string" },
+                        "questions_to_ask": {
+                          "type": "array",
+                          "items": { "type": "string" }
+                        }
+                      }
                     },
                     "people_profiles": {
                       "type": "array",
@@ -96,13 +106,42 @@
                           "estimated_tenure": { "type": "string" },
                           "profile_signals": { "type": "string" },
                           "news_mentions": { "type": "string" },
+                          "public_presence": { "type": "string" },
                           "error": { "type": "string" }
                         }
                       }
                     },
                     "market_analysis": {
                       "type": "object",
-                      "description": "Competitor, macro, and question generation analysis from Agent 4"
+                      "description": "Competitor, macro, and question generation analysis from Agent 4",
+                      "properties": {
+                        "opportunities": {
+                          "type": "array",
+                          "items": { "type": "string" }
+                        },
+                        "threats": {
+                          "type": "array",
+                          "items": { "type": "string" }
+                        },
+                        "competitive_landscape": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "competitor": { "type": "string" },
+                              "positioning": { "type": "string" }
+                            }
+                          }
+                        },
+                        "macroeconomic_factors": {
+                          "type": "array",
+                          "items": { "type": "string" }
+                        },
+                        "questions_to_ask": {
+                          "type": "array",
+                          "items": { "type": "string" }
+                        }
+                      }
                     }
                   }
                 }
