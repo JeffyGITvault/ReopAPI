@@ -17,7 +17,7 @@ class PipelineRequest(BaseModel):
     meeting_context: str
     
 @router.post("/run_pipeline")
-async def run_pipeline((payload: PipelineRequest):
+async def run_pipeline(payload: PipelineRequest):
     company = payload.company
     people = payload.people
     meeting_context = payload.meeting_context
