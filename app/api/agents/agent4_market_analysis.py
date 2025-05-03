@@ -75,7 +75,7 @@ def parse_groq_response(response: dict) -> dict:
     Parse Groq API response to extract structured JSON output.
     """
     try:
-        content = response["choices"][0]["message"]["content"]
+        content = response["content"]  # updated to match call_groq() structure
         return {"market_analysis": content}
-    except (KeyError, IndexError):
+    except (KeyError, TypeError):
         return {"error": "Invalid response from Groq during market analysis."}
