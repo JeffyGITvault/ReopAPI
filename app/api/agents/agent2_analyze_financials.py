@@ -2,6 +2,7 @@
 
 import requests
 import os
+import json
 from app.api.groq_client import call_groq
 
 def analyze_financials(sec_data: dict) -> dict:
@@ -118,9 +119,11 @@ Respond in the following JSON format:
 """
     return prompt
 
+import json
+
 def parse_groq_response(response: dict) -> dict:
     try:
         content = response["content"]
         return json.loads(content) if isinstance(content, str) else content
-    except (KeyError, IndexError):
-        return {"error": f"Invalid response from Groq during financial analysis: {str(e)}"}
+    except Exception as e:
+        return {"error": f"Invalid response from Groq: {str(e)}"}
