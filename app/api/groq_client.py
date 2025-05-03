@@ -1,7 +1,7 @@
 import os
 from typing import Generator, Union
 from groq import Groq
-from groq.error import GroqError
+
 
 # Initialize client
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
