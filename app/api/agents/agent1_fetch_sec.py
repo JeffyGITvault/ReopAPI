@@ -1,6 +1,7 @@
 # app/api/agents/agent1_fetch_sec.py
 
 from app.api.SECAPI import get_quarterly_filings
+from app.api.cik_resolver import load_alias_map
 from fastapi import Request
 from starlette.requests import Request as StarletteRequest
 
