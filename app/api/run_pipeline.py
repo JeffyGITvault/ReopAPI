@@ -1,6 +1,7 @@
 # app/api/run_pipeline.py
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Body
+from typing import List
 import asyncio
 from app.api.agents.agent1_fetch_sec import fetch_10q
 from app.api.agents.agent2_analyze_financials import analyze_financials
@@ -10,7 +11,11 @@ from app.api.agents.agent4_market_analysis import analyze_market
 router = APIRouter()
 
 @router.post("/run_pipeline")
-async def run_pipeline(company: str, people: list[str], meeting_context: str):
+async def run_pipeline(
+    company: str = Body(...),
+    people: List[str] = Body(...),
+    meeting_context: str = Body(...)
+):
     """
     Full multi-agent pipeline:
     Agent 1 -> SEC 10-Q Fetch (required)
