@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Body
 from typing import List
+from pydantic import BaseModel
 import asyncio
 from app.api.agents.agent1_fetch_sec import fetch_10q
 from app.api.agents.agent2_analyze_financials import analyze_financials
@@ -10,11 +11,16 @@ from app.api.agents.agent4_market_analysis import analyze_market
 
 router = APIRouter()
 
+class PipelineRequest(BaseModel):
+    company: str
+    people: List[str]
+    meeting_context: str
+    
 @router.post("/run_pipeline")
-async def run_pipeline(
-    company: str = Body(...),
-    people: List[str] = Body(...),
-    meeting_context: str = Body(...)
+async def run_pipeline((payload: PipelineRequest):
+    company = payload.company
+    people = payload.people
+    meeting_context = payload.meeting_context
 ):
     """
     Full multi-agent pipeline:
