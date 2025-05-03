@@ -33,7 +33,6 @@ async def run_pipeline(company: str, people: list[str], meeting_context: str):
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
-
         financial_analysis, people_profiles, market_analysis = results
 
         # === Soft Failures Handling ===
