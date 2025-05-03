@@ -62,7 +62,7 @@ def load_alias_map(force_reload=False):
 # === Main Resolver ===
 def resolve_company_name(name: str) -> Tuple[str, str]:
     aliases = load_alias_map()
-    name_lower = name.lower()
+    name_lower = name.lower().strip()
 
     # 1. Direct alias match
     if name_lower in aliases:
