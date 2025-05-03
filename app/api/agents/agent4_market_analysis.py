@@ -69,13 +69,9 @@ Respond in the following strict JSON format:
 """
     return prompt
 
-
 def parse_groq_response(response: dict) -> dict:
-    """
-    Parse Groq API response to extract structured JSON output.
-    """
     try:
-        content = response["content"]  # updated to match call_groq() structure
-        return {"market_analysis": content}
-    except (KeyError, TypeError):
-        return {"error": "Invalid response from Groq during market analysis."}
+        content = response["content"]
+        return json.loads(content) if isinstance(content, str) else content
+    except Exception as e:
+        return {"error": f"Invalid response from Groq during market analysis: {str(e)}"}
