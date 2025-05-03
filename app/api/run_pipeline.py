@@ -21,7 +21,6 @@ async def run_pipeline(payload: PipelineRequest):
     company = payload.company
     people = payload.people
     meeting_context = payload.meeting_context
-):
     """
     Full multi-agent pipeline:
     Agent 1 -> SEC 10-Q Fetch (required)
