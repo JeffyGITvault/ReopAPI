@@ -96,3 +96,39 @@ Examples:
 - Public advocate → open to co-innovation
 """
     return call_groq(prompt)["choices"][0]["message"]["content"].strip()
+
+def format_profiles_for_teams(profiles: list) -> str:
+    """
+    Converts the list of Agent 3 profiles into Teams-friendly markdown.
+    """
+    blocks = []
+
+    for p in profiles:
+        if "error" in p:
+            blocks.append(f"### ❌ **{p['name']}**\nError: {p['error']}")
+            continue
+
+        block = f"""
+### 👤 **{p['name']}** — Executive Profile  
+**Role Focus:**  
+{p['role_focus']}
+
+**Mention in SEC Filings:**  
+{p['filing_reference']}
+
+**Likely Tech Stack:**  
+{p['likely_toolchain']}
+
+**Estimated Tenure / Influence:**  
+{p['estimated_tenure']}
+
+**Leadership Style / Risk Profile:**  
+{p['profile_signals']}
+
+**Recent Mentions (NewsData.io):**  
+{p['news_mentions']}
+""".strip()
+        blocks.append(block)
+
+    return "\n\n---\n\n".join(blocks)
+
