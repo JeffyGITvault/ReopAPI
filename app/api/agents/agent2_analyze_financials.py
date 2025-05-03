@@ -70,10 +70,11 @@ Respond with a short bullet list.
 """
     try:
         result = call_groq(prompt)
-        content = result["choices"][0]["message"]["content"]
+        content = result["content"] 
         return content.strip()
     except Exception as e:
         return f"(Fallback failed: {str(e)})"
+
 
 def build_financial_prompt(html_content: str, external_signals: str) -> str:
     prompt = f"""
@@ -118,7 +119,8 @@ Respond in the following JSON format:
 
 def parse_groq_response(response: dict) -> dict:
     try:
-        content = response["choices"][0]["message"]["content"]
+        content = response["content"]
         return {"analysis": content}
     except (KeyError, IndexError):
         return {"error": "Invalid response from Groq during financial analysis."}
+
