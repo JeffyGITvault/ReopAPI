@@ -85,19 +85,17 @@
                     },
                     "people_profiles": {
                       "type": "array",
-                      "description": "Profiles for each person provided",
+                      "description": "Enriched executive profiles based on public signals and LLM inference",
                       "items": {
                         "type": "object",
                         "properties": {
                           "name": { "type": "string" },
-                          "title": { "type": "string" },
-                          "profile_summary": { "type": "string" },
-                          "linkedin_url": { "type": "string" },
-                          "role_inference": { "type": "string" },
-                          "strategic_focus": { "type": "string" },
-                          "tool_stack": { "type": "string" },
-                          "tenure_estimate": { "type": "string" },
-                          "risk_signals": { "type": "string" },
+                          "role_focus": { "type": "string" },
+                          "filing_reference": { "type": "string" },
+                          "likely_toolchain": { "type": "string" },
+                          "estimated_tenure": { "type": "string" },
+                          "profile_signals": { "type": "string" },
+                          "news_mentions": { "type": "string" },
                           "error": { "type": "string" }
                         }
                       }
