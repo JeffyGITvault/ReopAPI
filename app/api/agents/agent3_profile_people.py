@@ -3,10 +3,13 @@ import requests
 from app.api.groq_client import call_groq
 
 NEWS_API_KEY = os.getenv("NEWSDATA_API_KEY")
+SEARCH_API_KEY = os.getenv("SEARCH_API_KEY")
+GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
+max_results = 5
 
 def profile_people(people: list[str], company: str) -> list:
     """
-    Agent 3: Comprehensive profiling using NewsData.io, Groq, and simulated signals.
+    Agent 3: Comprehensive profiling using NewsData.io, Groq, and Google enrichment.
     """
     if not people:
         return {"error": "No people provided for profiling."}
@@ -24,8 +27,7 @@ def profile_people(people: list[str], company: str) -> list:
                 "estimated_tenure": estimate_tenure(person),
                 "profile_signals": infer_risk_signals(person),
                 "public_presence": enrich_with_public_signals(person, company),
-                "public_presence_Web": fetch_google_signals(person, company)
-
+                "public_web_results": fetch_google_signals(person, company)
             }
             profiles.append(profile)
         except Exception as e:
@@ -37,9 +39,6 @@ def profile_people(people: list[str], company: str) -> list:
     return profiles
 
 def fetch_newsdata_signals(person: str, company: str) -> str:
-    """
-    Fetch recent news headlines via NewsData.io mentioning the person and company.
-    """
     try:
         url = "https://newsdata.io/api/1/news"
         params = {
@@ -71,18 +70,15 @@ Search for public web results about {person} at {company}. Prioritize:
 
 Summarize what you can learn about their public presence and professional background.
 """
-    return call_groq(prompt).get("content", "").strip()
+    result = call_groq(prompt)
+    return result.get("content", result).strip() if isinstance(result, dict) else str(result).strip()
 
 def fetch_google_signals(person: str, company: str) -> str:
-    """
-    Uses the Google Programmable Search API to fetch public web results for the person.
-    Prioritizes domains like LinkedIn, Crunchbase, BusinessWire.
-    """
     try:
         query = f'"{person}" "{company}" site:linkedin.com OR site:crunchbase.com OR site:businesswire.com'
         params = {
-            "key": os.getenv("SEARCH_API_KEY"),
-            "cx": os.getenv("GOOGLE_CSE_ID"),
+            "key": SEARCH_API_KEY,
+            "cx": GOOGLE_CSE_ID,
             "q": query,
             "num": max_results
         }
@@ -97,31 +93,41 @@ def fetch_google_signals(person: str, company: str) -> str:
             f"- [{item['title']}]({item['link']}) — {item.get('snippet', 'No snippet')}"
             for item in items
         ])
-
     except Exception as e:
         return f"Google Search API fetch failed: {str(e)}"
-        
+
 def infer_role_focus(person: str, company: str) -> str:
     prompt = f"""
 Given the person's name \"{person}\" and the company \"{company}\", infer their likely focus area based on their job title.
 Describe 2–3 business or technical priorities based on their likely job function and industry context.
 """
-    return call_groq(prompt).get("content", "").strip()
+    result = call_groq(prompt)
+    return result.get("content", result).strip() if isinstance(result, dict) else str(result).strip()
 
 def check_filings_mention(person: str, company: str) -> str:
     prompt = f"""
 Check the last two 10-Q from {company}. Was {person} mentioned?
 If so, quote the sentence and summarize why.
 """
-    return call_groq(prompt).get("content", "").strip()
+    result = call_groq(prompt)
+    return result.get("content", result).strip() if isinstance(result, dict) else str(result).strip()
 
 def infer_stack_from_job_posts(company: str) -> str:
     prompt = f"""
 Based on recent job listings and analyst insight, what security or IT tools is {company} likely using?
-what open positions does the comapny have in the area of focus for our meeting contact?
+What open positions does the company have in the area of focus for our meeting contact?
 Mention 3–5 platform or vendor names relevant to modern enterprise IT.
 """
-    return call_groq(prompt).get("content", "").strip()
+    result = call_groq(prompt)
+    return result.get("content", result).strip() if isinstance(result, dict) else str(result).strip()
+
+def estimate_tenure(person: str) -> str:
+    prompt = f"""
+Estimate how long \"{person}\" has been in their current executive role. Be realistic and plausible.
+If you can infer influence level (e.g., keynote speaker, thought leader), include that too.
+"""
+    result = call_groq(prompt)
+    return result.get("content", result).strip() if isinstance(result, dict) else str(result).strip()
 
 def infer_risk_signals(person: str) -> str:
     prompt = f"""
@@ -131,7 +137,8 @@ Examples:
 - Long tenured → resistant to change
 - Public advocate → open to co-innovation
 """
-    return call_groq(prompt).get("content", "").strip()
+    result = call_groq(prompt)
+    return result.get("content", result).strip() if isinstance(result, dict) else str(result).strip()
 
 def format_profiles_for_teams(profiles: list) -> str:
     """
@@ -155,6 +162,9 @@ def format_profiles_for_teams(profiles: list) -> str:
 **Likely Tech Stack:**  
 {p['likely_toolchain']}
 
+**Estimated Tenure / Influence:**  
+{p['estimated_tenure']}
+
 **Leadership Style / Risk Profile:**  
 {p['profile_signals']}
 
@@ -162,7 +172,7 @@ def format_profiles_for_teams(profiles: list) -> str:
 {p['public_presence']}
 
 **Public Web Presence:**  
-{p['public_presence']}
+{p['public_web_results']}
 
 **Recent Mentions (NewsData.io):**  
 {p['news_mentions']}
