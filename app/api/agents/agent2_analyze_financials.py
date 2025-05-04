@@ -30,6 +30,7 @@ def analyze_financials(sec_data: dict) -> dict:
 
         prompt = build_financial_prompt(ten_q_html, external_signals)
         result = call_groq(prompt)
+        print("Agent 2 Groq raw output:", result)
         return parse_groq_response(result)
 
     except Exception as e:
