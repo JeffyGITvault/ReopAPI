@@ -7,6 +7,7 @@ def analyze_market(company_name: str, meeting_context: str) -> dict:
     try:
         prompt = build_market_prompt(company_name, meeting_context)
         result = call_groq(prompt)
+        print("Agent 4 Groq raw output:", result)
         parsed_analysis = parse_groq_response(result)
         return parsed_analysis
     except Exception as e:
