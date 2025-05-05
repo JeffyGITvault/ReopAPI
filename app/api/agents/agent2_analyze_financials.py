@@ -98,9 +98,9 @@ Be plausible and realistic — earnings beats, layoffs, customer wins, executive
 Respond with a short bullet list.
 """
    try:
-    result = call_groq(prompt)  # returns a JSON *string*
-    print("Agent 2 Groq raw output:", result)
-    parsed = parse_groq_response(result)  # parses the JSON string into a dict
+       result = call_groq(prompt)  # returns a JSON *string*
+       print("Agent 2 Groq raw output:", result)
+       parsed = parse_groq_response(result)  # parses the JSON string into a dict
 
 
 
