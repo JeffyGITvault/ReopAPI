@@ -98,11 +98,10 @@ Be plausible and realistic — earnings beats, layoffs, customer wins, executive
 Respond with a short bullet list.
 """
     try:
-        result = call_groq(prompt)
-        content = result["content"]
-        return content.strip()
-    except Exception as e:
-        return f"(Fallback failed: {str(e)})"
+       result = call_groq(prompt)  # returns JSON string
+        print("Agent 2 Groq raw output:", result)
+        parsed = parse_groq_response(result)  # parse_groq_response(json.loads(...))
+
 
 def build_financial_prompt(html_content: str, external_signals: str) -> str:
     prompt = f"""
@@ -148,7 +147,6 @@ Respond in the following JSON format:
 
 def parse_groq_response(response: dict) -> dict:
     try:
-        content = response["content"]
-        return json.loads(content) if isinstance(content, str) else content
-    except Exception as e:
-        return {"error": f"Invalid response from Groq: {str(e)}"}
+        return json.loads(response) if isinstance(response, str) else response
+    except json.JSONDecodeError as e:
+        return {"error": f"Invalid JSON returned from Groq: {str(e)}"}
