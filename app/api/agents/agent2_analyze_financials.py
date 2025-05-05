@@ -48,7 +48,17 @@ def analyze_financials(sec_data: dict) -> dict:
         prompt = build_financial_prompt(ten_q_html, external_signals)
         result = call_groq(prompt)
         print("Agent 2 Groq raw output:", result)
-        return parse_groq_response(result)
+        parsed = parse_groq_response(result)
+
+        # JSON handoff block to Agent 3 and Agent 4
+        json_payload_for_agents_3_4 = {
+            "company_name": company_name,
+            "financial_summary": parsed.get("financial_summary", ""),
+            "recent_events_summary": parsed.get("recent_events_summary", ""),
+            "key_metrics_table": parsed.get("key_metrics_table", ""),
+        }
+
+        return json_payload_for_agents_3_4
 
     except Exception as e:
         return {"error": f"Agent 2 - Financial analysis failed: {str(e)}"}
