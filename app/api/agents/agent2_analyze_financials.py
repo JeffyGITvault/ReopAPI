@@ -7,22 +7,39 @@ from app.api.groq_client import call_groq
 
 def analyze_financials(sec_data: dict) -> dict:
     try:
-        filings = sec_data.get("filings", [])
-        if not filings:
-            return {"error": "No 10-Q filings found for financial analysis."}
-
-        latest_filing = filings[0]
-        html_url = latest_filing.get("html_url", "")
-
-        if not html_url or html_url == "Unavailable":
-            return {"error": "No valid 10-Q URL available for financial analysis."}
-
-        headers = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
-        response = requests.get(html_url, headers=headers, timeout=10)
-        response.raise_for_status()
-        ten_q_html = response.text
-
+        source_type = sec_data.get("source", "")
         company_name = sec_data.get("company_name", "the company")
+
+        if source_type == "html":
+            ten_q_html = "\n\n".join(sec_data.get("chunks", []))
+            print("Agent 2 received pre-parsed 10-Q chunks.")
+
+        elif source_type == "url":
+            html_url = sec_data.get("url", "")
+            if not html_url:
+                return {"error": "No valid 10-Q URL provided for analysis."}
+            headers = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
+            response = requests.get(html_url, headers=headers, timeout=10)
+            response.raise_for_status()
+            ten_q_html = response.text
+            print("Agent 2 fetched 10-Q HTML from URL.")
+
+        else:
+            filings = sec_data.get("filings", [])
+            if not filings:
+                return {"error": "No 10-Q filings found for financial analysis."}
+
+            latest_filing = filings[0]
+            html_url = latest_filing.get("html_url", "")
+            if not html_url or html_url == "Unavailable":
+                return {"error": "No valid 10-Q URL available for financial analysis."}
+
+            headers = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
+            response = requests.get(html_url, headers=headers, timeout=10)
+            response.raise_for_status()
+            ten_q_html = response.text
+            print("Agent 2 fetched fallback 10-Q HTML from filings.")
+
         if os.getenv("NEWSDATA_API_KEY"):
             external_signals = fetch_recent_signals(company_name)
         else:
@@ -62,7 +79,7 @@ def fetch_recent_signals(company_name: str) -> str:
 
 def generate_synthetic_signals(company_name: str) -> str:
     prompt = f"""
-You are simulating a market analyst reviewing financial news, social signals, and analyst coverage of "{company_name}".
+You are simulating a market analyst reviewing financial news, social signals, and analyst coverage of \"{company_name}\".
 
 List 2–3 notable financial or strategic developments from the last 90 days that may affect how consultants or sellers engage with the company.
 
@@ -72,11 +89,10 @@ Respond with a short bullet list.
 """
     try:
         result = call_groq(prompt)
-        content = result["content"] 
+        content = result["content"]
         return content.strip()
     except Exception as e:
         return f"(Fallback failed: {str(e)})"
-
 
 def build_financial_prompt(html_content: str, external_signals: str) -> str:
     prompt = f"""
@@ -100,9 +116,9 @@ Summarize:
 Also include:
 - A short summary of external sentiment or developments that may be relevant to the company’s current strategy or outlook
 
-SEC 10-Q (truncated):
+SEC 10-Q:
 
-{html_content[:4000]}
+{html_content}
 
 External Signals:
 
@@ -119,8 +135,6 @@ Respond in the following JSON format:
 }}
 """
     return prompt
-
-import json
 
 def parse_groq_response(response: dict) -> dict:
     try:
