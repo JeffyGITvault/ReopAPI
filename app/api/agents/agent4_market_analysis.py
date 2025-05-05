@@ -46,7 +46,7 @@ Provide:
 - Key opportunities in the industry
 - Key risks or threats affecting the company
 - Any macroeconomic factors relevant
-- Smart, context-specific questions that an executive could ask during the meeting
+- Smart, context-specific questions to ask during the meeting
 
 Respond in the following strict JSON format:
 
@@ -66,6 +66,7 @@ Respond in the following strict JSON format:
 - "How are you prioritizing technology and security investments versus operational cost control in the next 12 months?"
 - "What current cyber resilience strategies do you have in place today and what would you like to improve in the next 6-12 months?"
 - "How does the organization manage technical debt and how much technical debt do you have impacting your resilience?"
+- "How does the organization utilize managed services to address skills and talent gaps?"
 {additional_hint}
 """
     return prompt
