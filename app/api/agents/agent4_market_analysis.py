@@ -74,6 +74,6 @@ Respond in the following strict JSON format:
 def parse_groq_response(response: dict) -> dict:
     try:
         content = response["content"]
-        return json.loads(content) if isinstance(content, str) else content
-    except Exception as e:
-        return {"error": f"Invalid response from Groq during market analysis: {str(e)}"}
+        return json.loads(content) if isinstance(content, str) else response
+     except json.JSONDecodeError as e:
+        return {"error": f"Invalid JSON returned from Groq: {str(e)}"}
