@@ -1,3 +1,5 @@
+# app/api/agents/agent3_profile_people.py
+
 import os
 import requests
 from app.api.groq_client import call_groq
@@ -123,7 +125,7 @@ Mention 3–5 platform or vendor names relevant to modern enterprise IT.
 
 def estimate_tenure(person: str) -> str:
     prompt = f"""
-Estimate how long \"{person}\" has been in their current executive role. Be realistic and plausible.
+Estimate how long \"{person}\" has been in their current role. Be realistic and plausible.
 If you can infer influence level (e.g., keynote speaker, thought leader), include that too.
 """
     result = call_groq(prompt)
