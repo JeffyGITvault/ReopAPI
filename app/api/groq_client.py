@@ -40,6 +40,7 @@ def call_groq(prompt: str, stream: bool = False, max_tokens: Optional[int] = 819
     last_error = None
     for model in GROQ_MODEL_PRIORITY:
         try:
+            logger.info(f"Calling Groq model: {model} (max_tokens={max_tokens})")
             response = client.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
@@ -60,4 +61,5 @@ def call_groq(prompt: str, stream: bool = False, max_tokens: Optional[int] = 819
         except Exception as e:
             last_error = e
             logger.warning(f"[WARN] Model '{model}' failed. Trying fallback... Error: {e}")
-    raise RuntimeError(f"All model fallbacks failed. Last error: {last_error}")
+    logger.error(f"All Groq model fallbacks failed. Last error: {last_error}")
+    raise RuntimeError(f"All Groq model fallbacks failed. Last error: {last_error}")
