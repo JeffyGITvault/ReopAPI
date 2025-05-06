@@ -90,6 +90,12 @@
                         "questions_to_ask": {
                           "type": "array",
                           "items": { "type": "string" }
+                        },
+                        "error": { "type": "string", "description": "Error message if analysis failed" },
+                        "notes": {
+                          "type": "array",
+                          "items": { "type": "string" },
+                          "description": "Extraction or fallback notes"
                         }
                       }
                     },
@@ -107,6 +113,7 @@
                           "profile_signals": { "type": "string" },
                           "news_mentions": { "type": "string" },
                           "public_presence": { "type": "string" },
+                          "public_web_results": { "type": "string" },
                           "error": { "type": "string" }
                         }
                       }
@@ -140,7 +147,8 @@
                         "questions_to_ask": {
                           "type": "array",
                           "items": { "type": "string" }
-                        }
+                        },
+                        "error": { "type": "string", "description": "Error message if analysis failed" }
                       }
                     }
                   }
