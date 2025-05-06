@@ -2,6 +2,7 @@ import logging
 import json
 from typing import Dict, Any
 from app.api.groq_client import call_groq
+from app.api.agents.agent4_market_analysis import analyze_company
 
 logger = logging.getLogger(__name__)
 
