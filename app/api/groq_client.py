@@ -20,9 +20,10 @@ client = get_groq_client()
 
 # Short, focused list of agentic/web-search-enabled models per Groq docs
 GROQ_MODEL_PRIORITY = [
-    "compound-beta",            # primary, most capable
-    "llama-3.3-70b-versatile",  # fallback if primary is down
-    "meta-llama/llama-4-maverick-17b-128e-instruct", # additional fallback
+   
+   "llama-3.3-70b-versatile",  #primary model
+   "llama-3.1-8b-instant",    #fallback
+
 ]
 
 def call_groq(
