@@ -9,14 +9,14 @@ from urllib.parse import quote_plus
 from transformers import AutoTokenizer
 from bs4 import BeautifulSoup
 from app.api.groq_client import call_groq, GROQ_MODEL_PRIORITY
-from app.api.config import DEFAULT_HEADERS, SEARCH_API_KEY, GOOGLE_CSE_ID
+from app.api.config import GROQ_MODEL_PRIORITY, DEFAULT_HEADERS, SEARCH_API_KEY, GOOGLE_CSE_ID
 import re
 
 logger = logging.getLogger(__name__)
 
 # Groq token limits
 GROQ_MAX_TOTAL_TOKENS = 131072
-GROQ_MAX_COMPLETION_TOKENS = 8192
+GROQ_MAX_COMPLETION_TOKENS = 32768
 GROQ_MAX_PROMPT_TOKENS = GROQ_MAX_TOTAL_TOKENS - GROQ_MAX_COMPLETION_TOKENS
 GROQ_SAFE_PROMPT_TOKENS = 90000  # Leave a buffer for org/tier limits
 
@@ -70,8 +70,16 @@ def extract_10q_sections(html: str, extraction_notes: List[str]) -> Dict[str, st
         if m:
             item1 = m.group(1)
             break
+    # NLP fallback for Item 1
     if not item1:
-        extraction_notes.append("Item 1 not found with standard patterns.")
+        header = re.search(r'(Item\s*1\.?[^I]{0,30})', text, re.IGNORECASE)
+        if header:
+            start = header.start()
+            # Take a window of 5000 characters after the header
+            item1 = text[start:start+5000]
+            extraction_notes.append("Item 1 extracted with fallback window.")
+        else:
+            extraction_notes.append("Item 1 not found with standard patterns or fallback.")
     # Robust regex for Item 2
     item2_patterns = [
         r'(Item\s*2\.?\s*Management.*?)(Item\s*3\.?|Item\s*4\.?|PART\s*II)',
@@ -83,10 +91,16 @@ def extract_10q_sections(html: str, extraction_notes: List[str]) -> Dict[str, st
         if m:
             item2 = m.group(1)
             break
+    # NLP fallback for Item 2
     if not item2:
-        extraction_notes.append("Item 2 not found with standard patterns.")
+        header = re.search(r'(Item\s*2\.?[^I]{0,30})', text, re.IGNORECASE)
+        if header:
+            start = header.start()
+            item2 = text[start:start+5000]
+            extraction_notes.append("Item 2 extracted with fallback window.")
+        else:
+            extraction_notes.append("Item 2 not found with standard patterns or fallback.")
     # Notes extraction: cross-reference Note mentions
-    notes_section = ""
     all_notes = re.findall(r'(Note\s*\d+.*?)(?=Note\s*\d+|$)', text, re.IGNORECASE)
     referenced_notes = set(re.findall(r'Note\s*\d+', item1 + item2, re.IGNORECASE))
     notes = [n for n in all_notes if any(ref in n for ref in referenced_notes)]
@@ -281,7 +295,24 @@ Respond in the following JSON format:
     try:
         result = call_groq(prompt, max_tokens=GROQ_MAX_COMPLETION_TOKENS)
         logger.info("Agent 2 Groq raw output (synthetic signals): %s", result)
-        parsed = parse_groq_response(result)
+        # Always parse and validate as JSON
+        clean_result = extract_json_from_llm_output(result) if isinstance(result, str) else result
+        try:
+            parsed = json.loads(clean_result) if isinstance(clean_result, str) else clean_result
+        except Exception as e:
+            logger.warning(f"Groq output (synthetic signals) was not valid JSON: {e}. Attempting to fix.")
+            try:
+                fixed = clean_result.replace(",]", "]").replace(",}}", "}}")
+                parsed = json.loads(fixed)
+            except Exception as e2:
+                logger.error(f"Failed to fix Groq output (synthetic signals): {e2}")
+                return json.dumps({
+                    "financial_summary": "No synthetic signals available.",
+                    "key_metrics_table": "",
+                    "suggested_graph": "",
+                    "recent_events_summary": "",
+                    "questions_to_ask": []
+                })
         # Return the full JSON structure for consistency
         if isinstance(parsed, dict):
             return json.dumps(parsed)
