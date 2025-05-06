@@ -145,6 +145,20 @@ def fetch_google_company_signals(company_name: str) -> str:
         logger.warning(f"Google Search API fetch failed for {company_name}: {e}")
         return f"Google Search API fetch failed: {str(e)}"
 
+def extract_json_from_llm_output(output: str) -> str:
+    # Remove markdown code block markers if present
+    if output.strip().startswith("```"):
+        # Remove the first line (``` or ```json) and the last line (```)
+        lines = output.strip().splitlines()
+        # Remove first and last line if they are code block markers
+        if lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].startswith("```"):
+            lines = lines[:-1]
+        output = "\n".join(lines)
+    # Optionally, remove any leading/trailing whitespace
+    return output.strip()
+
 def analyze_financials(sec_data: dict) -> Dict[str, Any]:
     """
     Agent 2: Analyze financials from SEC data, fetch news signals, and summarize with LLM.
@@ -223,14 +237,13 @@ def analyze_financials(sec_data: dict) -> Dict[str, Any]:
                 logger.error(f"Agent 2 - Financial analysis failed: {e}")
                 return {"error": f"Agent 2 - Financial analysis failed: {str(e)}", "notes": extraction_notes}
         logger.info("Agent 2 Groq raw output: %s", result)
-        parsed = None
+        clean_result = extract_json_from_llm_output(result) if isinstance(result, str) else result
         try:
-            parsed = json.loads(result) if isinstance(result, str) else result
+            parsed = json.loads(clean_result) if isinstance(clean_result, str) else clean_result
         except Exception as e:
             logger.warning(f"Groq output was not valid JSON: {e}. Attempting to fix.")
-            # Try to fix common JSON issues (e.g., trailing commas)
             try:
-                fixed = result.replace(",]", "]").replace(",}}", "}}")
+                fixed = clean_result.replace(",]", "]").replace(",}}", "}}")
                 parsed = json.loads(fixed)
             except Exception as e2:
                 logger.error(f"Failed to fix Groq output: {e2}")
@@ -333,6 +346,8 @@ def parse_groq_response(response: Any) -> Dict[str, Any]:
     Parse the response from Groq, handling both string and dict input. Fallback if not valid JSON.
     """
     try:
+        if isinstance(response, str):
+            response = extract_json_from_llm_output(response)
         return json.loads(response) if isinstance(response, str) else response
     except json.JSONDecodeError as e:
         logger.error(f"Invalid JSON returned from Groq: {e}. Raw output: {response}")
