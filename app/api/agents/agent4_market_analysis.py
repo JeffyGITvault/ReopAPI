@@ -42,18 +42,23 @@ def build_market_prompt(company: str, context: str) -> str:
 
     additional_hint = f"\n**Additional example based on this specific meeting context:**\n{dynamic_hint}" if dynamic_hint else ""
 
+    system_message = (
+        "You are a market and competitive intelligence analyst. Your job is to analyze the market, competitive landscape, and macroeconomic factors for the given company and meeting context. "
+        "You must extract and cite specific risks, opportunities, and competitors based on the provided context and any available financial analysis. "
+        "Respond ONLY in the following strict JSON format. Do not add any extra text or commentary."
+    )
+
     prompt = f"""
 You are a market analyst...
 
-Given the company "{company}" and the following meeting context: "{context}",
+Given the company \"{company}\" and the following meeting context: \"{context}\",
 analyze the market and competitive landscape.
 
 Provide:
-- A list of 2-3 major competitors and their positioning
-- Key opportunities in the industry
-- Key risks or threats affecting the company
-- Any macroeconomic factors relevant
-- Smart, context-specific questions to ask during the meeting
+- A list of 2-3 major competitors for the given company and their positioning versus the company
+- Key risks or threats affecting the company based on the financial analysis you conducted
+- Any macroeconomic factors relevant to the company
+- Smart, context-specific questions to ask during the meeting based on the meeting context
 
 Respond in the following strict JSON format:
 
@@ -61,7 +66,6 @@ Respond in the following strict JSON format:
     "opportunities": [],
     "threats": [],
     "competitive_landscape": [
-        {{"competitor": "", "positioning": ""}},
         {{"competitor": "", "positioning": ""}}
     ],
     "macroeconomic_factors": [],
@@ -75,6 +79,8 @@ Respond in the following strict JSON format:
 - "How does the organization manage technical debt and how much technical debt do you have impacting your resilience?"
 - "How does the organization utilize managed services to address skills and talent gaps?"
 {additional_hint}
+
+{system_message}
 """
     return prompt
 
