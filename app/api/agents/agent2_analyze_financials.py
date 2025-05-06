@@ -7,7 +7,7 @@ import json
 from typing import Dict, Any
 from urllib.parse import quote_plus
 from app.api.groq_client import call_groq
-from app.api.config import NEWSDATA_API_KEY, DEFAULT_HEADERS
+from app.api.config import NEWSDATA_API_KEY, DEFAULT_HEADERS, SEARCH_API_KEY, GOOGLE_CSE_ID
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,35 @@ def estimate_token_count(text: str) -> int:
     """Estimate the number of tokens in a text (approximate for LLMs)."""
     words = len(text.split())
     return int(words / 0.75)
+
+
+def fetch_google_company_signals(company_name: str) -> str:
+    """
+    Fetch recent company news using Google Custom Search as a fallback enrichment source.
+    """
+    if not SEARCH_API_KEY or not GOOGLE_CSE_ID:
+        logger.warning("Google Search API key or CSE ID not set. Skipping Google fetch.")
+        return "Google Search API key or CSE ID not set."
+    try:
+        query = f'"{company_name}" site:businesswire.com OR site:bloomberg.com OR site:reuters.com OR site:wsj.com'
+        params = {
+            "key": SEARCH_API_KEY,
+            "cx": GOOGLE_CSE_ID,
+            "q": query,
+            "num": 5
+        }
+        response = requests.get("https://www.googleapis.com/customsearch/v1", params=params, timeout=10)
+        response.raise_for_status()
+        items = response.json().get("items", [])
+        if not items:
+            return "No public web results found."
+        return "\n".join([
+            f"- [{item['title']}]({item['link']}) — {item.get('snippet', 'No snippet')}"
+            for item in items
+        ])
+    except Exception as e:
+        logger.warning(f"Google Search API fetch failed for {company_name}: {e}")
+        return f"Google Search API fetch failed: {str(e)}"
 
 
 def analyze_financials(sec_data: dict) -> Dict[str, Any]:
@@ -67,8 +96,10 @@ def analyze_financials(sec_data: dict) -> Dict[str, Any]:
 
         external_signals = (
             fetch_recent_signals(company_name)
-            if NEWSDATA_API_KEY else generate_synthetic_signals(company_name)
+            if NEWSDATA_API_KEY else fetch_google_company_signals(company_name)
         )
+        if not external_signals or 'No public web results found.' in external_signals or 'API key' in external_signals:
+            external_signals = generate_synthetic_signals(company_name)
 
         prompt = build_financial_prompt(ten_q_html, external_signals)
         result = call_groq(prompt, max_tokens=GROQ_MAX_COMPLETION_TOKENS)
@@ -90,7 +121,7 @@ def analyze_financials(sec_data: dict) -> Dict[str, Any]:
 
 def fetch_recent_signals(company_name: str) -> str:
     """
-    Fetch recent news signals for a company using NewsData.io. Sanitize and URL-encode queries. Handle 422 errors.
+    Fetch recent news signals for a company using NewsData.io. Sanitize and URL-encode queries. Handle 422 errors. Fallback to Google CSE or synthetic signals.
     """
     try:
         headers = {"Content-Type": "application/json"}
@@ -106,16 +137,26 @@ def fetch_recent_signals(company_name: str) -> str:
         }
         response = requests.get("https://newsdata.io/api/1/news", params=params, headers=headers, timeout=10)
         if response.status_code == 422:
-            logger.warning(f"NewsData.io 422 error for query: {company_name}. Falling back to synthetic signals.")
+            logger.warning(f"NewsData.io 422 error for query: {company_name}. Falling back to Google CSE.")
+            google_signals = fetch_google_company_signals(company_name)
+            if 'No public web results found.' not in google_signals and 'API key' not in google_signals:
+                return google_signals
             return generate_synthetic_signals(company_name)
         response.raise_for_status()
         articles = response.json().get("results", [])
         if not articles:
-            return "No recent news found."
+            logger.warning(f"No NewsData.io articles for {company_name}. Falling back to Google CSE.")
+            google_signals = fetch_google_company_signals(company_name)
+            if 'No public web results found.' not in google_signals and 'API key' not in google_signals:
+                return google_signals
+            return generate_synthetic_signals(company_name)
         summary = "\n".join([f"- {a['title']} ({a['link']})" for a in articles[:5]])
         return summary
     except Exception as e:
-        logger.warning(f"Failed to fetch real signals: {e}")
+        logger.warning(f"Failed to fetch real signals: {e}. Falling back to Google CSE.")
+        google_signals = fetch_google_company_signals(company_name)
+        if 'No public web results found.' not in google_signals and 'API key' not in google_signals:
+            return google_signals
         return f"Failed to fetch real signals: {str(e)}\n" + generate_synthetic_signals(company_name)
 
 
