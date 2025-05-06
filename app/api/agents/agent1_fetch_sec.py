@@ -1,7 +1,7 @@
 # app/api/agents/agent1_fetch_sec.py
 
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List
 from app.api.SECAPI import get_quarterly_filings
 from app.api.cik_resolver import load_alias_map
 from fastapi import Request
@@ -22,19 +22,33 @@ class DummyRequest(StarletteRequest):
         }
         super().__init__(scope)
 
-def fetch_10q(company_name: str) -> Dict[str, Any]:
+def fetch_10q(company_name: str, count: int = 2) -> Dict[str, Any]:
     """
-    Agent 1: Fetch the latest 10-Q filings for a given company.
-    Returns a dict with SEC filing data or an error message.
+    Agent 1: Fetch the latest N 10-Q filings for a given company.
+    Returns a dict with a list of SEC filing metadata (date, url, title, etc.) or an error message.
     """
     try:
         dummy_request = DummyRequest()
         filings_data = get_quarterly_filings(
             request=dummy_request,
             company_name=company_name,
-            count=2
+            count=count
         )
-        return filings_data
+        # Ensure output is a list of filings with URLs, dates, and titles
+        filings = filings_data.get("filings", [])
+        filings_list = []
+        for filing in filings:
+            filings_list.append({
+                "filing_date": filing.get("filing_date"),
+                "html_url": filing.get("html_url"),
+                "title": filings_data.get("company_name", company_name),
+                "marker": filing.get("marker", "")
+            })
+        return {
+            "company_name": filings_data.get("company_name", company_name),
+            "cik": filings_data.get("cik"),
+            "filings": filings_list
+        }
     except Exception as e:
         logger.error(f"Agent 1 - SEC data fetch failed: {e}")
         return {"error": f"Agent 1 - SEC data fetch failed: {str(e)}"}
