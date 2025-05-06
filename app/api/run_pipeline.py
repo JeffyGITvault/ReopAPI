@@ -21,6 +21,13 @@ async def run_pipeline(payload: PipelineRequest):
     company = payload.company
     people = payload.people
     meeting_context = payload.meeting_context
+    # Input validation
+    if not company or not isinstance(company, str) or not company.strip():
+        raise HTTPException(status_code=400, detail="Missing or invalid 'company' field.")
+    if not isinstance(people, list) or not all(isinstance(p, str) and p.strip() for p in people):
+        raise HTTPException(status_code=400, detail="'people' must be a non-empty list of non-empty strings.")
+    if not meeting_context or not isinstance(meeting_context, str) or not meeting_context.strip():
+        raise HTTPException(status_code=400, detail="Missing or invalid 'meeting_context' field.")
     """
     Full multi-agent pipeline:
     Agent 1 -> SEC 10-Q Fetch (required)

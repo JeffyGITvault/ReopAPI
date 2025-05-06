@@ -9,6 +9,7 @@ import requests
 from bs4 import BeautifulSoup
 from fastapi import Request, FastAPI, Query, Path
 from typing import Optional
+import logging
 
 # === Local Modules ===
 from app.api.cik_resolver import resolve_company_name, push_new_aliases_to_github, load_alias_map
@@ -23,6 +24,8 @@ app = FastAPI(
 
 HEADERS = {"User-Agent": "Jeffrey Guenthner (jeffrey.guenthner@gmail.com)"}
 MAX_PARALLEL = 10
+
+logger = logging.getLogger(__name__)
 
 @app.get("/debug_alias_map")
 def debug_alias_map():
@@ -61,7 +64,7 @@ def get_actual_filing_url(cik, accession, primary_doc):
             if validate_url(html_url):
                 return html_url
             else:
-                print(f"[WARN] Primary document failed validation: {html_url}")
+                logger.warning(f"[WARN] Primary document failed validation: {html_url}")
                 html_url = None
 
         resp = requests.get(index_url, headers=HEADERS)
@@ -86,10 +89,10 @@ def get_actual_filing_url(cik, accession, primary_doc):
                 html_url = candidate_url
                 break
             else:
-                print(f"[INFO] Rejected candidate due to failed validation: {candidate_url}")
+                logger.info(f"[INFO] Rejected candidate due to failed validation: {candidate_url}")
 
     except Exception as e:
-        print(f"[ERROR] Exception while resolving filing URL for CIK {cik}: {e}")
+        logger.error(f"[ERROR] Exception while resolving filing URL for CIK {cik}: {e}")
 
     return html_url or "Unavailable"
 
@@ -100,7 +103,7 @@ def get_quarterly_filings(
     count: int = Query(2, description="Number of 10-Q filings to return"),
 ):
     
-    print(f"[INFO] SECAPI called: {company_name}, count={count}")
+    logger.info(f"[INFO] SECAPI called: {company_name}, count={count}")
 
     start_time = time.time()
     cached = []
@@ -184,14 +187,14 @@ def get_quarterly_filings(
             report["marker"] = "📌 Most Recent" if i == 1 else "🕓 Older"
 
         if quarterly_reports:
-            print(f"[INFO] First filing: {quarterly_reports[0]['filing_date']} — {quarterly_reports[0]['html_url']}")
+            logger.info(f"[INFO] First filing: {quarterly_reports[0]['filing_date']} — {quarterly_reports[0]['html_url']}")
 
-        print(f"[TIMING] Total duration: {round(time.time() - start_time, 2)}s for {company_name}")
+        logger.info(f"[TIMING] Total duration: {round(time.time() - start_time, 2)}s for {company_name}")
 
         try:
             push_new_aliases_to_github()
         except Exception as e:
-            print(f"[Warning] Alias push failed: {e}")
+            logger.warning(f"[Warning] Alias push failed: {e}")
 
         return {
             "company_name": matched_name,
@@ -201,7 +204,7 @@ def get_quarterly_filings(
         }
 
     except Exception as e:
-        print(f"[ERROR] /get_quarterlies failed for {company_name}: {e}")
+        logger.error(f"[ERROR] /get_quarterlies failed for {company_name}: {e}")
         return {
             "company_name": company_name,
             "cik": cik,

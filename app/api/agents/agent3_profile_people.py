@@ -6,6 +6,7 @@ import logging
 from typing import List, Dict, Any
 from app.api.groq_client import call_groq
 from app.api.config import NEWSDATA_API_KEY, SEARCH_API_KEY, GOOGLE_CSE_ID
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +20,7 @@ def profile_people(people: List[str], company: str) -> List[Dict[str, Any]]:
     if not people:
         return [{"error": "No people provided for profiling."}]
 
-    profiles = []
-    for person in people:
+    def build_profile(person: str) -> Dict[str, Any]:
         try:
             profile = {
                 "name": person,
@@ -33,13 +33,19 @@ def profile_people(people: List[str], company: str) -> List[Dict[str, Any]]:
                 "public_presence": enrich_with_public_signals(person, company),
                 "public_web_results": fetch_google_signals(person, company)
             }
-            profiles.append(profile)
+            return profile
         except Exception as e:
             logger.error(f"Agent 3 profiling failed for {person}: {e}")
-            profiles.append({
+            return {
                 "name": person,
                 "error": f"Agent 3 profiling failed: {str(e)}"
-            })
+            }
+
+    profiles = []
+    with ThreadPoolExecutor(max_workers=min(8, len(people))) as executor:
+        future_to_person = {executor.submit(build_profile, person): person for person in people}
+        for future in as_completed(future_to_person):
+            profiles.append(future.result())
     return profiles
 
 def fetch_newsdata_signals(person: str, company: str) -> str:

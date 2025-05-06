@@ -169,14 +169,18 @@ def analyze_financials(sec_data: dict) -> Dict[str, Any]:
                 response.raise_for_status()
                 html = response.text
                 extracted = extract_10q_sections(html, extraction_notes)
-                # Summarize if too long
+                # Truncate each section individually before summarizing
                 for key in ["item1", "item2", "notes"]:
-                    extracted[key] = summarize_section(extracted[key], max_tokens=3000)
+                    section = extracted.get(key, "")
+                    if count_tokens(section) > 3000:
+                        extraction_notes.append(f"Section '{key}' in filing '{filing.get('filing_date', '')}' was truncated to 3000 tokens.")
+                        extracted[key] = safe_truncate_prompt(section, 3000)
                 extracted["filing_date"] = filing.get("filing_date", "")
                 extracted["title"] = filing.get("title", company_name)
                 extracted_filings.append(extracted)
             except Exception as e:
                 logger.warning(f"Failed to fetch or extract filing at {url}: {e}")
+                extraction_notes.append(f"Failed to fetch or extract filing at {url}: {e}")
                 missing_filings += 1
         if not extracted_filings:
             return {"error": "No valid 10-Q filings could be processed."}
@@ -309,10 +313,19 @@ Respond in the following JSON format:
         result = call_groq(prompt, max_tokens=GROQ_MAX_COMPLETION_TOKENS)
         logger.info("Agent 2 Groq raw output (synthetic signals): %s", result)
         parsed = parse_groq_response(result)
-        return parsed.get("financial_summary", "") if isinstance(parsed, dict) else str(parsed)
+        # Return the full JSON structure for consistency
+        if isinstance(parsed, dict):
+            return json.dumps(parsed)
+        return str(parsed)
     except Exception as e:
         logger.error(f"Failed to generate synthetic signals: {e}")
-        return "No synthetic signals available."
+        return json.dumps({
+            "financial_summary": "No synthetic signals available.",
+            "key_metrics_table": "",
+            "suggested_graph": "",
+            "recent_events_summary": "",
+            "questions_to_ask": []
+        })
 
 
 def parse_groq_response(response: Any) -> Dict[str, Any]:

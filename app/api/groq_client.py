@@ -44,7 +44,7 @@ def call_groq(
     :param kwargs: Additional parameters for Groq API
     :return: Full response string or generator of streamed tokens
     """
-    last_error = None
+    errors = []
     for model in GROQ_MODEL_PRIORITY:
         try:
             logger.info(f"Calling Groq model: {model} (max_tokens={max_tokens})")
@@ -69,7 +69,7 @@ def call_groq(
                 # Return the full content as string
                 return response.choices[0].message.content.strip()
         except Exception as e:
-            last_error = e
+            errors.append((model, str(e)))
             logger.warning(f"[WARN] Model '{model}' failed. Trying fallback... Error: {e}")
-    logger.error(f"All Groq model fallbacks failed. Last error: {last_error}")
-    raise RuntimeError(f"All Groq model fallbacks failed. Last error: {last_error}")
+    logger.error(f"All Groq model fallbacks failed. Errors: {errors}")
+    raise RuntimeError(f"All Groq model fallbacks failed. Errors: {errors}")
