@@ -65,10 +65,10 @@ async def run_pipeline(payload: PipelineRequest):
                 "error_details": people_profiles["error"]
             }
 
-        if isinstance(market_analysis, dict) and "error" in market_analysis:
-            market_analysis = {
+        if isinstance(company_analysis, dict) and "error" in company_analysis:
+            company_analysis = {
                 "status": "Agent 4 (Market Analysis) failed",
-                "error_details": market_analysis["error"]
+                "error_details": company_analysis["error"]
             }
 
         # === Final Output Packaging ===
@@ -78,7 +78,7 @@ async def run_pipeline(payload: PipelineRequest):
             "sec_data": sec_data,
             "financial_analysis": financial_analysis,
             "people_profiles": people_profiles,
-            "market_analysis": market_analysis
+            "market_analysis": company_analysis
         }
 
         return final_output
