@@ -7,8 +7,10 @@ import json
 from typing import Dict, Any, Optional
 from urllib.parse import quote_plus
 from transformers import AutoTokenizer
+from bs4 import BeautifulSoup
 from app.api.groq_client import call_groq, GROQ_MODEL_PRIORITY
 from app.api.config import NEWSDATA_API_KEY, DEFAULT_HEADERS, SEARCH_API_KEY, GOOGLE_CSE_ID
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +48,59 @@ def safe_truncate_prompt(prompt: str, max_tokens: int) -> str:
     if len(words) > allowed_words:
         logger.warning(f"Prompt too large (approx {len(words)/0.75} tokens). Truncating to {allowed_words} words.")
         return ' '.join(words[:allowed_words])
+    return prompt
+
+def extract_10q_sections(html: str) -> Dict[str, str]:
+    """
+    Extract Item 1 (Financial Statements), Item 2 (MD&A), and relevant Notes from 10-Q HTML/text.
+    Returns a dict with 'item1', 'item2', and 'notes' keys.
+    """
+    # Convert HTML to plain text for regex
+    soup = BeautifulSoup(html, "html.parser")
+    text = soup.get_text(separator=" ")
+    # Normalize whitespace
+    text = ' '.join(text.split())
+    # Extract Item 1
+    item1_match = re.search(r'(Item\s*1\.?\s*Financial Statements.*?)(Item\s*2\.?\s*Management)', text, re.IGNORECASE)
+    item1 = item1_match.group(1) if item1_match else ""
+    # Extract Item 2
+    item2_match = re.search(r'(Item\s*2\.?\s*Management.*?)(Item\s*3\.?|Item\s*4\.?|PART\s*II)', text, re.IGNORECASE)
+    item2 = item2_match.group(1) if item2_match else ""
+    # Extract Notes referenced in Item 1 and 2
+    notes = []
+    for section in [item1, item2]:
+        notes += re.findall(r'(Note\s*\d+.*?)(?=Note\s*\d+|$)', section, re.IGNORECASE)
+    notes_text = '\n\n'.join(notes)
+    return {"item1": item1, "item2": item2, "notes": notes_text}
+
+def build_groq_prompt_from_sections(company_name: str, sections: Dict[str, str], news: str = "") -> str:
+    """
+    Build a Groq prompt using extracted 10-Q sections and optional news.
+    """
+    prompt = f"""
+You are a financial analyst. Please analyze the following sections from the latest SEC 10-Q for {company_name}:
+
+Item 1: Financial Statements
+{sections.get('item1', '')}
+
+Item 2: Management's Discussion and Analysis (MD&A)
+{sections.get('item2', '')}
+
+Relevant Notes
+{sections.get('notes', '')}
+
+Recent News:
+{news}
+
+Summarize key financial trends from the 10-Q, note any risks such as margin declines, revenue declines, and recent events. Focus on management's discussion, financial condition, and any important notes. Respond in the following JSON format:
+{{
+  "financial_summary": "...",
+  "key_metrics_table": "...",
+  "suggested_graph": "...",
+  "recent_events_summary": "...",
+  "questions_to_ask": ["...", "..."]
+}}
+"""
     return prompt
 
 def fetch_google_company_signals(company_name: str) -> str:
@@ -110,11 +165,8 @@ def analyze_financials(sec_data: dict) -> Dict[str, Any]:
             ten_q_html = response.text
             logger.info("Agent 2 fetched fallback 10-Q HTML from filings.")
 
-        # Truncate 10-Q HTML if too large for Groq
-        token_count = count_tokens(ten_q_html)
-        if token_count > GROQ_MAX_PROMPT_TOKENS:
-            note = f"10-Q HTML was truncated from {token_count} tokens to {GROQ_SAFE_PROMPT_TOKENS} tokens to fit model limits."
-            ten_q_html = safe_truncate_prompt(ten_q_html, GROQ_SAFE_PROMPT_TOKENS)
+        # Extract only Item 1, Item 2, and Notes
+        extracted_sections = extract_10q_sections(ten_q_html)
 
         external_signals = (
             fetch_recent_signals(company_name)
@@ -123,7 +175,7 @@ def analyze_financials(sec_data: dict) -> Dict[str, Any]:
         if not external_signals or 'No public web results found.' in external_signals or 'API key' in external_signals:
             external_signals = generate_synthetic_signals(company_name)
 
-        prompt = build_financial_prompt(ten_q_html, external_signals)
+        prompt = build_groq_prompt_from_sections(company_name, extracted_sections, external_signals)
         prompt_token_count = count_tokens(prompt)
         if prompt_token_count > GROQ_SAFE_PROMPT_TOKENS:
             note = (note or "") + f" Prompt was truncated from {prompt_token_count} tokens to {GROQ_SAFE_PROMPT_TOKENS} tokens."
@@ -232,52 +284,6 @@ Respond in the following JSON format:
     except Exception as e:
         logger.error(f"Failed to generate synthetic signals: {e}")
         return "No synthetic signals available."
-
-
-def build_financial_prompt(html_content: str, external_signals: str) -> str:
-    """
-    Build a financial analysis prompt for the LLM.
-    """
-    prompt = f"""
-You are a junior financial analyst building a fast-read briefing for consultants and sales leads.
-
-Given:
-- A company's most recent 10-Q HTML (SEC filing)
-- If the company has no 10-Q HTML data, use general indsutry analysis based on public companies and possible competitors to our reference comapny
-- External signals from news, industry sources, and professional platforms
-
-Summarize:
-- Revenue trend (YoY or QoQ)
-- Gross margin trend (up/down/flat)
-- Cash position and debt level (from balance sheet)
-- Liquidity and operational flexibility
-- Any flagged risks (e.g., high leverage, negative cash flow)
-- One table of key financials
-- One graph suggestion (e.g., revenue vs margin, debt vs cash)
-- 2–3 smart financial questions to ask in client meetings
-
-Also include:
-- A short summary of external sentiment or developments that may be relevant to the company's current strategy or outlook
-
-SEC 10-Q:
-
-{html_content}
-
-External Signals:
-
-{external_signals}
-
-Respond in the following JSON format:
-
-{{
-  "financial_summary": "...",
-  "key_metrics_table": "...",
-  "suggested_graph": "...",
-  "recent_events_summary": "...",
-  "questions_to_ask": ["...", "..."]
-}}
-"""
-    return prompt
 
 
 def parse_groq_response(response: Any) -> Dict[str, Any]:
