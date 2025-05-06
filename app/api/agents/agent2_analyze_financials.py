@@ -23,10 +23,10 @@ GROQ_SAFE_PROMPT_TOKENS = 90000  # Leave a buffer for org/tier limits
 # Use the tokenizer for the primary model
 PRIMARY_MODEL = GROQ_MODEL_PRIORITY[0]
 try:
-    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3-70b")
+    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.3-70b-versatile")
 except Exception:
     tokenizer = None
-    logger.warning("Could not load tokenizer for meta-llama/Llama-3-70b. Token counting will be approximate.")
+    logger.warning("Could not load tokenizer for meta-llama/Llama-3.3-70b-versatile. Token counting will be approximate.")
 
 def count_tokens(text: str) -> int:
     if tokenizer:
