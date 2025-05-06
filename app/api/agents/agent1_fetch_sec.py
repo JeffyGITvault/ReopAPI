@@ -34,15 +34,25 @@ def fetch_10q(company_name: str, count: int = 2) -> Dict[str, Any]:
             company_name=company_name,
             count=count
         )
-        # Ensure output is a list of filings with URLs, dates, and titles
         filings = filings_data.get("filings", [])
         filings_list = []
         for filing in filings:
+            html_url = filing.get("html_url")
+            estimated_tokens = None
+            # Estimate token count for logging, but do not chunk or parse
+            if html_url and html_url != "Unavailable":
+                try:
+                    html = fetch_10q_html(html_url)
+                    text = clean_and_extract_text(html)
+                    estimated_tokens = estimate_token_count(text)
+                except Exception as e:
+                    logger.warning(f"Token estimate failed for {html_url}: {e}")
             filings_list.append({
                 "filing_date": filing.get("filing_date"),
-                "html_url": filing.get("html_url"),
+                "html_url": html_url,
                 "title": filings_data.get("company_name", company_name),
-                "marker": filing.get("marker", "")
+                "marker": filing.get("marker", ""),
+                "estimated_tokens": estimated_tokens
             })
         return {
             "company_name": filings_data.get("company_name", company_name),
@@ -80,33 +90,3 @@ def estimate_token_count(text: str) -> int:
     """
     words = len(text.split())
     return int(words / 0.75)
-
-def chunk_10q_text(text: str, chunk_size: int = 10000, overlap: int = 1000) -> Dict[str, Any]:
-    """
-    Chunk the 10-Q text into token-sized pieces for LLM processing.
-    """
-    try:
-        from transformers import AutoTokenizer
-        tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3-70b")
-        tokens = tokenizer.encode(text)
-        chunks = []
-        for i in range(0, len(tokens), chunk_size - overlap):
-            chunk_tokens = tokens[i:i + chunk_size]
-            chunk_text = tokenizer.decode(chunk_tokens)
-            chunks.append(chunk_text)
-        return {"source": "html", "chunks": chunks, "total_tokens": len(tokens)}
-    except Exception as e:
-        logger.error(f"Tokenization failed: {e}")
-        return {"error": f"Tokenization failed: {str(e)}"}
-
-def parse_10q_from_url(url: str) -> Dict[str, Any]:
-    """
-    Parse a 10-Q filing from a URL, chunking if small enough, else return URL and token estimate.
-    """
-    html = fetch_10q_html(url)
-    text = clean_and_extract_text(html)
-    estimated_tokens = estimate_token_count(text)
-    if estimated_tokens < 30000:
-        return chunk_10q_text(text)
-    else:
-        return {"source": "url", "url": url, "estimated_tokens": estimated_tokens}
