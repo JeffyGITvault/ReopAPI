@@ -4,5 +4,6 @@ uvicorn==0.34.0
 requests==2.32.3
 beautifulsoup4==4.13.3
 python-dotenv==1.1.0
-groq
+pydantic==2.6.3
+groq==0.4.2
 transformers==4.51.3

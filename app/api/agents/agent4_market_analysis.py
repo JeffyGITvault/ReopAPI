@@ -1,16 +1,23 @@
+import logging
+import json
+from typing import Dict, Any
 from app.api.groq_client import call_groq
 
-def analyze_market(company_name: str, meeting_context: str) -> dict:
+logger = logging.getLogger(__name__)
+
+def analyze_market(company_name: str, meeting_context: str) -> Dict[str, Any]:
     """
     Agent 4: Analyze the market and competitive landscape for a given company and context.
+    Returns a dict with market analysis or error.
     """
     try:
         prompt = build_market_prompt(company_name, meeting_context)
         result = call_groq(prompt)
-        print("Agent 4 Groq raw output:", result)
+        logger.info("Agent 4 Groq raw output: %s", result)
         parsed_analysis = parse_groq_response(result)
         return parsed_analysis
     except Exception as e:
+        logger.error(f"Agent 4 - Market analysis failed: {e}")
         return {"error": f"Agent 4 - Market analysis failed: {str(e)}"}
 
 
@@ -27,7 +34,7 @@ def build_market_prompt(company: str, context: str) -> str:
     elif "technology" in lc_context or "innovation" in lc_context:
         dynamic_hint = '- "Where are you investing most aggressively in tech-enabled transformation?"'
     elif "technical debt" in lc_context:
-        dynamic_hint = '- "What’s your current strategy for managing or paying down technical debt?"'
+        dynamic_hint = '- "What\'s your current strategy for managing or paying down technical debt?"'
     elif "managed service" in lc_context or "msp" in lc_context:
         dynamic_hint = '- "Which managed services are you considering now and why?"'
     elif "hybrid cloud" in lc_context or "multi-cloud" in lc_context:
@@ -71,9 +78,16 @@ Respond in the following strict JSON format:
 """
     return prompt
 
-def parse_groq_response(response: dict) -> dict:
+def parse_groq_response(response: Any) -> Dict[str, Any]:
+    """
+    Parse the response from Groq, handling both string and dict input.
+    """
     try:
-        content = response["content"]
+        content = response["content"] if isinstance(response, dict) and "content" in response else response
         return json.loads(content) if isinstance(content, str) else response
-     except json.JSONDecodeError as e:
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON returned from Groq: {e}")
         return {"error": f"Invalid JSON returned from Groq: {str(e)}"}
+    except Exception as e:
+        logger.error(f"Failed to parse Groq response: {e}")
+        return {"error": f"Failed to parse Groq response: {str(e)}"}
