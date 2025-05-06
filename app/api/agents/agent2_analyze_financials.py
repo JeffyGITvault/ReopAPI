@@ -9,7 +9,7 @@ from urllib.parse import quote_plus
 from transformers import AutoTokenizer
 from bs4 import BeautifulSoup
 from app.api.groq_client import call_groq, GROQ_MODEL_PRIORITY
-from app.api.config import GROQ_MODEL_PRIORITY, DEFAULT_HEADERS, SEARCH_API_KEY, GOOGLE_CSE_ID
+from app.api.config import DEFAULT_HEADERS, SEARCH_API_KEY, GOOGLE_CSE_ID
 import re
 
 logger = logging.getLogger(__name__)
