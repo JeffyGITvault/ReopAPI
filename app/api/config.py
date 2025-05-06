@@ -5,7 +5,6 @@ load_dotenv()
 
 # === API Keys ===
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-NEWSDATA_API_KEY = os.getenv("NEWSDATA_API_KEY")
 SEARCH_API_KEY = os.getenv("SEARCH_API_KEY")
 GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
 

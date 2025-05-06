@@ -7,7 +7,7 @@ import asyncio
 from app.api.agents.agent1_fetch_sec import fetch_10q
 from app.api.agents.agent2_analyze_financials import analyze_financials
 from app.api.agents.agent3_profile_people import profile_people
-from app.api.agents.agent4_market_analysis import analyze_market
+from app.api.agents.agent4_analyze_company import analyze_company
 
 router = APIRouter()
 

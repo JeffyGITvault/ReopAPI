@@ -5,7 +5,7 @@ import requests
 import logging
 from typing import List, Dict, Any
 from app.api.groq_client import call_groq
-from app.api.config import NEWSDATA_API_KEY, SEARCH_API_KEY, GOOGLE_CSE_ID
+from app.api.config import SEARCH_API_KEY, GOOGLE_CSE_ID
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logger = logging.getLogger(__name__)
