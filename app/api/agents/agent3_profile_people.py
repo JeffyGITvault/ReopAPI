@@ -132,7 +132,6 @@ def infer_stack_from_job_posts(company: str) -> str:
     prompt = f"""
 Based on recent job listings and analyst insight, what security or IT tools is {company} likely using?
 What open positions does the company have in the area of focus for our meeting contact?
-Mention 3–5 platform or vendor names relevant to modern enterprise IT.
 """
     try:
         result = call_groq(prompt)
