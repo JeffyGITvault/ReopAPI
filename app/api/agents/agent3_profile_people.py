@@ -28,7 +28,6 @@ def profile_people(people: List[str], company: str) -> List[Dict[str, Any]]:
                 "role_focus": infer_role_focus(person, company),
                 "filing_reference": check_filings_mention(person, company),
                 "likely_toolchain": infer_stack_from_job_posts(company),
-                "estimated_tenure": estimate_tenure(person),
                 "profile_signals": infer_risk_signals(person),
                 "public_presence": enrich_with_public_signals(person, company),
                 "public_web_results": fetch_google_signals(person, company)
