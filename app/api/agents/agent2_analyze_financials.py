@@ -53,53 +53,63 @@ def safe_truncate_prompt(prompt: str, max_tokens: int) -> str:
 def extract_10q_sections(html: str, extraction_notes: List[str]) -> Dict[str, str]:
     """
     Extract Item 1 (Financial Statements), Item 2 (MD&A), and relevant Notes from 10-Q HTML/text.
-    Returns a dict with 'item1', 'item2', and 'notes' keys.
+    Returns a dict with 'item1', 'item2', 'notes', and 'item1_tables' keys.
     """
     soup = BeautifulSoup(html, "html.parser")
     text = soup.get_text(separator=" ")
     text = ' '.join(text.split())
-    # Robust regex for Item 1
-    item1_patterns = [
-        r'(Item\s*1\.?\s*Financial Statements.*?)(Item\s*2\.?\s*Management)',
-        r'(Item\s*1\.?\s*Financial Information.*?)(Item\s*2\.?\s*Management)',
-        r'(Item\s*1\.?\s*Condensed Consolidated Financial Statements.*?)(Item\s*2\.?\s*Management)'
-    ]
-    item1 = ""
-    for pat in item1_patterns:
-        m = re.search(pat, text, re.IGNORECASE)
-        if m:
-            item1 = m.group(1)
-            break
-    # NLP fallback for Item 1
+    # Section boundary detection
+    item_headers = list(re.finditer(r'(Item\s*\d+[A-Z]?\.?\s*[A-Za-z\s\-&]*)', text, re.IGNORECASE))
+    sections = {}
+    for idx, match in enumerate(item_headers):
+        start = match.start()
+        end = item_headers[idx + 1].start() if idx + 1 < len(item_headers) else len(text)
+        header = match.group(1).strip()
+        sections[header.lower()] = text[start:end].strip()
+    # Extract Item 1 and Item 2 using detected boundaries
+    item1 = ''
+    item2 = ''
+    for k in sections:
+        if k.startswith('item 1') and not k.startswith('item 1a'):
+            item1 = sections[k]
+            extraction_notes.append(f"Item 1 extracted using section boundary: '{k}'")
+        if k.startswith('item 2') and not k.startswith('item 2a'):
+            item2 = sections[k]
+            extraction_notes.append(f"Item 2 extracted using section boundary: '{k}'")
     if not item1:
-        header = re.search(r'(Item\s*1\.?[^I]{0,30})', text, re.IGNORECASE)
-        if header:
-            start = header.start()
-            # Take a window of 5000 characters after the header
-            item1 = text[start:start+5000]
-            extraction_notes.append("Item 1 extracted with fallback window.")
-        else:
-            extraction_notes.append("Item 1 not found with standard patterns or fallback.")
-    # Robust regex for Item 2
-    item2_patterns = [
-        r'(Item\s*2\.?\s*Management.*?)(Item\s*3\.?|Item\s*4\.?|PART\s*II)',
-        r'(Item\s*2\.?\s*Management.*?)(PART\s*II)'
-    ]
-    item2 = ""
-    for pat in item2_patterns:
-        m = re.search(pat, text, re.IGNORECASE)
-        if m:
-            item2 = m.group(1)
-            break
-    # NLP fallback for Item 2
+        extraction_notes.append("Item 1 not found using section boundary detection.")
     if not item2:
-        header = re.search(r'(Item\s*2\.?[^I]{0,30})', text, re.IGNORECASE)
-        if header:
-            start = header.start()
-            item2 = text[start:start+5000]
-            extraction_notes.append("Item 2 extracted with fallback window.")
+        extraction_notes.append("Item 2 not found using section boundary detection.")
+    # Extract tables from Item 1 (if any)
+    item1_tables = []
+    if item1:
+        # Find the HTML corresponding to Item 1
+        # Use regex to find the HTML segment for Item 1
+        html_text = html
+        item1_html = ''
+        item1_match = re.search(r'(Item\s*1\.?[^<]{0,30})(.*?)(Item\s*2\.?|$)', html_text, re.IGNORECASE | re.DOTALL)
+        if item1_match:
+            item1_html = item1_match.group(2)
         else:
-            extraction_notes.append("Item 2 not found with standard patterns or fallback.")
+            # fallback: use the whole HTML if not found
+            item1_html = html_text
+        item1_soup = BeautifulSoup(item1_html, "html.parser")
+        tables = item1_soup.find_all('table')
+        for table in tables:
+            # Convert table to text (or CSV-like string)
+            rows = []
+            for tr in table.find_all('tr'):
+                cells = [td.get_text(separator=" ", strip=True) for td in tr.find_all(['td', 'th'])]
+                rows.append(','.join(cells))
+            table_text = '\n'.join(rows)
+            if table_text.strip():
+                item1_tables.append(table_text)
+        if item1_tables:
+            extraction_notes.append(f"Extracted {len(item1_tables)} tables from Item 1 section.")
+        else:
+            extraction_notes.append("No tables found in Item 1 section.")
+    else:
+        extraction_notes.append("No Item 1 section found for table extraction.")
     # Notes extraction: cross-reference Note mentions
     all_notes = re.findall(r'(Note\s*\d+.*?)(?=Note\s*\d+|$)', text, re.IGNORECASE)
     referenced_notes = set(re.findall(r'Note\s*\d+', item1 + item2, re.IGNORECASE))
@@ -107,7 +117,7 @@ def extract_10q_sections(html: str, extraction_notes: List[str]) -> Dict[str, st
     if not notes:
         extraction_notes.append("No referenced notes found in Item 1 or 2.")
     notes_text = '\n\n'.join(notes)
-    return {"item1": item1, "item2": item2, "notes": notes_text}
+    return {"item1": item1, "item2": item2, "notes": notes_text, "item1_tables": item1_tables}
 
 def summarize_section(section: str, max_tokens: int = 3000) -> str:
     """
@@ -121,12 +131,41 @@ def summarize_section(section: str, max_tokens: int = 3000) -> str:
     return safe_truncate_prompt(section, max_tokens)
 
 def build_groq_prompt_from_filings(company_name: str, filings: List[Dict[str, str]], news: str = "", extraction_notes: List[str] = None) -> str:
-    system_message = "You are a financial analyst. Only output valid JSON."
-    prompt = system_message + f"\nCompare and analyze the following SEC 10-Q filings for {company_name}. For each, only Item 1 (Financial Statements), Item 2 (MD&A), and relevant Notes are included.\n\n"
+    system_message = (
+        "You are a financial analyst. Only output valid JSON. "
+        "Do NOT use markdown or code blocks. "
+        "Do NOT include control characters. "
+        "ALWAYS return valid JSON in the specified format."
+    )
+    prompt = system_message + f"\nCompare and analyze the following SEC 10-Q filings for {company_name}. For each, only Item 1 (Financial Statements), Item 2 (MD&A), relevant Notes, and extracted tables are included.\n\n"
     for filing in filings:
         label = f"Filing Date: {filing.get('filing_date', 'Unknown')} | Title: {filing.get('title', '')}"
         prompt += f"---\n{label}\nItem 1: Financial Statements\n{filing.get('item1', '')}\n\nItem 2: Management's Discussion and Analysis (MD&A)\n{filing.get('item2', '')}\n\nRelevant Notes\n{filing.get('notes', '')}\n\n"
-    prompt += f"Recent News:\n{news}\n\nSummarize key financial trends across the filings, note any risks such as margin declines, revenue declines, and recent events. Focus on management's discussion, financial condition, and any important notes. Compare the filings and highlight any trends or changes. Only output valid JSON. Respond in the following JSON format:\n{{\n  \"financial_summary\": \"...\",\n  \"key_metrics_table\": \"...\",\n  \"suggested_graph\": \"...\",\n  \"recent_events_summary\": \"...\",\n  \"questions_to_ask\": [\"...\", \"...\"]\n}}\n"
+        # Add all extracted tables from Item 1, all rows, with labels
+        tables = filing.get('item1_tables', [])
+        if tables:
+            prompt += "Extracted Financial Tables from Item 1 (all tables, all rows, pipe-separated):\n"
+            for i, table in enumerate(tables):
+                rows = table.split('\n')
+                header = rows[0] if rows else "(No header)"
+                label = f"Table {i+1}: {header}"
+                # Priority detection
+                if any(x in header.lower() for x in ["balance sheet", "income statement"]):
+                    label += " (PRIORITY TABLE)"
+                prompt += label + "\n"
+                for row in rows:
+                    # Convert to pipe-separated (avoid markdown)
+                    prompt += ' | '.join([cell.strip() for cell in row.split(',')]) + '\n'
+                prompt += '\n'
+    prompt += (
+        f"Recent News:\n{news}\n\n"
+        "Instructions: Analyze the above tables for trends, anomalies, and key metrics. "
+        "Reference specific tables in your summary if possible, and prioritize analysis of Balance Sheet and Income Statement tables if present. "
+        "Summarize key financial trends across the filings, note any risks such as margin declines, revenue declines, and recent events. "
+        "Focus on management's discussion, financial condition, and any important notes. Compare the filings and highlight any trends or changes. "
+        "Only output valid JSON. Respond in the following JSON format:\n"
+        "{\n  \"financial_summary\": \"...\",\n  \"key_metrics_table\": \"...\",\n  \"suggested_graph\": \"...\",\n  \"recent_events_summary\": \"...\",\n  \"questions_to_ask\": [\"...\", \"...\"]\n}\n"
+    )
     if extraction_notes:
         prompt += f"\n\nExtraction Notes: {'; '.join(extraction_notes)}"
     return prompt
@@ -254,12 +293,31 @@ def analyze_financials(sec_data: dict) -> Dict[str, Any]:
             parsed = json.loads(clean_result) if isinstance(clean_result, str) else clean_result
         except Exception as e:
             logger.warning(f"Groq output was not valid JSON: {e}. Attempting to fix.")
-            try:
-                fixed = clean_result.replace(",]", "]").replace(",}}", "}}")
-                parsed = json.loads(fixed)
-            except Exception as e2:
-                logger.error(f"Failed to fix Groq output: {e2}")
-                return {"error": f"Groq output was not valid JSON and could not be fixed: {str(e2)}", "notes": extraction_notes}
+            # Try to extract the largest JSON object using regex
+            json_match = re.search(r'\{(?:[^{}]|(?R))*\}', clean_result, re.DOTALL)
+            if json_match:
+                try:
+                    parsed = json.loads(json_match.group(0))
+                except Exception as e2:
+                    logger.error(f"Failed to fix Groq output with regex: {e2}")
+                    return {"error": f"Groq output was not valid JSON and could not be fixed: {str(e2)}", "notes": extraction_notes}
+            else:
+                try:
+                    fixed = clean_result.replace(",]", "]").replace(",}}", "}}")
+                    parsed = json.loads(fixed)
+                except Exception as e2:
+                    logger.error(f"Failed to fix Groq output: {e2}")
+                    return {"error": f"Groq output was not valid JSON and could not be fixed: {str(e2)}", "notes": extraction_notes}
+        # Fallback messaging if no real data
+        if not parsed or not any(parsed.get(k) for k in ["financial_summary", "key_metrics_table", "recent_events_summary"]):
+            return {
+                "financial_summary": "No financial data found in filings. Please check the filings manually.",
+                "key_metrics_table": "",
+                "suggested_graph": "",
+                "recent_events_summary": "",
+                "questions_to_ask": [],
+                "notes": extraction_notes
+            }
         json_payload_for_agents_3_4 = {
             "company_name": company_name,
             "financial_summary": parsed.get("financial_summary", "") if parsed else "",
