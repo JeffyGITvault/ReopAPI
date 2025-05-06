@@ -12,7 +12,7 @@ def analyze_company(company_name: str, meeting_context: str) -> Dict[str, Any]:
     """
     try:
         prompt = build_market_prompt(company_name, meeting_context)
-        result = call_groq(prompt)
+        result = call_groq(prompt, max_tokens=32768)
         logger.info("Agent 4 Groq raw output: %s", result)
         parsed_analysis = parse_groq_response(result)
         return parsed_analysis

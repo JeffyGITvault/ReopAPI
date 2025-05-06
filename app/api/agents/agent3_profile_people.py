@@ -60,7 +60,7 @@ Search for public web results about {person} at {company}. Prioritize:
 Summarize what you can learn about their public presence and professional background.
 """
     try:
-        result = call_groq(prompt)
+        result = call_groq(prompt, max_tokens=32768)
         return result.get("content", result).strip() if isinstance(result, dict) else str(result).strip()
     except Exception as e:
         logger.error(f"Groq enrichment failed for {person}: {e}")
@@ -103,7 +103,7 @@ Given the person's name \"{person}\" and the company \"{company}\", infer their 
 Describe 2–3 business or technical priorities based on their likely job function and industry context.
 """
     try:
-        result = call_groq(prompt)
+        result = call_groq(prompt, max_tokens=32768)
         return result.get("content", result).strip() if isinstance(result, dict) else str(result).strip()
     except Exception as e:
         logger.error(f"Groq role focus inference failed for {person}: {e}")
@@ -118,7 +118,7 @@ Check the last two 10-Q from {company}. Was {person} mentioned?
 If so, quote the sentence and summarize why.
 """
     try:
-        result = call_groq(prompt)
+        result = call_groq(prompt, max_tokens=32768)
         return result.get("content", result).strip() if isinstance(result, dict) else str(result).strip()
     except Exception as e:
         logger.error(f"Groq filings mention check failed for {person}: {e}")
@@ -169,7 +169,7 @@ def infer_stack_from_job_posts(company: str) -> str:
 Given the following job postings for {company}, infer what security or IT tools, platforms, or vendors the company is likely using. Mention 3–5 relevant technologies, and summarize any open positions that stand out.\n\nJob Listings:\n{jobs_text}\n\nRespond in a concise, bullet-pointed format.
 """
         try:
-            result = call_groq(prompt)
+            result = call_groq(prompt, max_tokens=32768)
             return result.get("content", result).strip() if isinstance(result, dict) else str(result).strip()
         except Exception as e:
             logger.error(f"Groq stack inference failed for {company}: {e}")

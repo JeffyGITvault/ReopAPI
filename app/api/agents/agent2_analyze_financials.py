@@ -119,7 +119,7 @@ def extract_10q_sections(html: str, extraction_notes: List[str]) -> Dict[str, st
     notes_text = '\n\n'.join(notes)
     return {"item1": item1, "item2": item2, "notes": notes_text, "item1_tables": item1_tables}
 
-def summarize_section(section: str, max_tokens: int = 3000) -> str:
+def summarize_section(section: str, max_tokens: int = 10000) -> str:
     """
     Simple extractive summary: return the first N tokens of the section.
     """
@@ -168,6 +168,12 @@ def build_groq_prompt_from_filings(company_name: str, filings: List[Dict[str, st
     )
     if extraction_notes:
         prompt += f"\n\nExtraction Notes: {'; '.join(extraction_notes)}"
+    # FINAL TRUNCATION: Only if prompt exceeds 20,000 tokens
+    max_prompt_tokens = 20000
+    prompt_token_count = count_tokens(prompt)
+    if prompt_token_count > max_prompt_tokens:
+        logger.warning(f"Prompt too large ({prompt_token_count} tokens). Truncating to {max_prompt_tokens} tokens.")
+        prompt = safe_truncate_prompt(prompt, max_prompt_tokens)
     return prompt
 
 def fetch_google_company_signals(company_name: str) -> str:
@@ -239,9 +245,9 @@ def analyze_financials(sec_data: dict) -> Dict[str, Any]:
                 # Truncate each section individually before summarizing
                 for key in ["item1", "item2", "notes"]:
                     section = extracted.get(key, "")
-                    if count_tokens(section) > 3000:
-                        extraction_notes.append(f"Section '{key}' in filing '{filing.get('filing_date', '')}' was truncated to 3000 tokens.")
-                        extracted[key] = safe_truncate_prompt(section, 3000)
+                    if count_tokens(section) > 32000:
+                        extraction_notes.append(f"Section '{key}' in filing '{filing.get('filing_date', '')}' was truncated to 32000 tokens.")
+                        extracted[key] = safe_truncate_prompt(section, 32000)
                 extracted["filing_date"] = filing.get("filing_date", "")
                 extracted["title"] = filing.get("title", company_name)
                 extracted_filings.append(extracted)
@@ -266,7 +272,7 @@ def analyze_financials(sec_data: dict) -> Dict[str, Any]:
         try:
             result = call_groq(
                 prompt,
-                max_tokens=GROQ_MAX_COMPLETION_TOKENS,
+                max_tokens=32768,
                 include_domains=["sec.gov"],
                 response_format={"type": "json_object"}
             )
@@ -277,7 +283,7 @@ def analyze_financials(sec_data: dict) -> Dict[str, Any]:
                 try:
                     result = call_groq(
                         prompt,
-                        max_tokens=GROQ_MAX_COMPLETION_TOKENS,
+                        max_tokens=32768,
                         include_domains=["sec.gov"],
                         response_format={"type": "json_object"}
                     )
@@ -351,7 +357,7 @@ Respond in the following JSON format:
 }}
 """
     try:
-        result = call_groq(prompt, max_tokens=GROQ_MAX_COMPLETION_TOKENS)
+        result = call_groq(prompt, max_tokens=32768)
         logger.info("Agent 2 Groq raw output (synthetic signals): %s", result)
         # Always parse and validate as JSON
         clean_result = extract_json_from_llm_output(result) if isinstance(result, str) else result
