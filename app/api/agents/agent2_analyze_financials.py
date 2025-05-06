@@ -4,9 +4,10 @@ import logging
 import requests
 import os
 import json
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from urllib.parse import quote_plus
-from app.api.groq_client import call_groq
+from transformers import AutoTokenizer
+from app.api.groq_client import call_groq, GROQ_MODEL_PRIORITY
 from app.api.config import NEWSDATA_API_KEY, DEFAULT_HEADERS, SEARCH_API_KEY, GOOGLE_CSE_ID
 
 logger = logging.getLogger(__name__)
@@ -15,13 +16,37 @@ logger = logging.getLogger(__name__)
 GROQ_MAX_TOTAL_TOKENS = 131072
 GROQ_MAX_COMPLETION_TOKENS = 8192
 GROQ_MAX_PROMPT_TOKENS = GROQ_MAX_TOTAL_TOKENS - GROQ_MAX_COMPLETION_TOKENS
+GROQ_SAFE_PROMPT_TOKENS = 90000  # Leave a buffer for org/tier limits
 
+# Use the tokenizer for the primary model
+PRIMARY_MODEL = GROQ_MODEL_PRIORITY[0]
+try:
+    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3-70b")
+except Exception:
+    tokenizer = None
+    logger.warning("Could not load tokenizer for meta-llama/Llama-3-70b. Token counting will be approximate.")
 
-def estimate_token_count(text: str) -> int:
-    """Estimate the number of tokens in a text (approximate for LLMs)."""
-    words = len(text.split())
-    return int(words / 0.75)
+def count_tokens(text: str) -> int:
+    if tokenizer:
+        return len(tokenizer.encode(text))
+    # Fallback: rough estimate
+    return int(len(text.split()) / 0.75)
 
+def safe_truncate_prompt(prompt: str, max_tokens: int) -> str:
+    if tokenizer:
+        tokens = tokenizer.encode(prompt)
+        if len(tokens) > max_tokens:
+            logger.warning(f"Prompt too large ({len(tokens)} tokens). Truncating to {max_tokens} tokens.")
+            tokens = tokens[:max_tokens]
+            return tokenizer.decode(tokens)
+        return prompt
+    # Fallback: rough truncation
+    words = prompt.split()
+    allowed_words = int(max_tokens * 0.75)
+    if len(words) > allowed_words:
+        logger.warning(f"Prompt too large (approx {len(words)/0.75} tokens). Truncating to {allowed_words} words.")
+        return ' '.join(words[:allowed_words])
+    return prompt
 
 def fetch_google_company_signals(company_name: str) -> str:
     """
@@ -51,12 +76,12 @@ def fetch_google_company_signals(company_name: str) -> str:
         logger.warning(f"Google Search API fetch failed for {company_name}: {e}")
         return f"Google Search API fetch failed: {str(e)}"
 
-
 def analyze_financials(sec_data: dict) -> Dict[str, Any]:
     """
     Agent 2: Analyze financials from SEC data, fetch news signals, and summarize with LLM.
     Returns a dict with financial summary or error.
     """
+    note = None
     try:
         source_type = sec_data.get("source", "")
         company_name = sec_data.get("company_name", "the company")
@@ -86,13 +111,10 @@ def analyze_financials(sec_data: dict) -> Dict[str, Any]:
             logger.info("Agent 2 fetched fallback 10-Q HTML from filings.")
 
         # Truncate 10-Q HTML if too large for Groq
-        token_count = estimate_token_count(ten_q_html)
+        token_count = count_tokens(ten_q_html)
         if token_count > GROQ_MAX_PROMPT_TOKENS:
-            logger.warning(f"10-Q HTML too large for Groq prompt ({token_count} tokens). Truncating.")
-            # Truncate to max allowed tokens (approximate)
-            words = ten_q_html.split()
-            allowed_words = int(GROQ_MAX_PROMPT_TOKENS * 0.75)
-            ten_q_html = ' '.join(words[:allowed_words])
+            note = f"10-Q HTML was truncated from {token_count} tokens to {GROQ_SAFE_PROMPT_TOKENS} tokens to fit model limits."
+            ten_q_html = safe_truncate_prompt(ten_q_html, GROQ_SAFE_PROMPT_TOKENS)
 
         external_signals = (
             fetch_recent_signals(company_name)
@@ -102,7 +124,27 @@ def analyze_financials(sec_data: dict) -> Dict[str, Any]:
             external_signals = generate_synthetic_signals(company_name)
 
         prompt = build_financial_prompt(ten_q_html, external_signals)
-        result = call_groq(prompt, max_tokens=GROQ_MAX_COMPLETION_TOKENS)
+        prompt_token_count = count_tokens(prompt)
+        if prompt_token_count > GROQ_SAFE_PROMPT_TOKENS:
+            note = (note or "") + f" Prompt was truncated from {prompt_token_count} tokens to {GROQ_SAFE_PROMPT_TOKENS} tokens."
+            prompt = safe_truncate_prompt(prompt, GROQ_SAFE_PROMPT_TOKENS)
+
+        # Try Groq call, retry with truncated prompt if context error
+        try:
+            result = call_groq(prompt, max_tokens=GROQ_MAX_COMPLETION_TOKENS, include_domains=["sec.gov"])
+        except Exception as e:
+            if "context_length_exceeded" in str(e) or "Request too large" in str(e):
+                note = (note or "") + " Groq context limit exceeded, prompt was truncated and retried."
+                prompt = safe_truncate_prompt(prompt, GROQ_SAFE_PROMPT_TOKENS // 2)
+                try:
+                    result = call_groq(prompt, max_tokens=GROQ_MAX_COMPLETION_TOKENS, include_domains=["sec.gov"])
+                except Exception as e2:
+                    logger.error(f"Agent 2 - Financial analysis failed after retry: {e2}")
+                    return {"error": f"Agent 2 - Financial analysis failed after retry: {str(e2)}", "note": note}
+            else:
+                logger.error(f"Agent 2 - Financial analysis failed: {e}")
+                return {"error": f"Agent 2 - Financial analysis failed: {str(e)}", "note": note}
+
         logger.info("Agent 2 Groq raw output: %s", result)
         parsed = parse_groq_response(result)
 
@@ -113,10 +155,12 @@ def analyze_financials(sec_data: dict) -> Dict[str, Any]:
             "recent_events_summary": parsed.get("recent_events_summary", ""),
             "key_metrics_table": parsed.get("key_metrics_table", ""),
         }
+        if note:
+            json_payload_for_agents_3_4["note"] = note.strip()
         return json_payload_for_agents_3_4
     except Exception as e:
         logger.error(f"Agent 2 - Financial analysis failed: {e}")
-        return {"error": f"Agent 2 - Financial analysis failed: {str(e)}"}
+        return {"error": f"Agent 2 - Financial analysis failed: {str(e)}", "note": note}
 
 
 def fetch_recent_signals(company_name: str) -> str:

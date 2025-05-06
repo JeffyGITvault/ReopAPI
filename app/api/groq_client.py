@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import Generator, Union, Optional
+from typing import Generator, Union, Optional, List
 from groq import Groq
 
 logger = logging.getLogger(__name__)
@@ -18,23 +18,30 @@ def get_groq_client() -> Groq:
 
 client = get_groq_client()
 
-# Production-only supported models, prioritized
+# Short, focused list of agentic/web-search-enabled models per Groq docs
 GROQ_MODEL_PRIORITY = [
-    "llama-3.3-70b-versatile",  # preferred
-    "llama3-70b-8192",          # fallback 1
-    "llama3-8b-8192",           # fallback 2
-    "llama-3.1-8b-instant",     # fallback 3
-    "llama-guard-3-8b",         # niche safety model fallback
-    "gemma2-9b-it"              # last-resort general model
+    "compound-beta",            # primary, most capable
+    "llama-3.3-70b-versatile",  # fallback if primary is down
+    "meta-llama/llama-4-maverick-17b-128e-instruct", # additional fallback
 ]
 
-def call_groq(prompt: str, stream: bool = False, max_tokens: Optional[int] = 8192) -> Union[str, Generator[str, None, None]]:
+def call_groq(
+    prompt: str,
+    stream: bool = False,
+    max_tokens: Optional[int] = 8192,
+    include_domains: Optional[List[str]] = None,
+    exclude_domains: Optional[List[str]] = None,
+    **kwargs
+) -> Union[str, Generator[str, None, None]]:
     """
-    Send prompt to Groq, with optional streaming. Falls back to next model on failure.
+    Send prompt to Groq, with optional streaming and agentic tooling. Falls back to next model on failure.
 
     :param prompt: Prompt text for LLM
     :param stream: Whether to stream token output
     :param max_tokens: Maximum number of tokens for completion (default 8192)
+    :param include_domains: List of domains to include in web search (e.g., ["sec.gov"])
+    :param exclude_domains: List of domains to exclude from web search
+    :param kwargs: Additional parameters for Groq API
     :return: Full response string or generator of streamed tokens
     """
     last_error = None
@@ -46,7 +53,10 @@ def call_groq(prompt: str, stream: bool = False, max_tokens: Optional[int] = 819
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3,
                 stream=stream,
-                max_tokens=max_tokens
+                max_tokens=max_tokens,
+                include_domains=include_domains,
+                exclude_domains=exclude_domains,
+                **kwargs
             )
             if stream:
                 # Return a generator of streamed tokens
