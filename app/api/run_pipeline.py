@@ -33,7 +33,7 @@ async def run_pipeline(payload: PipelineRequest):
     Agent 1 -> SEC 10-Q Fetch (required)
     Agent 2 -> Financial Analysis (parallel)
     Agent 3 -> People Profiling (parallel)
-    Agent 4 -> Market Analysis (parallel)
+    Agent 4 -> Analyze Company (parallel)
     """
     try:
         # === Agent 1: SEC 10-Q Fetch ===
@@ -46,11 +46,11 @@ async def run_pipeline(payload: PipelineRequest):
         tasks = [
             asyncio.to_thread(analyze_financials, sec_data),
             asyncio.to_thread(profile_people, people, company),
-            asyncio.to_thread(analyze_market, company, meeting_context)
+            asyncio.to_thread(analyze_company, company, meeting_context)
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        financial_analysis, people_profiles, market_analysis = results
+        financial_analysis, people_profiles, company_analysis = results
 
         # === Soft Failures Handling ===
         if isinstance(financial_analysis, dict) and "error" in financial_analysis:
