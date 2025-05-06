@@ -200,10 +200,8 @@ def analyze_financials(sec_data: dict) -> Dict[str, Any]:
             return {"error": "No valid 10-Q filings could be processed."}
         if missing_filings:
             extraction_notes.append(f"{missing_filings} filings could not be processed and were skipped.")
-        external_signals = (
-            fetch_recent_signals(company_name)
-            if NEWSDATA_API_KEY else fetch_google_company_signals(company_name)
-        )
+        # Always use Google Custom Search for news enrichment
+        external_signals = fetch_google_company_signals(company_name)
         if not external_signals or 'No public web results found.' in external_signals or 'API key' in external_signals:
             external_signals = generate_synthetic_signals(company_name)
         prompt = build_groq_prompt_from_filings(company_name, extracted_filings, external_signals, extraction_notes)
@@ -260,48 +258,6 @@ def analyze_financials(sec_data: dict) -> Dict[str, Any]:
         logger.error(f"Agent 2 - Financial analysis failed: {e}")
         return {"error": f"Agent 2 - Financial analysis failed: {str(e)}"}
 
-
-def fetch_recent_signals(company_name: str) -> str:
-    """
-    Fetch recent news signals for a company using NewsData.io. Sanitize and URL-encode queries. Handle 422 errors. Fallback to Google CSE or synthetic signals.
-    """
-    try:
-        headers = {"Content-Type": "application/json"}
-        # Sanitize and URL-encode the query
-        query = quote_plus(company_name)
-        params = {
-            "apikey": NEWSDATA_API_KEY,
-            "q": query,
-            "language": "en",
-            "category": "business",
-            "country": "us",
-            "page": 1
-        }
-        response = requests.get("https://newsdata.io/api/1/news", params=params, headers=headers, timeout=10)
-        if response.status_code == 422:
-            logger.warning(f"NewsData.io 422 error for query: {company_name}. Falling back to Google CSE.")
-            google_signals = fetch_google_company_signals(company_name)
-            if 'No public web results found.' not in google_signals and 'API key' not in google_signals:
-                return google_signals
-            return generate_synthetic_signals(company_name)
-        response.raise_for_status()
-        articles = response.json().get("results", [])
-        if not articles:
-            logger.warning(f"No NewsData.io articles for {company_name}. Falling back to Google CSE.")
-            google_signals = fetch_google_company_signals(company_name)
-            if 'No public web results found.' not in google_signals and 'API key' not in google_signals:
-                return google_signals
-            return generate_synthetic_signals(company_name)
-        summary = "\n".join([f"- {a['title']} ({a['link']})" for a in articles[:5]])
-        return summary
-    except Exception as e:
-        logger.warning(f"Failed to fetch real signals: {e}. Falling back to Google CSE.")
-        google_signals = fetch_google_company_signals(company_name)
-        if 'No public web results found.' not in google_signals and 'API key' not in google_signals:
-            return google_signals
-        return f"Failed to fetch real signals: {str(e)}\n" + generate_synthetic_signals(company_name)
-
-
 def generate_synthetic_signals(company_name: str) -> str:
     """
     Generate plausible synthetic financial signals for a company.
@@ -339,7 +295,6 @@ Respond in the following JSON format:
             "recent_events_summary": "",
             "questions_to_ask": []
         })
-
 
 def parse_groq_response(response: Any) -> Dict[str, Any]:
     """

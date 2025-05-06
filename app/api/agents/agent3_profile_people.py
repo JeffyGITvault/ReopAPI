@@ -14,7 +14,7 @@ max_results = 5
 
 def profile_people(people: List[str], company: str) -> List[Dict[str, Any]]:
     """
-    Agent 3: Comprehensive profiling using NewsData.io, Groq, and Google enrichment.
+    Agent 3: Comprehensive profiling using Google enrichment and Groq.
     Returns a list of profile dicts for each person.
     """
     if not people:
@@ -24,7 +24,7 @@ def profile_people(people: List[str], company: str) -> List[Dict[str, Any]]:
         try:
             profile = {
                 "name": person,
-                "news_mentions": fetch_newsdata_signals(person, company),
+                "news_mentions": fetch_google_signals(person, company),  # Use Google only
                 "role_focus": infer_role_focus(person, company),
                 "filing_reference": check_filings_mention(person, company),
                 "likely_toolchain": infer_stack_from_job_posts(company),
@@ -47,33 +47,6 @@ def profile_people(people: List[str], company: str) -> List[Dict[str, Any]]:
         for future in as_completed(future_to_person):
             profiles.append(future.result())
     return profiles
-
-def fetch_newsdata_signals(person: str, company: str) -> str:
-    """
-    Fetch recent news signals for a person at a company using NewsData.io.
-    """
-    if not NEWSDATA_API_KEY:
-        logger.warning("NEWSDATA_API_KEY not set. Skipping news fetch.")
-        return "NewsData.io API key not set."
-    try:
-        url = "https://newsdata.io/api/1/news"
-        params = {
-            "apikey": NEWSDATA_API_KEY,
-            "q": f"{person} {company}",
-            "language": "en",
-            "category": "business",
-            "page": 1
-        }
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        articles = data.get("results", [])[:3]
-        if not articles:
-            return "No recent news found."
-        return "\n".join([f"- {a['title']} ({a.get('link', 'no link')})" for a in articles])
-    except Exception as e:
-        logger.warning(f"NewsData.io fetch failed for {person}: {e}")
-        return f"NewsData.io fetch failed: {str(e)}"
 
 def enrich_with_public_signals(person: str, company: str) -> str:
     """
