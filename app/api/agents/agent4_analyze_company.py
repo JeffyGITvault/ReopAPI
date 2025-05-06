@@ -5,7 +5,7 @@ from app.api.groq_client import call_groq
 
 logger = logging.getLogger(__name__)
 
-def analyze_market(company_name: str, meeting_context: str) -> Dict[str, Any]:
+def analyze_company(company_name: str, meeting_context: str) -> Dict[str, Any]:
     """
     Agent 4: Analyze the market and competitive landscape for a given company and context.
     Returns a dict with market analysis or error.

@@ -28,7 +28,6 @@ def profile_people(people: List[str], company: str) -> List[Dict[str, Any]]:
                 "role_focus": infer_role_focus(person, company),
                 "filing_reference": check_filings_mention(person, company),
                 "likely_toolchain": infer_stack_from_job_posts(company),
-                "profile_signals": infer_risk_signals(person),
                 "public_presence": enrich_with_public_signals(person, company),
                 "public_web_results": fetch_google_signals(person, company)
             }
@@ -127,51 +126,57 @@ If so, quote the sentence and summarize why.
 
 def infer_stack_from_job_posts(company: str) -> str:
     """
-    Use Groq to infer likely tech stack from job postings for a company.
+    Search for the company's careers/jobs page, extract job titles/descriptions, and use Groq to infer likely tech stack.
     """
-    prompt = f"""
-Based on recent job listings and analyst insight, what security or IT tools is {company} likely using?
-What open positions does the company have in the area of focus for our meeting contact?
-"""
+    if not SEARCH_API_KEY or not GOOGLE_CSE_ID:
+        logger.warning("Google Search API key or CSE ID not set. Skipping Google fetch for jobs page.")
+        return "Google Search API key or CSE ID not set."
     try:
-        result = call_groq(prompt)
-        return result.get("content", result).strip() if isinstance(result, dict) else str(result).strip()
-    except Exception as e:
-        logger.error(f"Groq stack inference failed for {company}: {e}")
-        return f"Groq stack inference failed: {str(e)}"
-
-def estimate_tenure(person: str) -> str:
-    """
-    Use Groq to estimate a person's tenure and influence level.
-    """
-    prompt = f"""
-Estimate how long \"{person}\" has been in their current role. Be realistic and plausible.
-If you can infer influence level (e.g., keynote speaker, thought leader), include that too.
+        # 1. Search for the company's careers/jobs page
+        query = f'{company} careers OR jobs site:{company}.com'
+        params = {
+            "key": SEARCH_API_KEY,
+            "cx": GOOGLE_CSE_ID,
+            "q": query,
+            "num": 3
+        }
+        response = requests.get("https://www.googleapis.com/customsearch/v1", params=params, timeout=10)
+        response.raise_for_status()
+        items = response.json().get("items", [])
+        if not items:
+            return "No careers page found."
+        # 2. Try to fetch and extract job titles/descriptions from the first result
+        jobs_url = items[0]["link"]
+        try:
+            jobs_resp = requests.get(jobs_url, timeout=10)
+            jobs_resp.raise_for_status()
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(jobs_resp.text, "html.parser")
+            # Try to extract job titles (look for <h2>, <h3>, <a>, or <li> with 'job' in text)
+            jobs = []
+            for tag in soup.find_all(["h2", "h3", "a", "li"]):
+                text = tag.get_text(separator=" ", strip=True)
+                if ("job" in text.lower() or "engineer" in text.lower() or "developer" in text.lower() or "analyst" in text.lower() or "manager" in text.lower()):
+                    jobs.append(text)
+                if len(jobs) >= 10:
+                    break
+            jobs_text = "\n".join(jobs) if jobs else soup.get_text(separator=" ", strip=True)[:2000]
+        except Exception as e:
+            logger.warning(f"Failed to fetch or parse jobs page: {e}")
+            jobs_text = "Could not extract job listings."
+        # 3. Pass the job data to Groq for stack inference
+        prompt = f"""
+Given the following job postings for {company}, infer what security or IT tools, platforms, or vendors the company is likely using. Mention 3–5 relevant technologies, and summarize any open positions that stand out.\n\nJob Listings:\n{jobs_text}\n\nRespond in a concise, bullet-pointed format.
 """
-    try:
-        result = call_groq(prompt)
-        return result.get("content", result).strip() if isinstance(result, dict) else str(result).strip()
+        try:
+            result = call_groq(prompt)
+            return result.get("content", result).strip() if isinstance(result, dict) else str(result).strip()
+        except Exception as e:
+            logger.error(f"Groq stack inference failed for {company}: {e}")
+            return f"Groq stack inference failed: {str(e)}"
     except Exception as e:
-        logger.error(f"Groq tenure estimation failed for {person}: {e}")
-        return f"Groq tenure estimation failed: {str(e)}"
-
-def infer_risk_signals(person: str) -> str:
-    """
-    Use Groq to infer possible soft signals about a person's leadership style or risk profile.
-    """
-    prompt = f"""
-What are possible soft signals about {person}'s leadership style or risk profile?
-Examples:
-- Recently joined → may be reshaping strategy
-- Long tenured → resistant to change
-- Public advocate → open to co-innovation
-"""
-    try:
-        result = call_groq(prompt)
-        return result.get("content", result).strip() if isinstance(result, dict) else str(result).strip()
-    except Exception as e:
-        logger.error(f"Groq risk signal inference failed for {person}: {e}")
-        return f"Groq risk signal inference failed: {str(e)}"
+        logger.error(f"Google Search API fetch for jobs page failed for {company}: {e}")
+        return f"Google Search API fetch for jobs page failed: {str(e)}"
 
 def format_profiles_for_teams(profiles: List[Dict[str, Any]]) -> str:
     """
@@ -192,12 +197,6 @@ def format_profiles_for_teams(profiles: List[Dict[str, Any]]) -> str:
 
 **Likely Tech Stack:**  
 {p['likely_toolchain']}
-
-**Estimated Tenure / Influence:**  
-{p['estimated_tenure']}
-
-**Leadership Style / Risk Profile:**  
-{p['profile_signals']}
 
 **Public Presence & Background:**  
 {p['public_presence']}
