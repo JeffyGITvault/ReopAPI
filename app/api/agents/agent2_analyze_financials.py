@@ -5,10 +5,23 @@ import requests
 import os
 import json
 from typing import Dict, Any
+from urllib.parse import quote_plus
 from app.api.groq_client import call_groq
 from app.api.config import NEWSDATA_API_KEY, DEFAULT_HEADERS
 
 logger = logging.getLogger(__name__)
+
+# Groq token limits
+GROQ_MAX_TOTAL_TOKENS = 131072
+GROQ_MAX_COMPLETION_TOKENS = 8192
+GROQ_MAX_PROMPT_TOKENS = GROQ_MAX_TOTAL_TOKENS - GROQ_MAX_COMPLETION_TOKENS
+
+
+def estimate_token_count(text: str) -> int:
+    """Estimate the number of tokens in a text (approximate for LLMs)."""
+    words = len(text.split())
+    return int(words / 0.75)
+
 
 def analyze_financials(sec_data: dict) -> Dict[str, Any]:
     """
@@ -43,13 +56,22 @@ def analyze_financials(sec_data: dict) -> Dict[str, Any]:
             ten_q_html = response.text
             logger.info("Agent 2 fetched fallback 10-Q HTML from filings.")
 
+        # Truncate 10-Q HTML if too large for Groq
+        token_count = estimate_token_count(ten_q_html)
+        if token_count > GROQ_MAX_PROMPT_TOKENS:
+            logger.warning(f"10-Q HTML too large for Groq prompt ({token_count} tokens). Truncating.")
+            # Truncate to max allowed tokens (approximate)
+            words = ten_q_html.split()
+            allowed_words = int(GROQ_MAX_PROMPT_TOKENS * 0.75)
+            ten_q_html = ' '.join(words[:allowed_words])
+
         external_signals = (
             fetch_recent_signals(company_name)
             if NEWSDATA_API_KEY else generate_synthetic_signals(company_name)
         )
 
         prompt = build_financial_prompt(ten_q_html, external_signals)
-        result = call_groq(prompt)
+        result = call_groq(prompt, max_tokens=GROQ_MAX_COMPLETION_TOKENS)
         logger.info("Agent 2 Groq raw output: %s", result)
         parsed = parse_groq_response(result)
 
@@ -65,21 +87,27 @@ def analyze_financials(sec_data: dict) -> Dict[str, Any]:
         logger.error(f"Agent 2 - Financial analysis failed: {e}")
         return {"error": f"Agent 2 - Financial analysis failed: {str(e)}"}
 
+
 def fetch_recent_signals(company_name: str) -> str:
     """
-    Fetch recent news signals for a company using NewsData.io.
+    Fetch recent news signals for a company using NewsData.io. Sanitize and URL-encode queries. Handle 422 errors.
     """
     try:
         headers = {"Content-Type": "application/json"}
+        # Sanitize and URL-encode the query
+        query = quote_plus(company_name)
         params = {
             "apikey": NEWSDATA_API_KEY,
-            "q": company_name,
+            "q": query,
             "language": "en",
             "category": "business",
             "country": "us",
             "page": 1
         }
         response = requests.get("https://newsdata.io/api/1/news", params=params, headers=headers, timeout=10)
+        if response.status_code == 422:
+            logger.warning(f"NewsData.io 422 error for query: {company_name}. Falling back to synthetic signals.")
+            return generate_synthetic_signals(company_name)
         response.raise_for_status()
         articles = response.json().get("results", [])
         if not articles:
@@ -89,6 +117,7 @@ def fetch_recent_signals(company_name: str) -> str:
     except Exception as e:
         logger.warning(f"Failed to fetch real signals: {e}")
         return f"Failed to fetch real signals: {str(e)}\n" + generate_synthetic_signals(company_name)
+
 
 def generate_synthetic_signals(company_name: str) -> str:
     """
@@ -101,16 +130,24 @@ List 2–3 notable financial or strategic developments from the last 90 days tha
 
 Be plausible and realistic — earnings beats, layoffs, customer wins, executive changes, downgrades, supply chain issues, or product delays.
 
-Respond with a short bullet list.
+Respond in the following JSON format:
+{{
+  "financial_summary": "...",
+  "key_metrics_table": "...",
+  "suggested_graph": "...",
+  "recent_events_summary": "...",
+  "questions_to_ask": ["...", "..."]
+}}
 """
     try:
-        result = call_groq(prompt)
+        result = call_groq(prompt, max_tokens=GROQ_MAX_COMPLETION_TOKENS)
         logger.info("Agent 2 Groq raw output (synthetic signals): %s", result)
         parsed = parse_groq_response(result)
         return parsed.get("financial_summary", "") if isinstance(parsed, dict) else str(parsed)
     except Exception as e:
         logger.error(f"Failed to generate synthetic signals: {e}")
         return "No synthetic signals available."
+
 
 def build_financial_prompt(html_content: str, external_signals: str) -> str:
     """
@@ -157,12 +194,13 @@ Respond in the following JSON format:
 """
     return prompt
 
+
 def parse_groq_response(response: Any) -> Dict[str, Any]:
     """
-    Parse the response from Groq, handling both string and dict input.
+    Parse the response from Groq, handling both string and dict input. Fallback if not valid JSON.
     """
     try:
         return json.loads(response) if isinstance(response, str) else response
     except json.JSONDecodeError as e:
-        logger.error(f"Invalid JSON returned from Groq: {e}")
-        return {"error": f"Invalid JSON returned from Groq: {str(e)}"}
+        logger.error(f"Invalid JSON returned from Groq: {e}. Raw output: {response}")
+        return {"error": f"Invalid JSON returned from Groq: {str(e)}", "raw_output": response}
