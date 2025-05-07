@@ -1,7 +1,7 @@
 from app.api.memory_schema import Agent2Financials, Agent3Profile, Agent4RiskMap
 from typing import List, Optional
 
-def build_agent_1_prompt(agent_2_data: Agent2Financials, agent_3_data: Agent3Profile, agent_4_data: Agent4RiskMap, additional_context: Optional[dict] = None) -> str:
+def build_agent_1_prompt(agent_2_data: Agent2Financials, agent_3_data: Agent3Profile, agent_4_data: Agent4RiskMap, additional_context: Optional[dict] = None, is_public: bool = True, private_company_analysis: Optional[dict] = None) -> str:
     # Avoid backslashes in f-string expressions by building the string in parts
     agent2_questions = "\n- ".join(agent_2_data.questions_to_ask)
     agent3_signals = "\n- ".join(agent_3_data.signals)
@@ -18,9 +18,17 @@ def build_agent_1_prompt(agent_2_data: Agent2Financials, agent_3_data: Agent3Pro
         f"- Proposed solutions: {ac.get('proposed_solutions', 'Not specified')}\n"
         f"- Wants messaging help: {ac.get('messaging_help', 'Not specified')}\n\n"
     )
+    private_section = ""
+    if not is_public:
+        private_section = (
+            "This company appears to be private. No SEC filings or public financials are available.\n"
+            "Analysis is based on public web signals and industry data.\n\n"
+            f"Private Company Analysis:\n{private_company_analysis if private_company_analysis else 'No additional data found.'}\n\n"
+        )
     return (
         "You are an executive assistant AI tasked with synthesizing intelligence from three specialized agents. Your job is to produce a sharp, structured briefing.\n\n"
         f"{context_section}"
+        f"{private_section}"
         "### Agent 2: Financial Overview ###\n"
         f"Summary:\n{agent_2_data.financial_summary}\n\n"
         f"Key Metrics Table:\n{agent_2_data.key_metrics_table}\n\n"

@@ -159,10 +159,10 @@ def build_groq_prompt_from_filings(company_name: str, filings: List[Dict[str, st
                 prompt += '\n'
     prompt += (
         f"Recent News:\n{news}\n\n"
-        "Instructions: Analyze the above tables for trends, anomalies, and key metrics. "
-        "Reference specific tables in your summary if possible, and prioritize analysis of Balance Sheet and Income Statement tables if present. "
+        "Instructions: Analyze the 10-Q filings for key metrics and output revenue, gross margin, and net income in your summary, compare the filings and highlight any trends or changes. "
+        "prioritize analysis of Balance Sheet and Income Statement tables from Item 1 and layer in the MD&A and Notes from Item 2. "
         "Summarize key financial trends across the filings, note any risks such as margin declines, revenue declines, and recent events. "
-        "Focus on management's discussion, financial condition, and any important notes. Compare the filings and highlight any trends or changes. "
+        "show the key metrics in a table format, and show the financial summary in a narrative format. "
         "Only output valid JSON. Respond in the following JSON format:\n"
         "{\n  \"financial_summary\": \"...\",\n  \"key_metrics_table\": \"...\",\n  \"suggested_graph\": \"...\",\n  \"recent_events_summary\": \"...\",\n  \"questions_to_ask\": [\"...\", \"...\"]\n}\n"
     )
@@ -220,8 +220,8 @@ def extract_json_from_llm_output(output: str) -> str:
 
 def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[str, Any]:
     """
-    Agent 2: Analyze financials from SEC data, fetch news signals, and summarize with LLM.
-    Returns a dict with financial summary or error.
+    Agent 2: Analyze financials from SEC data, fetch news signals, and with LLM.
+    Returns a dict with financial analysis or error.
     """
     note = None
     try:
@@ -335,10 +335,21 @@ def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[
             }
         # --- Ensure correct types for output fields ---
         key_metrics_table = parsed.get("key_metrics_table", {})
-        if isinstance(key_metrics_table, str):
-            # If the LLM returned a string, wrap it in a dict under a generic key
-            key_metrics_table = {"Notes": [key_metrics_table]}
-        elif not isinstance(key_metrics_table, dict):
+        # Post-process: ensure all values are lists of strings
+        def dict_to_list_of_strings(d):
+            return [f"{k}: {v}" for k, v in d.items()]
+        if isinstance(key_metrics_table, dict):
+            for k, v in list(key_metrics_table.items()):
+                if isinstance(v, dict):
+                    key_metrics_table[k] = dict_to_list_of_strings(v)
+                elif isinstance(v, str):
+                    key_metrics_table[k] = [v]
+                elif isinstance(v, list):
+                    # Ensure all elements are strings
+                    key_metrics_table[k] = [str(x) for x in v]
+                else:
+                    key_metrics_table[k] = [str(v)]
+        else:
             key_metrics_table = {}
         questions_to_ask = parsed.get("questions_to_ask", [])
         if not isinstance(questions_to_ask, list):

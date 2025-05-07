@@ -58,9 +58,10 @@
                   "properties": {
                     "company": { "type": "string" },
                     "meeting_context": { "type": "string" },
+                    "is_public": { "type": "boolean", "description": "True if the company is public and SEC filings are available; false if private." },
                     "sec_data": {
                       "type": "object",
-                      "description": "SEC filings including 10-Q links",
+                      "description": "SEC filings including 10-Q links (public companies only)",
                       "properties": {
                         "company_name": { "type": "string" },
                         "cik": { "type": "string" },
@@ -81,10 +82,10 @@
                     },
                     "financial_analysis": {
                       "type": "object",
-                      "description": "LLM-powered financial summary and signal analysis",
+                      "description": "LLM-powered financial summary and signal analysis (public companies only)",
                       "properties": {
                         "financial_summary": { "type": "string" },
-                        "key_metrics_table": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string" } } } },
+                        "key_metrics_table": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string" } } },
                         "suggested_graph": { "type": "string" },
                         "recent_events_summary": { "type": "string" },
                         "questions_to_ask": {
@@ -114,7 +115,8 @@
                           "news_mentions": { "type": "string" },
                           "public_presence": { "type": "string" },
                           "public_web_results": { "type": "string" },
-                          "error": { "type": "string" }
+                          "error": { "type": "string" },
+                          "signals": { "type": "array", "items": { "type": "string" }, "description": "Signals or key insights about the person" }
                         }
                       }
                     },
@@ -149,6 +151,17 @@
                           "items": { "type": "string" }
                         },
                         "error": { "type": "string", "description": "Error message if analysis failed" }
+                      }
+                    },
+                    "private_company_analysis": {
+                      "type": ["object", "null"],
+                      "description": "Analysis for private companies based on public web signals, news, and industry data. Null if not applicable.",
+                      "properties": {
+                        "company_overview": { "type": "string", "description": "Overview of the private company from public sources." },
+                        "recent_news": { "type": "string", "description": "Recent news or events about the company." },
+                        "key_people": { "type": "string", "description": "Key people and roles at the company." },
+                        "industry_positioning": { "type": "string", "description": "Industry/market positioning." },
+                        "risks_opportunities": { "type": "string", "description": "Risks and opportunities for the private company." }
                       }
                     },
                     "executive_briefing": { "type": "string", "description": "Synthesized executive briefing from all agents" }

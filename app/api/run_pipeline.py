@@ -45,17 +45,23 @@ async def run_pipeline(payload: PipelineRequest):
     try:
         # === Agent 1: SEC 10-Q Fetch ===
         sec_data = fetch_10q(company)
-        if "error" in sec_data:
-            logger.error(f"Agent 1 failed: {sec_data['error']}")
-            raise Exception(f"Agent 1 failed: {sec_data['error']}")
-        # === Launch Agent 2, 3, and 4 concurrently ===
-        tasks = [
-            asyncio.to_thread(analyze_financials, sec_data, additional_context),
-            asyncio.to_thread(profile_people, people, company),
-            asyncio.to_thread(analyze_company, company, meeting_context)
-        ]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        financial_analysis, people_profiles, company_analysis = results
+        is_public = bool(sec_data.get("filings")) and not sec_data.get("error")
+        private_company_analysis = None
+        if is_public:
+            # === Launch Agent 2, 3, and 4 concurrently ===
+            tasks = [
+                asyncio.to_thread(analyze_financials, sec_data, additional_context),
+                asyncio.to_thread(profile_people, people, company),
+                asyncio.to_thread(analyze_company, company, meeting_context)
+            ]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            financial_analysis, people_profiles, company_analysis = results
+        else:
+            # Private company workflow
+            financial_analysis = {"error": "No SEC filings found. Company appears to be private."}
+            people_profiles = await asyncio.to_thread(profile_people, people, company)
+            company_analysis = await asyncio.to_thread(analyze_company, company, meeting_context)
+            private_company_analysis = await asyncio.to_thread(analyze_private_company, company, meeting_context, additional_context)
         # === Robust error handling for agent outputs ===
         agent2 = agent3 = agent4 = None
         agent2_error = agent3_error = agent4_error = None
@@ -83,7 +89,9 @@ async def run_pipeline(payload: PipelineRequest):
                 name=people[0] if people else "Unknown", title=None, signals=[agent3_error or "Unavailable"], engagement_style=None),
             agent4 if agent4 else Agent4RiskMap(
                 threats=[agent4_error or "Unavailable"], opportunities=[], competitive_landscape=[], macroeconomic_factors=[], questions_to_ask=[]),
-            additional_context=additional_context
+            additional_context=additional_context,
+            is_public=is_public,
+            private_company_analysis=private_company_analysis
         )
         logger.info(f"Meta-prompt for synthesis:\n{meta_prompt}")
         # === Synthesis LLM call (OpenAI GPT-4-turbo) ===
@@ -107,10 +115,12 @@ async def run_pipeline(payload: PipelineRequest):
         final_output = {
             "company": company,
             "meeting_context": meeting_context,
+            "is_public": is_public,
             "sec_data": sec_data,
             "financial_analysis": financial_analysis,
             "people_profiles": people_profiles,
             "market_analysis": company_analysis,
+            "private_company_analysis": private_company_analysis,
             "executive_briefing": executive_briefing
         }
         return final_output
