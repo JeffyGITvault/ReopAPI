@@ -8,6 +8,10 @@ from app.api.agents.agent1_fetch_sec import fetch_10q
 from app.api.agents.agent2_analyze_financials import analyze_financials
 from app.api.agents.agent3_profile_people import profile_people
 from app.api.agents.agent4_analyze_company import analyze_company
+from app.api.memory_schema import Agent2Financials, Agent3Profile, Agent4RiskMap
+from app.api.prompt_builder import build_agent_1_prompt
+import logging
+import openai
 
 router = APIRouter()
 
@@ -21,6 +25,7 @@ async def run_pipeline(payload: PipelineRequest):
     company = payload.company
     people = payload.people
     meeting_context = payload.meeting_context
+    logger = logging.getLogger("run_pipeline")
     # Input validation
     if not company or not isinstance(company, str) or not company.strip():
         raise HTTPException(status_code=400, detail="Missing or invalid 'company' field.")
@@ -38,39 +43,62 @@ async def run_pipeline(payload: PipelineRequest):
     try:
         # === Agent 1: SEC 10-Q Fetch ===
         sec_data = fetch_10q(company)
-
         if "error" in sec_data:
+            logger.error(f"Agent 1 failed: {sec_data['error']}")
             raise Exception(f"Agent 1 failed: {sec_data['error']}")
-
         # === Launch Agent 2, 3, and 4 concurrently ===
         tasks = [
             asyncio.to_thread(analyze_financials, sec_data),
             asyncio.to_thread(profile_people, people, company),
             asyncio.to_thread(analyze_company, company, meeting_context)
         ]
-
         results = await asyncio.gather(*tasks, return_exceptions=True)
         financial_analysis, people_profiles, company_analysis = results
-
-        # === Soft Failures Handling ===
-        if isinstance(financial_analysis, dict) and "error" in financial_analysis:
-            financial_analysis = {
-                "status": "Agent 2 (Financial Analysis) failed",
-                "error_details": financial_analysis["error"]
-            }
-
-        if isinstance(people_profiles, dict) and "error" in people_profiles:
-            people_profiles = {
-                "status": "Agent 3 (People Profiling) failed",
-                "error_details": people_profiles["error"]
-            }
-
-        if isinstance(company_analysis, dict) and "error" in company_analysis:
-            company_analysis = {
-                "status": "Agent 4 (Market Analysis) failed",
-                "error_details": company_analysis["error"]
-            }
-
+        # === Robust error handling for agent outputs ===
+        agent2 = agent3 = agent4 = None
+        agent2_error = agent3_error = agent4_error = None
+        try:
+            agent2 = Agent2Financials(**financial_analysis) if isinstance(financial_analysis, dict) else Agent2Financials.model_validate(financial_analysis)
+        except Exception as e:
+            agent2_error = f"Agent 2 output invalid: {e}"
+            logger.error(agent2_error)
+        try:
+            profile = people_profiles[0] if isinstance(people_profiles, list) and people_profiles else people_profiles
+            agent3 = Agent3Profile(**profile) if isinstance(profile, dict) else Agent3Profile.model_validate(profile)
+        except Exception as e:
+            agent3_error = f"Agent 3 output invalid: {e}"
+            logger.error(agent3_error)
+        try:
+            agent4 = Agent4RiskMap(**company_analysis) if isinstance(company_analysis, dict) else Agent4RiskMap.model_validate(company_analysis)
+        except Exception as e:
+            agent4_error = f"Agent 4 output invalid: {e}"
+            logger.error(agent4_error)
+        # === Build meta-prompt (even if some agents failed) ===
+        meta_prompt = build_agent_1_prompt(
+            agent2 if agent2 else Agent2Financials(
+                financial_summary=agent2_error or "Unavailable", key_metrics_table={}, recent_events_summary="", questions_to_ask=[], suggested_graph=None),
+            agent3 if agent3 else Agent3Profile(
+                name=people[0] if people else "Unknown", title=None, signals=[agent3_error or "Unavailable"], engagement_style=None),
+            agent4 if agent4 else Agent4RiskMap(
+                threats=[agent4_error or "Unavailable"], opportunities=[], competitive_landscape=[], macroeconomic_factors=[], questions_to_ask=[])
+        )
+        logger.info(f"Meta-prompt for synthesis:\n{meta_prompt}")
+        # === Synthesis LLM call (OpenAI GPT-4-turbo) ===
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-4-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a world-class executive intelligence summarizer."},
+                    {"role": "user", "content": meta_prompt}
+                ],
+                max_tokens=8192,
+                temperature=0.4
+            )
+            executive_briefing = response['choices'][0]['message']['content']
+            logger.info(f"Synthesis LLM result: {executive_briefing[:500]}...")
+        except Exception as e:
+            logger.error(f"Synthesis LLM call failed: {e}")
+            executive_briefing = f"[SYNTHESIS LLM ERROR] {e}\n\n{meta_prompt}"
         # === Final Output Packaging ===
         final_output = {
             "company": company,
@@ -78,10 +106,10 @@ async def run_pipeline(payload: PipelineRequest):
             "sec_data": sec_data,
             "financial_analysis": financial_analysis,
             "people_profiles": people_profiles,
-            "market_analysis": company_analysis
+            "market_analysis": company_analysis,
+            "executive_briefing": executive_briefing
         }
-
         return final_output
-
     except Exception as e:
+        logger.error(f"Pipeline failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
