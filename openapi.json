@@ -84,7 +84,7 @@
                       "description": "LLM-powered financial summary and signal analysis",
                       "properties": {
                         "financial_summary": { "type": "string" },
-                        "key_metrics_table": { "type": "string" },
+                        "key_metrics_table": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string" } } } },
                         "suggested_graph": { "type": "string" },
                         "recent_events_summary": { "type": "string" },
                         "questions_to_ask": {
@@ -150,7 +150,8 @@
                         },
                         "error": { "type": "string", "description": "Error message if analysis failed" }
                       }
-                    }
+                    },
+                    "executive_briefing": { "type": "string", "description": "Synthesized executive briefing from all agents" }
                   }
                 }
               }
