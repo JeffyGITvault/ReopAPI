@@ -19,12 +19,14 @@ class PipelineRequest(BaseModel):
     company: str
     people: List[str]
     meeting_context: str
+    additional_context: dict = {}
     
 @router.post("/run_pipeline")
 async def run_pipeline(payload: PipelineRequest):
     company = payload.company
     people = payload.people
     meeting_context = payload.meeting_context
+    additional_context = payload.additional_context or {}
     logger = logging.getLogger("run_pipeline")
     # Input validation
     if not company or not isinstance(company, str) or not company.strip():
@@ -48,7 +50,7 @@ async def run_pipeline(payload: PipelineRequest):
             raise Exception(f"Agent 1 failed: {sec_data['error']}")
         # === Launch Agent 2, 3, and 4 concurrently ===
         tasks = [
-            asyncio.to_thread(analyze_financials, sec_data),
+            asyncio.to_thread(analyze_financials, sec_data, additional_context),
             asyncio.to_thread(profile_people, people, company),
             asyncio.to_thread(analyze_company, company, meeting_context)
         ]
@@ -80,12 +82,14 @@ async def run_pipeline(payload: PipelineRequest):
             agent3 if agent3 else Agent3Profile(
                 name=people[0] if people else "Unknown", title=None, signals=[agent3_error or "Unavailable"], engagement_style=None),
             agent4 if agent4 else Agent4RiskMap(
-                threats=[agent4_error or "Unavailable"], opportunities=[], competitive_landscape=[], macroeconomic_factors=[], questions_to_ask=[])
+                threats=[agent4_error or "Unavailable"], opportunities=[], competitive_landscape=[], macroeconomic_factors=[], questions_to_ask=[]),
+            additional_context=additional_context
         )
         logger.info(f"Meta-prompt for synthesis:\n{meta_prompt}")
         # === Synthesis LLM call (OpenAI GPT-4-turbo) ===
         try:
-            response = openai.ChatCompletion.create(
+            client = openai.OpenAI()
+            response = client.chat.completions.create(
                 model="gpt-4-turbo",
                 messages=[
                     {"role": "system", "content": "You are a world-class executive intelligence summarizer."},
@@ -94,7 +98,7 @@ async def run_pipeline(payload: PipelineRequest):
                 max_tokens=8192,
                 temperature=0.4
             )
-            executive_briefing = response['choices'][0]['message']['content']
+            executive_briefing = response.choices[0].message.content
             logger.info(f"Synthesis LLM result: {executive_briefing[:500]}...")
         except Exception as e:
             logger.error(f"Synthesis LLM call failed: {e}")

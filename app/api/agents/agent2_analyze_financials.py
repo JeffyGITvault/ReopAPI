@@ -218,7 +218,7 @@ def extract_json_from_llm_output(output: str) -> str:
     # Optionally, remove any leading/trailing whitespace
     return output.strip()
 
-def analyze_financials(sec_data: dict) -> Dict[str, Any]:
+def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[str, Any]:
     """
     Agent 2: Analyze financials from SEC data, fetch news signals, and summarize with LLM.
     Returns a dict with financial summary or error.
@@ -263,7 +263,16 @@ def analyze_financials(sec_data: dict) -> Dict[str, Any]:
         external_signals = fetch_google_company_signals(company_name)
         if not external_signals or 'No public web results found.' in external_signals or 'API key' in external_signals:
             external_signals = generate_synthetic_signals(company_name)
-        prompt = build_groq_prompt_from_filings(company_name, extracted_filings, external_signals, extraction_notes)
+        # --- Add user context to the prompt ---
+        ac = additional_context or {}
+        user_context_section = (
+            "User-provided meeting context (pre-meeting):\n"
+            f"- First meeting: {ac.get('first_meeting', 'Not specified')}\n"
+            f"- User knowledge: {ac.get('user_knowledge', 'Not specified')}\n"
+            f"- Proposed solutions: {ac.get('proposed_solutions', 'Not specified')}\n"
+            f"- Wants messaging help: {ac.get('messaging_help', 'Not specified')}\n\n"
+        )
+        prompt = user_context_section + build_groq_prompt_from_filings(company_name, extracted_filings, external_signals, extraction_notes)
         prompt_token_count = count_tokens(prompt)
         logger.info(f"Prompt token count: {prompt_token_count}")
         if prompt_token_count > GROQ_SAFE_PROMPT_TOKENS:
@@ -318,17 +327,31 @@ def analyze_financials(sec_data: dict) -> Dict[str, Any]:
         if not parsed or not any(parsed.get(k) for k in ["financial_summary", "key_metrics_table", "recent_events_summary"]):
             return {
                 "financial_summary": "No financial data found in filings. Please check the filings manually.",
-                "key_metrics_table": "",
+                "key_metrics_table": {},
                 "suggested_graph": "",
                 "recent_events_summary": "",
                 "questions_to_ask": [],
                 "notes": extraction_notes
             }
+        # --- Ensure correct types for output fields ---
+        key_metrics_table = parsed.get("key_metrics_table", {})
+        if isinstance(key_metrics_table, str):
+            # If the LLM returned a string, wrap it in a dict under a generic key
+            key_metrics_table = {"Notes": [key_metrics_table]}
+        elif not isinstance(key_metrics_table, dict):
+            key_metrics_table = {}
+        questions_to_ask = parsed.get("questions_to_ask", [])
+        if not isinstance(questions_to_ask, list):
+            questions_to_ask = [str(questions_to_ask)] if questions_to_ask else []
+        # Remove or blank out suggested_graph
+        suggested_graph = ""
         json_payload_for_agents_3_4 = {
             "company_name": company_name,
             "financial_summary": parsed.get("financial_summary", "") if parsed else "",
             "recent_events_summary": parsed.get("recent_events_summary", "") if parsed else "",
-            "key_metrics_table": parsed.get("key_metrics_table", "") if parsed else "",
+            "key_metrics_table": key_metrics_table,
+            "suggested_graph": suggested_graph,
+            "questions_to_ask": questions_to_ask,
             "notes": extraction_notes
         }
         return json_payload_for_agents_3_4

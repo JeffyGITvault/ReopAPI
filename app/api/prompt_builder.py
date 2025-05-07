@@ -1,7 +1,7 @@
 from app.api.memory_schema import Agent2Financials, Agent3Profile, Agent4RiskMap
-from typing import List
+from typing import List, Optional
 
-def build_agent_1_prompt(agent_2_data: Agent2Financials, agent_3_data: Agent3Profile, agent_4_data: Agent4RiskMap) -> str:
+def build_agent_1_prompt(agent_2_data: Agent2Financials, agent_3_data: Agent3Profile, agent_4_data: Agent4RiskMap, additional_context: Optional[dict] = None) -> str:
     # Avoid backslashes in f-string expressions by building the string in parts
     agent2_questions = "\n- ".join(agent_2_data.questions_to_ask)
     agent3_signals = "\n- ".join(agent_3_data.signals)
@@ -9,8 +9,18 @@ def build_agent_1_prompt(agent_2_data: Agent2Financials, agent_3_data: Agent3Pro
     agent4_opportunities = "\n- ".join(agent_4_data.opportunities)
     agent4_macro = "\n- ".join(agent_4_data.macroeconomic_factors)
     agent4_questions = "\n- ".join(agent_4_data.questions_to_ask)
+    # Summarize additional context
+    ac = additional_context or {}
+    context_section = (
+        "Additional context from user (pre-meeting):\n"
+        f"- First meeting: {ac.get('first_meeting', 'Not specified')}\n"
+        f"- User knowledge: {ac.get('user_knowledge', 'Not specified')}\n"
+        f"- Proposed solutions: {ac.get('proposed_solutions', 'Not specified')}\n"
+        f"- Wants messaging help: {ac.get('messaging_help', 'Not specified')}\n\n"
+    )
     return (
         "You are an executive assistant AI tasked with synthesizing intelligence from three specialized agents. Your job is to produce a sharp, structured briefing.\n\n"
+        f"{context_section}"
         "### Agent 2: Financial Overview ###\n"
         f"Summary:\n{agent_2_data.financial_summary}\n\n"
         f"Key Metrics Table:\n{agent_2_data.key_metrics_table}\n\n"

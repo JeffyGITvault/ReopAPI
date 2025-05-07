@@ -29,14 +29,16 @@ def profile_people(people: List[str], company: str) -> List[Dict[str, Any]]:
                 "filing_reference": check_filings_mention(person, company),
                 "likely_toolchain": infer_stack_from_job_posts(company),
                 "public_presence": enrich_with_public_signals(person, company),
-                "public_web_results": fetch_google_signals(person, company)
+                "public_web_results": fetch_google_signals(person, company),
+                "signals": []  # Placeholder, can be filled with actual signals if available
             }
             return profile
         except Exception as e:
             logger.error(f"Agent 3 profiling failed for {person}: {e}")
             return {
                 "name": person,
-                "error": f"Agent 3 profiling failed: {str(e)}"
+                "error": f"Agent 3 profiling failed: {str(e)}",
+                "signals": [f"Agent 3 profiling failed: {str(e)}"]
             }
 
     profiles = []
