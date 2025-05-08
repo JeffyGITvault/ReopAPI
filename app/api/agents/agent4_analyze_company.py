@@ -5,13 +5,13 @@ from app.api.groq_client import call_groq
 
 logger = logging.getLogger(__name__)
 
-def analyze_company(company_name: str, meeting_context: str) -> Dict[str, Any]:
+def analyze_company(company_name: str, meeting_context: str, agent2_summary: str = None, agent3_profile: dict = None) -> Dict[str, Any]:
     """
     Agent 4: Analyze the market and competitive landscape for a given company and context.
     Returns a dict with market analysis or error.
     """
     try:
-        prompt = build_market_prompt(company_name, meeting_context)
+        prompt = build_market_prompt(company_name, meeting_context, agent2_summary, agent3_profile)
         result = call_groq(prompt, max_tokens=32768)
         logger.info("Agent 4 Groq raw output: %s", result)
         parsed_analysis = parse_groq_response(result)
