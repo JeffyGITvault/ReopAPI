@@ -2,8 +2,56 @@ import logging
 import json
 from typing import Dict, Any
 from app.api.groq_client import call_groq
+import spacy
+import os
 
 logger = logging.getLogger(__name__)
+
+# Load spaCy model once
+try:
+    nlp = spacy.load("en_core_web_sm")
+except Exception:
+    nlp = None
+    logger.warning("spaCy model not loaded. Topic extraction will be skipped.")
+
+# Remove backend QUESTION_BANK and JSON loading, use CustomGPT RAG for question bank
+# Helper: NLP topic/entity extraction (still used for topic awareness)
+def extract_topics(text):
+    if not nlp or not text:
+        return []
+    doc = nlp(text)
+    topics = set()
+    for ent in doc.ents:
+        topics.add(ent.text.lower())
+    for chunk in doc.noun_chunks:
+        topics.add(chunk.text.lower())
+    return list(topics)
+
+# Helper: LLM-generated hints (still used as fallback or supplement)
+def generate_llm_hints(context, agent2_summary, agent3_profile):
+    prompt = f'''
+Given the following meeting context and agent findings, generate 3-5 highly relevant, context-specific strategic questions to ask the client. Only output the questions as a list.
+
+Meeting context:
+{context}
+
+Financial summary:
+{agent2_summary}
+
+Executive profile:
+{agent3_profile}
+'''
+    try:
+        result = call_groq(prompt, max_tokens=4000)
+        if isinstance(result, str):
+            lines = [line.strip('-* \n') for line in result.splitlines() if line.strip() and (line.strip().startswith('-') or line.strip().startswith('*'))]
+            if not lines:
+                lines = [line.strip() for line in result.splitlines() if line.strip()]
+            return lines
+        return []
+    except Exception as e:
+        logger.warning(f"LLM-generated hints failed: {e}")
+        return []
 
 def analyze_company(company_name: str, meeting_context: str, agent2_summary: str = None, agent3_profile: dict = None) -> Dict[str, Any]:
     """
@@ -25,11 +73,11 @@ def build_market_prompt(company: str, context: str, agent2_summary: str = None, 
     """
     Build a prompt for Groq to perform market and competitive analysis,
     using baseline questions and dynamic context-driven hints.
-    Now supports multiple context-specific hints and leverages agent2/agent3 outputs.
+    Now supports multiple context-specific hints and leverages agent2/agent3 outputs, NLP topic extraction, and LLM-generated hints. The question bank is managed in the CustomGPT knowledge base (RAG).
     """
     lc_context = context.lower()
     dynamic_hints = []
-    # Keyword-based
+    # 1. Keyword-based (legacy)
     if "security" in lc_context or "cyber" in lc_context:
         dynamic_hints.append('What are your top 1–2 cyber resilience priorities now and going into next year?')
     if "technology" in lc_context or "innovation" in lc_context:
@@ -40,13 +88,20 @@ def build_market_prompt(company: str, context: str, agent2_summary: str = None, 
         dynamic_hints.append("Which managed services are you considering now and why?")
     if "hybrid cloud" in lc_context or "multi-cloud" in lc_context:
         dynamic_hints.append("How are you balancing on-prem and public cloud workloads today?")
-    # Agent 2-based
+    # 2. Agent 2-based
     if agent2_summary and "margin" in agent2_summary.lower():
         dynamic_hints.append("How are you addressing margin pressure in your business?")
-    # Agent 3-based
+    # 3. Agent 3-based
     if agent3_profile and agent3_profile.get("title", "").lower() == "ciso":
         dynamic_hints.append("What are your top security investment priorities for the next 12 months?")
-    # ...add more as needed...
+    # 4. NLP topic/entity extraction (for awareness, not question bank lookup)
+    all_text = f"{context}\n{agent2_summary or ''}\n{str(agent3_profile) if agent3_profile else ''}"
+    topics = extract_topics(all_text)
+    # 5. LLM-generated hints (always include for extra context)
+    llm_hints = generate_llm_hints(context, agent2_summary, agent3_profile)
+    dynamic_hints.extend(llm_hints)
+    # Deduplicate
+    dynamic_hints = list(dict.fromkeys(dynamic_hints))
     if dynamic_hints:
         additional_hint = "\n**Additional context-specific questions:**\n" + "\n".join(f"- {q}" for q in dynamic_hints)
     else:
@@ -97,6 +152,8 @@ Respond in the following strict JSON format:
 - "How does the organization utilize managed services to address skills and talent gaps?"
 
 {system_message}
+
+You have access to a question bank of strategic questions in your knowledge base. Always use this bank to select and present the most relevant questions for the meeting context, company, and agent findings below.
 """
     return prompt
 
