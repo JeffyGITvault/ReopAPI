@@ -130,6 +130,46 @@ def summarize_section(section: str, max_tokens: int = 10000) -> str:
     # Truncate to max_tokens
     return safe_truncate_prompt(section, max_tokens)
 
+REQUIRED_METRICS = [
+    "Revenue",
+    "Gross Margin",
+    "Net Income",
+    "Cost of Goods Sold",
+    "Cost of Sales",
+    "Days Sales Outstanding (DSO)",
+    "Days Payable Outstanding (DPO)",
+    "Debt to Equity Ratio",
+    "Liquidity Ratio"
+]
+
+def normalize_key_metrics_table(table):
+    """
+    Ensure the key_metrics_table is a dict of {quarter: {metric: value, ...}},
+    with all REQUIRED_METRICS present for each quarter. Fill missing with blank or 'Not Provided'.
+    Accepts either dict or list of dicts from LLM.
+    """
+    if not table:
+        return {}
+    # If already in correct format
+    if isinstance(table, dict):
+        quarters = list(table.keys())
+        out = {}
+        for q in quarters:
+            metrics = table[q] if isinstance(table[q], dict) else {}
+            out[q] = {m: metrics.get(m, "Not Provided") for m in REQUIRED_METRICS}
+        return out
+    # If list of dicts (e.g., [{"quarter":..., "Revenue":...}, ...])
+    if isinstance(table, list):
+        out = {}
+        for entry in table:
+            q = entry.get("quarter") or entry.get("Quarter")
+            if not q:
+                continue
+            out[q] = {m: entry.get(m, "Not Provided") for m in REQUIRED_METRICS}
+        return out
+    # If string or unknown, return empty
+    return {}
+
 def build_groq_prompt_from_filings(company_name: str, filings: List[Dict[str, str]], news: str = "", extraction_notes: List[str] = None) -> str:
     system_message = (
         "You are a financial analyst. Only output valid JSON. "
@@ -141,7 +181,6 @@ def build_groq_prompt_from_filings(company_name: str, filings: List[Dict[str, st
     for filing in filings:
         label = f"Filing Date: {filing.get('filing_date', 'Unknown')} | Title: {filing.get('title', '')}"
         prompt += f"---\n{label}\nItem 1: Financial Statements\n{filing.get('item1', '')}\n\nItem 2: Management's Discussion and Analysis (MD&A)\n{filing.get('item2', '')}\n\nRelevant Notes\n{filing.get('notes', '')}\n\n"
-        # Add all extracted tables from Item 1, all rows, with labels
         tables = filing.get('item1_tables', [])
         if tables:
             prompt += "Extracted Financial Tables from Item 1 (all tables, all rows, pipe-separated):\n"
@@ -149,26 +188,26 @@ def build_groq_prompt_from_filings(company_name: str, filings: List[Dict[str, st
                 rows = table.split('\n')
                 header = rows[0] if rows else "(No header)"
                 label = f"Table {i+1}: {header}"
-                # Priority detection
                 if any(x in header.lower() for x in ["balance sheet", "income statement"]):
                     label += " (PRIORITY TABLE)"
                 prompt += label + "\n"
                 for row in rows:
-                    # Convert to pipe-separated (avoid markdown)
                     prompt += ' | '.join([cell.strip() for cell in row.split(',')]) + '\n'
                 prompt += '\n'
     prompt += (
         f"Recent News:\n{news}\n\n"
-        "Instructions: Analyze the 10-Q filings for key metrics and output revenue, gross margin, and net income in your summary, compare the filings and highlight any trends or changes. "
-        "prioritize analysis of Balance Sheet and Income Statement tables from Item 1 and layer in the MD&A and Notes from Item 2. "
-        "Summarize key financial trends across the filings, note any risks such as margin declines, revenue declines, and recent events. "
-        "show the key metrics in a table format, and show the financial summary in a narrative format. "
+        "Instructions: Carefully extract and compare the following financial metrics from the 10-Q filings: "
+        "Revenue, Gross Margin, Net Income, Cost of Goods Sold (COGS) or Cost of Sales, Days Sales Outstanding (DSO), Days Payable Outstanding (DPO), Debt to Equity Ratio, and Liquidity Ratio. "
+        "If any metric is not available, leave the cell blank or mark as 'Not Provided'. "
+        "Build a summary table with columns for each filing/quarter and rows for each metric above. "
+        "The table should be in markdown format, with each column representing a quarter/filing and each row a metric. "
+        "Prioritize analysis of Balance Sheet and Income Statement tables from Item 1, and layer in the MD&A and Notes from Item 2. "
+        "After the table, provide a narrative analysis of trends, changes, and any notable risks or opportunities. "
         "Only output valid JSON. Respond in the following JSON format:\n"
         "{\n  \"financial_summary\": \"...\",\n  \"key_metrics_table\": \"...\",\n  \"suggested_graph\": \"...\",\n  \"recent_events_summary\": \"...\",\n  \"questions_to_ask\": [\"...\", \"...\"]\n}\n"
     )
     if extraction_notes:
         prompt += f"\n\nExtraction Notes: {'; '.join(extraction_notes)}"
-    # FINAL TRUNCATION: Only if prompt exceeds 20,000 tokens
     max_prompt_tokens = 20000
     prompt_token_count = count_tokens(prompt)
     if prompt_token_count > max_prompt_tokens:
@@ -345,12 +384,13 @@ def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[
                 elif isinstance(v, str):
                     key_metrics_table[k] = [v]
                 elif isinstance(v, list):
-                    # Ensure all elements are strings
                     key_metrics_table[k] = [str(x) for x in v]
                 else:
                     key_metrics_table[k] = [str(v)]
         else:
             key_metrics_table = {}
+        # --- Normalize table for UI ---
+        normalized_table = normalize_key_metrics_table(parsed.get("key_metrics_table", {}))
         questions_to_ask = parsed.get("questions_to_ask", [])
         if not isinstance(questions_to_ask, list):
             questions_to_ask = [str(questions_to_ask)] if questions_to_ask else []
@@ -360,7 +400,7 @@ def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[
             "company_name": company_name,
             "financial_summary": parsed.get("financial_summary", "") if parsed else "",
             "recent_events_summary": parsed.get("recent_events_summary", "") if parsed else "",
-            "key_metrics_table": key_metrics_table,
+            "key_metrics_table": normalized_table,
             "suggested_graph": suggested_graph,
             "questions_to_ask": questions_to_ask,
             "notes": extraction_notes

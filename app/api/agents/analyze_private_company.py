@@ -75,4 +75,37 @@ def analyze_private_company(company_name: str, meeting_context: str, additional_
             "key_people": "",
             "industry_positioning": "",
             "risks_opportunities": ""
-        } 
+        }
+
+def format_table(table_dict):
+    if not table_dict:
+        return "No data available."
+    # If table_dict is already a markdown string, just return it
+    if isinstance(table_dict, str):
+        return table_dict
+    quarters = list(table_dict.keys())
+    metrics = set()
+    for q in quarters:
+        if isinstance(table_dict[q], dict):
+            metrics.update(table_dict[q].keys())
+        elif isinstance(table_dict[q], list):
+            for item in table_dict[q]:
+                if ":" in item:
+                    metrics.add(item.split(":")[0].strip())
+    metrics = sorted(metrics)
+    header = "| Metric | " + " | ".join(quarters) + " |\n"
+    sep = "|---" * (len(quarters)+1) + "|\n"
+    rows = ""
+    for m in metrics:
+        row = f"| {m} | "
+        for q in quarters:
+            val = ""
+            if isinstance(table_dict[q], dict):
+                val = table_dict[q].get(m, "")
+            elif isinstance(table_dict[q], list):
+                for item in table_dict[q]:
+                    if item.startswith(f"{m}:"):
+                        val = item.split(":", 1)[1].strip()
+            row += f"{val} | "
+        rows += row + "\n"
+    return header + sep + rows 

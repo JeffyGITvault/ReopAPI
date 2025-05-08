@@ -7,9 +7,9 @@ import asyncio
 from app.api.agents.agent1_fetch_sec import fetch_10q
 from app.api.agents.agent2_analyze_financials import analyze_financials
 from app.api.agents.agent3_profile_people import profile_people
-from app.api.agents.agent4_analyze_company import analyze_company
+from app.api.agents.agent4_analyze_company import analyze_company, build_market_prompt
 from app.api.memory_schema import Agent2Financials, Agent3Profile, Agent4RiskMap
-from app.api.prompt_builder import build_agent_1_prompt
+from app.api.prompt_builder import build_agent_1_prompt, format_table
 import logging
 import openai
 
@@ -20,6 +20,7 @@ class PipelineRequest(BaseModel):
     people: List[str]
     meeting_context: str
     additional_context: dict = {}
+    titles: List[str] = []  # Optional: allow user to pass titles
     
 @router.post("/run_pipeline")
 async def run_pipeline(payload: PipelineRequest):
@@ -27,6 +28,7 @@ async def run_pipeline(payload: PipelineRequest):
     people = payload.people
     meeting_context = payload.meeting_context
     additional_context = payload.additional_context or {}
+    titles = payload.titles if hasattr(payload, 'titles') else [None] * len(people)
     logger = logging.getLogger("run_pipeline")
     # Input validation
     if not company or not isinstance(company, str) or not company.strip():
@@ -51,15 +53,28 @@ async def run_pipeline(payload: PipelineRequest):
             # === Launch Agent 2, 3, and 4 concurrently ===
             tasks = [
                 asyncio.to_thread(analyze_financials, sec_data, additional_context),
-                asyncio.to_thread(profile_people, people, company),
-                asyncio.to_thread(analyze_company, company, meeting_context)
+                asyncio.to_thread(profile_people, people, company, titles),
+                # Agent 4 will be called after Agent 2 and 3 finish, to allow dynamic contexting
             ]
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            financial_analysis, people_profiles, company_analysis = results
+            financial_analysis, people_profiles = results
+            # Prepare Agent 2 and 3 context for Agent 4
+            agent2_summary = None
+            agent3_profile = None
+            try:
+                agent2_summary = financial_analysis.get("financial_summary") if isinstance(financial_analysis, dict) else None
+            except Exception:
+                agent2_summary = None
+            try:
+                agent3_profile = people_profiles[0] if isinstance(people_profiles, list) and people_profiles else people_profiles
+            except Exception:
+                agent3_profile = None
+            # Now run Agent 4 with dynamic context
+            company_analysis = await asyncio.to_thread(analyze_company, company, meeting_context, agent2_summary, agent3_profile)
         else:
             # Private company workflow
             financial_analysis = {"error": "No SEC filings found. Company appears to be private."}
-            people_profiles = await asyncio.to_thread(profile_people, people, company)
+            people_profiles = await asyncio.to_thread(profile_people, people, company, titles)
             company_analysis = await asyncio.to_thread(analyze_company, company, meeting_context)
             private_company_analysis = await asyncio.to_thread(analyze_private_company, company, meeting_context, additional_context)
         # === Robust error handling for agent outputs ===
@@ -72,7 +87,12 @@ async def run_pipeline(payload: PipelineRequest):
             logger.error(agent2_error)
         try:
             profile = people_profiles[0] if isinstance(people_profiles, list) and people_profiles else people_profiles
-            agent3 = Agent3Profile(**profile) if isinstance(profile, dict) else Agent3Profile.model_validate(profile)
+            agent3 = Agent3Profile(
+                name=profile.get("name"),
+                title=profile.get("title"),
+                signals=profile.get("signals", []),
+                engagement_style=profile.get("engagement_style")
+            ) if isinstance(profile, dict) else Agent3Profile.model_validate(profile)
         except Exception as e:
             agent3_error = f"Agent 3 output invalid: {e}"
             logger.error(agent3_error)
@@ -91,7 +111,8 @@ async def run_pipeline(payload: PipelineRequest):
                 threats=[agent4_error or "Unavailable"], opportunities=[], competitive_landscape=[], macroeconomic_factors=[], questions_to_ask=[]),
             additional_context=additional_context,
             is_public=is_public,
-            private_company_analysis=private_company_analysis
+            private_company_analysis=private_company_analysis,
+            enforce_title=True
         )
         logger.info(f"Meta-prompt for synthesis:\n{meta_prompt}")
         # === Synthesis LLM call (OpenAI GPT-4-turbo) ===
