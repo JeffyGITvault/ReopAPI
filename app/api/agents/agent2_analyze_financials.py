@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 from app.api.groq_client import call_groq, GROQ_MODEL_PRIORITY
 from app.api.config import DEFAULT_HEADERS, SEARCH_API_KEY, GOOGLE_CSE_ID
 import re
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -257,6 +258,39 @@ def extract_json_from_llm_output(output: str) -> str:
     # Optionally, remove any leading/trailing whitespace
     return output.strip()
 
+def extract_metrics_from_html_tables(html_tables):
+    """
+    Attempt to extract required metrics from HTML tables using pandas.
+    Returns a dict of {quarter: {metric: value, ...}} and a set of found metrics.
+    """
+    metrics_found = set()
+    metrics_data = {}
+    for table_html in html_tables:
+        try:
+            dfs = pd.read_html(table_html)
+        except Exception:
+            continue
+        for df in dfs:
+            # Try to find columns that match required metrics
+            for metric in REQUIRED_METRICS:
+                for col in df.columns:
+                    if metric.lower() in str(col).lower():
+                        metrics_found.add(metric)
+                        # Try to extract values for each quarter (columns or rows)
+                        for idx, row in df.iterrows():
+                            for c in df.columns:
+                                if metric.lower() in str(c).lower():
+                                    val = row[c]
+                                    # Use index or a column as quarter label
+                                    quarter = str(row[0]) if df.columns[0] != c else f"Row {idx+1}"
+                                    if quarter not in metrics_data:
+                                        metrics_data[quarter] = {}
+                                    metrics_data[quarter][metric] = str(val)
+        # If we found all metrics, break early
+        if len(metrics_found) == len(REQUIRED_METRICS):
+            break
+    return metrics_data, metrics_found
+
 def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[str, Any]:
     """
     Agent 2: Analyze financials from SEC data, fetch news signals, and with LLM.
@@ -271,6 +305,8 @@ def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[
         extracted_filings = []
         missing_filings = 0
         extraction_notes = []
+        python_metrics = {}
+        python_metrics_found = set()
         for filing in filings:
             url = filing.get("html_url")
             if not url or url == "Unavailable":
@@ -290,10 +326,31 @@ def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[
                 extracted["filing_date"] = filing.get("filing_date", "")
                 extracted["title"] = filing.get("title", company_name)
                 extracted_filings.append(extracted)
+                # --- Try Python table extraction ---
+                html_tables = extracted.get("item1_tables", [])
+                metrics, found = extract_metrics_from_html_tables(html_tables)
+                if metrics:
+                    python_metrics.update(metrics)
+                python_metrics_found.update(found)
             except Exception as e:
                 logger.warning(f"Failed to fetch or extract filing at {url}: {e}")
                 extraction_notes.append(f"Failed to fetch or extract filing at {url}: {e}")
                 missing_filings += 1
+        # --- If all required metrics found, use Python extraction ---
+        if python_metrics and len(python_metrics_found) == len(REQUIRED_METRICS):
+            extraction_notes.append("All required metrics extracted via Python table parsing.")
+            normalized_table = normalize_key_metrics_table(python_metrics)
+            return {
+                "company_name": company_name,
+                "financial_summary": "Extracted all key metrics using Python table parsing.",
+                "recent_events_summary": "",
+                "key_metrics_table": normalized_table,
+                "suggested_graph": "",
+                "questions_to_ask": [],
+                "notes": extraction_notes,
+                "source": "python"
+            }
+        # --- Otherwise, fallback to LLM/RAG as before ---
         if not extracted_filings:
             return {"error": "No valid 10-Q filings could be processed."}
         if missing_filings:
