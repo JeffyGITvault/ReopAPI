@@ -145,10 +145,11 @@ if __name__ == "__main__":
     else:
         print("Usage: python question_bank.py sync")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Or specify your front-end domain(s) for better security
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-) 
+# Remove or comment out the following block, as 'app' is not defined here:
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# ) 
