@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Any, Dict
 from app.api.agents.analyze_private_company import analyze_private_company
+from fastapi.middleware.cors import CORSMiddleware
 
 QUESTION_BANK_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "customgpt_question_bank_v4_9_reconstructed_full.json")
 LOGS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
@@ -142,4 +143,12 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "sync":
         sync_local_to_rag()
     else:
-        print("Usage: python question_bank.py sync") 
+        print("Usage: python question_bank.py sync")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Or specify your front-end domain(s) for better security
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+) 
