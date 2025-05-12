@@ -426,150 +426,120 @@
     }
   },
   "tagged_sequenced_flows": {
-    "cloud": [
-      [
-        {
-          "question": "What role does cloud play in your current IT roadmap?",
-          "intent": [
-            "discovery"
-          ],
-          "stage": "discovery",
-          "persona": "generic"
-        },
-        {
-          "question": "Where are execution risks highest in your cloud strategy?",
-          "intent": [
-            "execution"
-          ],
-          "stage": "execution",
-          "persona": "generic"
-        },
-        {
-          "question": "What trade-offs do you face with cloud adoption?",
-          "intent": [
-            "trade-off"
-          ],
-          "stage": "validation",
-          "persona": "generic"
-        },
-        {
-          "question": "What happens if cloud underperforms for another 6\u201312 months?",
-          "intent": [
-            "urgency"
-          ],
-          "stage": "strategic",
-          "persona": "generic"
-        }
+    "cloud": {
+      "engineering": [
+        [
+          {
+            "question": "What role does cloud play in your current engineering roadmap?",
+            "intent": ["discovery"],
+            "stage": "discovery",
+            "persona": "Engineering",
+            "conditional_follow_up": [
+              { "if": "answer contains 'critical'", "next": 1 }
+            ]
+          },
+          {
+            "question": "Where are execution risks highest in your cloud engineering strategy?",
+            "intent": ["execution"],
+            "stage": "execution",
+            "persona": "Engineering"
+          }
+        ]
+      ],
+      "finance": [
+        [
+          {
+            "question": "How does cloud spending impact your financial planning?",
+            "intent": ["discovery"],
+            "stage": "discovery",
+            "persona": "Finance",
+            "conditional_follow_up": [
+              { "if": "answer contains 'unpredictable'", "next": 1 }
+            ]
+          },
+          {
+            "question": "What controls do you have in place for cloud cost management?",
+            "intent": ["execution"],
+            "stage": "execution",
+            "persona": "Finance"
+          }
+        ]
       ]
-    ],
-    "cybersecurity": [
-      [
-        {
-          "question": "What role does cybersecurity play in your current IT roadmap?",
-          "intent": [
-            "discovery"
-          ],
-          "stage": "discovery",
-          "persona": "generic"
-        },
-        {
-          "question": "Where are execution risks highest in your cybersecurity strategy?",
-          "intent": [
-            "execution"
-          ],
-          "stage": "execution",
-          "persona": "generic"
-        },
-        {
-          "question": "What trade-offs do you face with cybersecurity adoption?",
-          "intent": [
-            "trade-off"
-          ],
-          "stage": "validation",
-          "persona": "generic"
-        },
-        {
-          "question": "What happens if cybersecurity underperforms for another 6\u201312 months?",
-          "intent": [
-            "urgency"
-          ],
-          "stage": "strategic",
-          "persona": "generic"
-        }
+    },
+    "cybersecurity": {
+      "engineering": [
+        [
+          {
+            "question": "What role does cybersecurity play in your current IT roadmap?",
+            "intent": [
+              "discovery"
+            ],
+            "stage": "discovery",
+            "persona": "generic"
+          },
+          {
+            "question": "Where are execution risks highest in your cybersecurity strategy?",
+            "intent": [
+              "execution"
+            ],
+            "stage": "execution",
+            "persona": "generic"
+          },
+          {
+            "question": "What trade-offs do you face with cybersecurity adoption?",
+            "intent": [
+              "trade-off"
+            ],
+            "stage": "validation",
+            "persona": "generic"
+          },
+          {
+            "question": "What happens if cybersecurity underperforms for another 6\u201312 months?",
+            "intent": [
+              "urgency"
+            ],
+            "stage": "strategic",
+            "persona": "generic"
+          }
+        ]
+      ],
+      "finance": [
+        [
+          {
+            "question": "What role does cybersecurity play in your current IT roadmap?",
+            "intent": [
+              "discovery"
+            ],
+            "stage": "discovery",
+            "persona": "generic"
+          },
+          {
+            "question": "Where are execution risks highest in your cybersecurity strategy?",
+            "intent": [
+              "execution"
+            ],
+            "stage": "execution",
+            "persona": "generic"
+          },
+          {
+            "question": "What trade-offs do you face with cybersecurity adoption?",
+            "intent": [
+              "trade-off"
+            ],
+            "stage": "validation",
+            "persona": "generic"
+          },
+          {
+            "question": "What happens if cybersecurity underperforms for another 6\u201312 months?",
+            "intent": [
+              "urgency"
+            ],
+            "stage": "strategic",
+            "persona": "generic"
+          }
+        ]
       ]
-    ],
-    "technical debt": [
-      [
-        {
-          "question": "What role does technical debt play in your current IT roadmap?",
-          "intent": [
-            "discovery"
-          ],
-          "stage": "discovery",
-          "persona": "generic"
-        },
-        {
-          "question": "Where are execution risks highest in your technical debt strategy?",
-          "intent": [
-            "execution"
-          ],
-          "stage": "execution",
-          "persona": "generic"
-        },
-        {
-          "question": "What trade-offs do you face with technical debt adoption?",
-          "intent": [
-            "trade-off"
-          ],
-          "stage": "validation",
-          "persona": "generic"
-        },
-        {
-          "question": "What happens if technical debt underperforms for another 6\u201312 months?",
-          "intent": [
-            "urgency"
-          ],
-          "stage": "strategic",
-          "persona": "generic"
-        }
-      ]
-    ],
-    "customer experience": [
-      [
-        {
-          "question": "What role does customer experience play in your current IT roadmap?",
-          "intent": [
-            "discovery"
-          ],
-          "stage": "discovery",
-          "persona": "generic"
-        },
-        {
-          "question": "Where are execution risks highest in your customer experience strategy?",
-          "intent": [
-            "execution"
-          ],
-          "stage": "execution",
-          "persona": "generic"
-        },
-        {
-          "question": "What trade-offs do you face with customer experience adoption?",
-          "intent": [
-            "trade-off"
-          ],
-          "stage": "validation",
-          "persona": "generic"
-        },
-        {
-          "question": "What happens if customer experience underperforms for another 6\u201312 months?",
-          "intent": [
-            "urgency"
-          ],
-          "stage": "strategic",
-          "persona": "generic"
-        }
-      ]
-    ]
+    }
   },
   "framework_branching": {
     "NIST": [
