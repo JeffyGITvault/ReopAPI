@@ -12,6 +12,7 @@ from app.api.memory_schema import Agent2Financials, Agent3Profile, Agent4RiskMap
 from app.api.prompt_builder import build_agent_1_prompt, format_table
 import logging
 import openai
+from app.api.agents.analyze_private_company import analyze_private_company
 
 router = APIRouter()
 
@@ -101,6 +102,14 @@ async def run_pipeline(payload: PipelineRequest):
         except Exception as e:
             agent4_error = f"Agent 4 output invalid: {e}"
             logger.error(agent4_error)
+            # Ensure all required fields are present in fallback
+            agent4 = Agent4RiskMap(
+                threats=[agent4_error or "Unavailable"],
+                opportunities=[],
+                competitive_landscape=[],
+                macroeconomic_factors=[],
+                questions_to_ask=[]
+            )
         # === Build meta-prompt (even if some agents failed) ===
         meta_prompt = build_agent_1_prompt(
             agent2 if agent2 else Agent2Financials(
@@ -146,5 +155,5 @@ async def run_pipeline(payload: PipelineRequest):
         }
         return final_output
     except Exception as e:
-        logger.error(f"Pipeline failed: {e}")
+        logger.error(f"Pipeline failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

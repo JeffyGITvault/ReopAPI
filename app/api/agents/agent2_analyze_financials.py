@@ -408,7 +408,14 @@ def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[
         return json_payload_for_agents_3_4
     except Exception as e:
         logger.error(f"Agent 2 - Financial analysis failed: {e}")
-        return {"error": f"Agent 2 - Financial analysis failed: {str(e)}"}
+        return {
+            "financial_summary": f"Agent 2 - Financial analysis failed: {str(e)}",
+            "key_metrics_table": {},
+            "recent_events_summary": "",
+            "suggested_graph": "",
+            "questions_to_ask": [],
+            "notes": extraction_notes if 'extraction_notes' in locals() else []
+        }
 
 def generate_synthetic_signals(company_name: str) -> str:
     """

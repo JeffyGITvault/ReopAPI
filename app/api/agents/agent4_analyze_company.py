@@ -92,7 +92,8 @@ def build_market_prompt(company: str, context: str, agent2_summary: str = None, 
     if agent2_summary and "margin" in agent2_summary.lower():
         dynamic_hints.append("How are you addressing margin pressure in your business?")
     # 3. Agent 3-based
-    if agent3_profile and agent3_profile.get("title", "").lower() == "ciso":
+    title = agent3_profile.get("title") if agent3_profile else ""
+    if title and title.lower() == "ciso":
         dynamic_hints.append("What are your top security investment priorities for the next 12 months?")
     # 4. NLP topic/entity extraction (for awareness, not question bank lookup)
     all_text = f"{context}\n{agent2_summary or ''}\n{str(agent3_profile) if agent3_profile else ''}"
