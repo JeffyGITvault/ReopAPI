@@ -56,9 +56,39 @@ def load_question_bank():
             return json.load(f)
 
 def save_question_bank(data):
-    # Only allow local save for now (RAG KB is source of truth in prod)
-    with open(QUESTION_BANK_PATH, "w") as f:
-        json.dump(data, f, indent=2)
+    if USE_CUSTOMGPT_KB:
+        headers = {"Authorization": f"Bearer {CUSTOMGPT_KB_TOKEN}", "Content-Type": "application/json"} if CUSTOMGPT_KB_TOKEN else {"Content-Type": "application/json"}
+        try:
+            resp = requests.post(CUSTOMGPT_KB_URL, headers=headers, json=data, timeout=10)
+            resp.raise_for_status()
+            return True
+        except Exception as e:
+            # Fallback: also save locally if RAG update fails
+            with open(QUESTION_BANK_PATH, "w") as f:
+                json.dump(data, f, indent=2)
+            raise HTTPException(status_code=500, detail=f"Failed to update RAG KB: {e}")
+    else:
+        with open(QUESTION_BANK_PATH, "w") as f:
+            json.dump(data, f, indent=2)
+    return True
+
+# --- Sync script: push local file to RAG KB ---
+def sync_local_to_rag():
+    """Push the local question bank file to the CustomGPT knowledge base."""
+    if not CUSTOMGPT_KB_TOKEN:
+        print("CUSTOMGPT_KB_TOKEN is not set.")
+        return False
+    with open(QUESTION_BANK_PATH) as f:
+        data = json.load(f)
+    headers = {"Authorization": f"Bearer {CUSTOMGPT_KB_TOKEN}", "Content-Type": "application/json"}
+    try:
+        resp = requests.post(CUSTOMGPT_KB_URL, headers=headers, json=data, timeout=10)
+        resp.raise_for_status()
+        print(f"Sync successful: {resp.status_code}")
+        return True
+    except Exception as e:
+        print(f"Sync failed: {e}")
+        return False
 
 def log_action(agent, action, details):
     ensure_logs_dir()
@@ -104,4 +134,11 @@ def update_question_bank(
     save_question_bank(data)
     log_action(x_agent_id, "update", {"update": payload.update, "reason": payload.reason, "new_version": data["version"]})
     log_analytics(x_agent_id, "update_question_bank", {"update": payload.update, "reason": payload.reason, "new_version": data["version"]})
-    return {"status": "success", "version": data["version"]} 
+    return {"status": "success", "version": data["version"]}
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "sync":
+        sync_local_to_rag()
+    else:
+        print("Usage: python question_bank.py sync") 
