@@ -1,0 +1,1550 @@
+{
+  "tagged_role_question_packs": {
+    "CIO": {
+      "cloud": [
+        {
+          "question": "What is your strategy for managing cloud at the CIO level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "CIO"
+        },
+        {
+          "question": "What is your strategy for managing cloud at the CIO level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "CIO"
+        },
+        {
+          "question": "What is your strategy for managing cloud at the CIO level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "CIO"
+        }
+      ],
+      "cybersecurity": [
+        {
+          "question": "What is your strategy for managing cybersecurity at the CIO level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "CIO"
+        },
+        {
+          "question": "What is your strategy for managing cybersecurity at the CIO level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "CIO"
+        },
+        {
+          "question": "What is your strategy for managing cybersecurity at the CIO level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "CIO"
+        }
+      ],
+      "technical debt": [
+        {
+          "question": "What is your strategy for managing technical debt at the CIO level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "CIO"
+        },
+        {
+          "question": "What is your strategy for managing technical debt at the CIO level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "CIO"
+        },
+        {
+          "question": "What is your strategy for managing technical debt at the CIO level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "CIO"
+        }
+      ],
+      "customer experience": [
+        {
+          "question": "What is your strategy for managing customer experience at the CIO level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "CIO"
+        },
+        {
+          "question": "What is your strategy for managing customer experience at the CIO level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "CIO"
+        },
+        {
+          "question": "What is your strategy for managing customer experience at the CIO level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "CIO"
+        }
+      ]
+    },
+    "VP of IT": {
+      "cloud": [
+        {
+          "question": "What is your strategy for managing cloud at the VP of IT level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "VP of IT"
+        },
+        {
+          "question": "What is your strategy for managing cloud at the VP of IT level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "VP of IT"
+        },
+        {
+          "question": "What is your strategy for managing cloud at the VP of IT level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "VP of IT"
+        }
+      ],
+      "cybersecurity": [
+        {
+          "question": "What is your strategy for managing cybersecurity at the VP of IT level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "VP of IT"
+        },
+        {
+          "question": "What is your strategy for managing cybersecurity at the VP of IT level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "VP of IT"
+        },
+        {
+          "question": "What is your strategy for managing cybersecurity at the VP of IT level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "VP of IT"
+        }
+      ],
+      "technical debt": [
+        {
+          "question": "What is your strategy for managing technical debt at the VP of IT level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "VP of IT"
+        },
+        {
+          "question": "What is your strategy for managing technical debt at the VP of IT level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "VP of IT"
+        },
+        {
+          "question": "What is your strategy for managing technical debt at the VP of IT level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "VP of IT"
+        }
+      ],
+      "customer experience": [
+        {
+          "question": "What is your strategy for managing customer experience at the VP of IT level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "VP of IT"
+        },
+        {
+          "question": "What is your strategy for managing customer experience at the VP of IT level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "VP of IT"
+        },
+        {
+          "question": "What is your strategy for managing customer experience at the VP of IT level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "VP of IT"
+        }
+      ]
+    },
+    "IT Director": {
+      "cloud": [
+        {
+          "question": "What is your strategy for managing cloud at the IT Director level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "IT Director"
+        },
+        {
+          "question": "What is your strategy for managing cloud at the IT Director level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "IT Director"
+        },
+        {
+          "question": "What is your strategy for managing cloud at the IT Director level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "IT Director"
+        }
+      ],
+      "cybersecurity": [
+        {
+          "question": "What is your strategy for managing cybersecurity at the IT Director level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "IT Director"
+        },
+        {
+          "question": "What is your strategy for managing cybersecurity at the IT Director level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "IT Director"
+        },
+        {
+          "question": "What is your strategy for managing cybersecurity at the IT Director level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "IT Director"
+        }
+      ],
+      "technical debt": [
+        {
+          "question": "What is your strategy for managing technical debt at the IT Director level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "IT Director"
+        },
+        {
+          "question": "What is your strategy for managing technical debt at the IT Director level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "IT Director"
+        },
+        {
+          "question": "What is your strategy for managing technical debt at the IT Director level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "IT Director"
+        }
+      ],
+      "customer experience": [
+        {
+          "question": "What is your strategy for managing customer experience at the IT Director level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "IT Director"
+        },
+        {
+          "question": "What is your strategy for managing customer experience at the IT Director level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "IT Director"
+        },
+        {
+          "question": "What is your strategy for managing customer experience at the IT Director level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "IT Director"
+        }
+      ]
+    },
+    "Manager": {
+      "cloud": [
+        {
+          "question": "What is your strategy for managing cloud at the Manager level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "Manager"
+        },
+        {
+          "question": "What is your strategy for managing cloud at the Manager level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "Manager"
+        },
+        {
+          "question": "What is your strategy for managing cloud at the Manager level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "Manager"
+        }
+      ],
+      "cybersecurity": [
+        {
+          "question": "What is your strategy for managing cybersecurity at the Manager level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "Manager"
+        },
+        {
+          "question": "What is your strategy for managing cybersecurity at the Manager level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "Manager"
+        },
+        {
+          "question": "What is your strategy for managing cybersecurity at the Manager level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "Manager"
+        }
+      ],
+      "technical debt": [
+        {
+          "question": "What is your strategy for managing technical debt at the Manager level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "Manager"
+        },
+        {
+          "question": "What is your strategy for managing technical debt at the Manager level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "Manager"
+        },
+        {
+          "question": "What is your strategy for managing technical debt at the Manager level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "Manager"
+        }
+      ],
+      "customer experience": [
+        {
+          "question": "What is your strategy for managing customer experience at the Manager level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "Manager"
+        },
+        {
+          "question": "What is your strategy for managing customer experience at the Manager level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "Manager"
+        },
+        {
+          "question": "What is your strategy for managing customer experience at the Manager level?",
+          "intent": [
+            "strategic"
+          ],
+          "stage": "strategic",
+          "persona": "Manager"
+        }
+      ]
+    }
+  },
+  "tagged_sequenced_flows": {
+    "cloud": [
+      [
+        {
+          "question": "What role does cloud play in your current IT roadmap?",
+          "intent": [
+            "discovery"
+          ],
+          "stage": "discovery",
+          "persona": "generic"
+        },
+        {
+          "question": "Where are execution risks highest in your cloud strategy?",
+          "intent": [
+            "execution"
+          ],
+          "stage": "execution",
+          "persona": "generic"
+        },
+        {
+          "question": "What trade-offs do you face with cloud adoption?",
+          "intent": [
+            "trade-off"
+          ],
+          "stage": "validation",
+          "persona": "generic"
+        },
+        {
+          "question": "What happens if cloud underperforms for another 6\u201312 months?",
+          "intent": [
+            "urgency"
+          ],
+          "stage": "strategic",
+          "persona": "generic"
+        }
+      ]
+    ],
+    "cybersecurity": [
+      [
+        {
+          "question": "What role does cybersecurity play in your current IT roadmap?",
+          "intent": [
+            "discovery"
+          ],
+          "stage": "discovery",
+          "persona": "generic"
+        },
+        {
+          "question": "Where are execution risks highest in your cybersecurity strategy?",
+          "intent": [
+            "execution"
+          ],
+          "stage": "execution",
+          "persona": "generic"
+        },
+        {
+          "question": "What trade-offs do you face with cybersecurity adoption?",
+          "intent": [
+            "trade-off"
+          ],
+          "stage": "validation",
+          "persona": "generic"
+        },
+        {
+          "question": "What happens if cybersecurity underperforms for another 6\u201312 months?",
+          "intent": [
+            "urgency"
+          ],
+          "stage": "strategic",
+          "persona": "generic"
+        }
+      ]
+    ],
+    "technical debt": [
+      [
+        {
+          "question": "What role does technical debt play in your current IT roadmap?",
+          "intent": [
+            "discovery"
+          ],
+          "stage": "discovery",
+          "persona": "generic"
+        },
+        {
+          "question": "Where are execution risks highest in your technical debt strategy?",
+          "intent": [
+            "execution"
+          ],
+          "stage": "execution",
+          "persona": "generic"
+        },
+        {
+          "question": "What trade-offs do you face with technical debt adoption?",
+          "intent": [
+            "trade-off"
+          ],
+          "stage": "validation",
+          "persona": "generic"
+        },
+        {
+          "question": "What happens if technical debt underperforms for another 6\u201312 months?",
+          "intent": [
+            "urgency"
+          ],
+          "stage": "strategic",
+          "persona": "generic"
+        }
+      ]
+    ],
+    "customer experience": [
+      [
+        {
+          "question": "What role does customer experience play in your current IT roadmap?",
+          "intent": [
+            "discovery"
+          ],
+          "stage": "discovery",
+          "persona": "generic"
+        },
+        {
+          "question": "Where are execution risks highest in your customer experience strategy?",
+          "intent": [
+            "execution"
+          ],
+          "stage": "execution",
+          "persona": "generic"
+        },
+        {
+          "question": "What trade-offs do you face with customer experience adoption?",
+          "intent": [
+            "trade-off"
+          ],
+          "stage": "validation",
+          "persona": "generic"
+        },
+        {
+          "question": "What happens if customer experience underperforms for another 6\u201312 months?",
+          "intent": [
+            "urgency"
+          ],
+          "stage": "strategic",
+          "persona": "generic"
+        }
+      ]
+    ]
+  },
+  "framework_branching": {
+    "NIST": [
+      "Where does your cybersecurity program diverge from NIST guidelines?",
+      "What\u2019s your plan for closing NIST coverage gaps this quarter?"
+    ]
+  },
+  "vertical_tuned_extensions": {
+    "healthcare": {
+      "cloud": [
+        "How does cloud enable EHR integration and patient data continuity in your environment?"
+      ]
+    }
+  },
+  "role_progression_flows": {
+    "Cloud Optimization - Strategic View": [
+      {
+        "persona": "Manager",
+        "question": "Where do cloud provisioning delays cause rework?",
+        "intent": [
+          "execution"
+        ],
+        "stage": "execution",
+        "follow_up_pack": "Cloud Optimization - Director View",
+        "trigger_tags": [
+          "cloud lag",
+          "manual request"
+        ]
+      },
+      {
+        "persona": "IT Director",
+        "question": "Which systems are least optimized for cloud-native cost savings?",
+        "intent": [
+          "foresight"
+        ],
+        "stage": "validation",
+        "follow_up_pack": "Cloud Optimization - VP View",
+        "trigger_tags": [
+          "lift-and-shift",
+          "spend waste"
+        ]
+      },
+      {
+        "persona": "VP of IT",
+        "question": "Where are cloud savings hardest to validate against business impact?",
+        "intent": [
+          "alignment"
+        ],
+        "stage": "validation",
+        "follow_up_pack": "Cloud Optimization - CIO Alignment",
+        "trigger_tags": [
+          "unclear ROI",
+          "finance mismatch"
+        ]
+      },
+      {
+        "persona": "CIO",
+        "question": "How aligned is your cloud investment strategy with board expectations?",
+        "intent": [
+          "alignment"
+        ],
+        "stage": "strategic",
+        "trigger_tags": [
+          "exec fit",
+          "strategic ROI"
+        ]
+      }
+    ]
+  },
+  "question_packs": {
+    "Top 10 for CIOs - Cloud Strategy": [
+      "What\u2019s your 18-month view on cloud ROI and board scrutiny?",
+      "Where are compliance risks highest in your multi-cloud strategy?"
+    ]
+  },
+  "edge_topic_expansions": {
+    "AI Ops": [
+      {
+        "question": "Where are drift detection tools missing anomalies in live model outputs?",
+        "intent": [
+          "foresight"
+        ],
+        "stage": "execution",
+        "persona": "VP of IT",
+        "trigger_tags": [
+          "model failure",
+          "ops blindspot"
+        ]
+      }
+    ]
+  },
+  "legacy_blended_topic_questions": {
+    "cloud": [
+      "Where are you seeing diminishing returns from cloud investments, and what\u2019s driving it?",
+      "What internal friction points slow down your cloud adoption or optimization efforts?",
+      "Which workloads remain on-prem and why haven\u2019t they moved to the cloud yet?",
+      "What trade-offs have you had to make between cloud flexibility and compliance requirements?",
+      "How do you measure cloud ROI beyond cost savings?",
+      "How aligned are your cloud operations with your business agility goals?",
+      "Which part of your cloud stack gives you the most operational overhead?",
+      "How do you handle accountability across business and IT for cloud decisions?",
+      "What\u2019s one cloud initiative that didn\u2019t meet expectations, and what did you learn from it?",
+      "What\u2019s your current roadmap for optimizing cloud spend without reducing performance?",
+      "What lessons have you learned from implementing cloud programs?",
+      "What technologies or partners are supporting your cloud strategy in healthcare?",
+      "How do you ensure alignment of cloud goals with enterprise objectives?",
+      "What are your biggest challenges related to cloud in your CIO role?",
+      "How are you measuring success with your cloud initiatives?",
+      "How do you handle organizational resistance to change around cloud?",
+      "What is your approach to cloud in the context of manufacturing?",
+      "What KPIs are most important when tracking cloud progress?",
+      "What is your approach to cloud in the context of tech?",
+      "How do you ensure scalability and sustainability in your cloud approach?",
+      "In what ways is your team driving innovation through cloud?",
+      "What is your approach to cloud in the context of education?",
+      "What technologies or partners are supporting your cloud strategy in public sector?",
+      "What is your approach to cloud in the context of public sector?",
+      "What is your approach to cloud in the context of energy?",
+      "What technologies or partners are supporting your cloud strategy in energy?",
+      "What technologies or partners are supporting your cloud strategy in transportation?",
+      "What is your approach to cloud in the context of transportation?",
+      "What is your approach to cloud in the context of public safety?",
+      "What is your approach to cloud in the context of casino gaming commercial?",
+      "What technologies or partners are supporting your cloud strategy in casino gaming commercial?",
+      "What technologies or partners are supporting your cloud strategy in tribal?",
+      "What is your approach to cloud in the context of tribal?",
+      "What is your approach to cloud in the context of healthcare?",
+      "What technologies or partners are supporting your cloud strategy in finance?",
+      "What is your approach to cloud in the context of finance?",
+      "What is your approach to cloud in the context of retail?",
+      "What are your biggest challenges related to cloud in your CTO role?",
+      "What technologies or partners are supporting your cloud strategy in manufacturing?",
+      "What technologies or partners are supporting your cloud strategy in tech?",
+      "What technologies or partners are supporting your cloud strategy in education?",
+      "What technologies or partners are supporting your cloud strategy in public safety?",
+      "What are your biggest challenges related to cloud in your CISO role?",
+      "What technologies or partners are supporting your cloud strategy in retail?",
+      "What are your biggest challenges related to cloud in your CFO role?",
+      "What are your biggest challenges related to cloud in your VP of IT role?",
+      "What are your biggest challenges related to cloud in your IT Director role?",
+      "What are your biggest challenges related to cloud in your Senior Manager role?",
+      "What are your biggest challenges related to cloud in your Manager role?",
+      "What are your biggest challenges related to cloud in your Solutions Architect role?"
+    ],
+    "ai": [
+      "Which AI use case has delivered the most measurable business impact for you?",
+      "What guardrails do you have in place to prevent AI from creating operational risk?",
+      "Where are you struggling to integrate AI into existing business processes?",
+      "Which part of your organization is resisting AI adoption, and why?",
+      "What data limitations are slowing your AI initiatives?",
+      "What\u2019s one AI experiment that failed \u2014 and how did you course correct?",
+      "How do you ensure your AI projects stay aligned with actual business outcomes?",
+      "Where are your teams duplicating effort due to fragmented AI tooling or strategy?",
+      "What\u2019s the biggest ethical dilemma your team has faced with AI so far?",
+      "How are you preparing your workforce for the shift AI is creating?",
+      "What is your approach to ai in the context of healthcare?",
+      "How do you handle organizational resistance to change around ai?",
+      "What is your approach to ai in the context of finance?",
+      "How are you measuring success with your ai initiatives?",
+      "What are your biggest challenges related to ai in your CIO role?",
+      "How do you ensure scalability and sustainability in your ai approach?",
+      "What lessons have you learned from implementing ai programs?",
+      "What KPIs are most important when tracking ai progress?",
+      "How do you ensure alignment of ai goals with enterprise objectives?",
+      "In what ways is your team driving innovation through ai?",
+      "What is your approach to ai in the context of education?",
+      "What technologies or partners are supporting your ai strategy in education?",
+      "What technologies or partners are supporting your ai strategy in public sector?",
+      "What is your approach to ai in the context of energy?",
+      "What technologies or partners are supporting your ai strategy in energy?",
+      "What technologies or partners are supporting your ai strategy in transportation?",
+      "What is your approach to ai in the context of transportation?",
+      "What technologies or partners are supporting your ai strategy in public safety?",
+      "What technologies or partners are supporting your ai strategy in casino gaming commercial?",
+      "What technologies or partners are supporting your ai strategy in tribal?",
+      "What is your approach to ai in the context of tribal?",
+      "What are your biggest challenges related to ai in your CTO role?",
+      "What technologies or partners are supporting your ai strategy in healthcare?",
+      "What technologies or partners are supporting your ai strategy in retail?",
+      "What is your approach to ai in the context of manufacturing?",
+      "What is your approach to ai in the context of tech?",
+      "What technologies or partners are supporting your ai strategy in tech?",
+      "What is your approach to ai in the context of public sector?",
+      "What is your approach to ai in the context of public safety?",
+      "What is your approach to ai in the context of casino gaming commercial?",
+      "What are your biggest challenges related to ai in your CISO role?",
+      "What technologies or partners are supporting your ai strategy in finance?",
+      "What is your approach to ai in the context of retail?",
+      "What are your biggest challenges related to ai in your CFO role?",
+      "What technologies or partners are supporting your ai strategy in manufacturing?",
+      "What are your biggest challenges related to ai in your VP of IT role?",
+      "What are your biggest challenges related to ai in your IT Director role?",
+      "What are your biggest challenges related to ai in your Senior Manager role?",
+      "What are your biggest challenges related to ai in your Manager role?",
+      "What are your biggest challenges related to ai in your Solutions Architect role?"
+    ],
+    "cybersecurity": [
+      "Where do you see the biggest gap between your security policy and operational reality?",
+      "Which cybersecurity metric is most misunderstood by non-security leaders?",
+      "What\u2019s your most underfunded area of security that you believe is a hidden risk?",
+      "Where do compliance requirements force you into security trade-offs?",
+      "How do you detect misalignments between security operations and DevOps practices?",
+      "What\u2019s your approach to balancing user friction with authentication strength?",
+      "Which attack surface keeps you up at night and why?",
+      "What internal blockers slow down your response to identified vulnerabilities?",
+      "Where have your security investments failed to deliver on intended outcomes?",
+      "How do you justify security spend to executive leadership when there\u2019s no breach?",
+      "What is your approach to cybersecurity in the context of healthcare?",
+      "What are your biggest challenges related to cybersecurity in your CIO role?",
+      "What lessons have you learned from implementing cybersecurity programs?",
+      "How do you handle organizational resistance to change around cybersecurity?",
+      "How are you measuring success with your cybersecurity initiatives?",
+      "What KPIs are most important when tracking cybersecurity progress?",
+      "What technologies or partners are supporting your cybersecurity strategy in manufacturing?",
+      "What is your approach to cybersecurity in the context of manufacturing?",
+      "What is your approach to cybersecurity in the context of tech?",
+      "What technologies or partners are supporting your cybersecurity strategy in tech?",
+      "How do you ensure alignment of cybersecurity goals with enterprise objectives?",
+      "What technologies or partners are supporting your cybersecurity strategy in education?",
+      "In what ways is your team driving innovation through cybersecurity?",
+      "What is your approach to cybersecurity in the context of public sector?",
+      "What is your approach to cybersecurity in the context of energy?",
+      "How do you ensure scalability and sustainability in your cybersecurity approach?",
+      "What is your approach to cybersecurity in the context of transportation?",
+      "What is your approach to cybersecurity in the context of public safety?",
+      "What technologies or partners are supporting your cybersecurity strategy in public safety?",
+      "What is your approach to cybersecurity in the context of casino gaming commercial?",
+      "What technologies or partners are supporting your cybersecurity strategy in casino gaming commercial?",
+      "What is your approach to cybersecurity in the context of tribal?",
+      "What technologies or partners are supporting your cybersecurity strategy in healthcare?",
+      "What is your approach to cybersecurity in the context of finance?",
+      "What technologies or partners are supporting your cybersecurity strategy in finance?",
+      "What are your biggest challenges related to cybersecurity in your CTO role?",
+      "What is your approach to cybersecurity in the context of retail?",
+      "What is your approach to cybersecurity in the context of education?",
+      "What technologies or partners are supporting your cybersecurity strategy in transportation?",
+      "What are your biggest challenges related to cybersecurity in your CISO role?",
+      "What technologies or partners are supporting your cybersecurity strategy in retail?",
+      "What technologies or partners are supporting your cybersecurity strategy in energy?",
+      "What technologies or partners are supporting your cybersecurity strategy in tribal?",
+      "What are your biggest challenges related to cybersecurity in your CFO role?",
+      "What are your biggest challenges related to cybersecurity in your VP of IT role?",
+      "What technologies or partners are supporting your cybersecurity strategy in public sector?",
+      "What are your biggest challenges related to cybersecurity in your IT Director role?",
+      "What are your biggest challenges related to cybersecurity in your Senior Manager role?",
+      "What are your biggest challenges related to cybersecurity in your Manager role?",
+      "What are your biggest challenges related to cybersecurity in your Solutions Architect role?"
+    ],
+    "digital transformation": [
+      "What does digital transformation success look like in your org \u2014 and who defines it?",
+      "Where do your transformation efforts face the most resistance internally?",
+      "Which digital initiatives have stalled, and what\u2019s blocking progress?",
+      "How are you balancing innovation speed with operational stability?",
+      "What legacy decisions are still shaping your digital transformation outcomes?",
+      "How aligned is your executive team on transformation priorities?",
+      "Where are digital tools creating redundancy instead of streamlining workflows?",
+      "How do you decide which processes to digitize first?",
+      "What\u2019s the biggest lesson you\u2019ve learned from a failed digital initiative?",
+      "Where is your digital roadmap at risk due to lack of data or talent?",
+      "What lessons have you learned from implementing digital transformation programs?",
+      "In what ways is your team driving innovation through digital transformation?",
+      "How do you ensure alignment of digital transformation goals with enterprise objectives?",
+      "How are you measuring success with your digital transformation initiatives?",
+      "What is your approach to digital transformation in the context of retail?",
+      "How do you handle organizational resistance to change around digital transformation?",
+      "What KPIs are most important when tracking digital transformation progress?",
+      "What are your biggest challenges related to digital transformation in your CIO role?",
+      "What technologies or partners are supporting your digital transformation strategy in tech?",
+      "How do you ensure scalability and sustainability in your digital transformation approach?",
+      "What is your approach to digital transformation in the context of education?",
+      "What technologies or partners are supporting your digital transformation strategy in education?",
+      "What is your approach to digital transformation in the context of public sector?",
+      "What technologies or partners are supporting your digital transformation strategy in public sector?",
+      "What technologies or partners are supporting your digital transformation strategy in energy?",
+      "What technologies or partners are supporting your digital transformation strategy in transportation?",
+      "What is your approach to digital transformation in the context of transportation?",
+      "What technologies or partners are supporting your digital transformation strategy in public safety?",
+      "What technologies or partners are supporting your digital transformation strategy in casino gaming commercial?",
+      "What is your approach to digital transformation in the context of casino gaming commercial?",
+      "What is your approach to digital transformation in the context of tribal?",
+      "What technologies or partners are supporting your digital transformation strategy in tribal?",
+      "What technologies or partners are supporting your digital transformation strategy in healthcare?",
+      "What is your approach to digital transformation in the context of finance?",
+      "What are your biggest challenges related to digital transformation in your CTO role?",
+      "What technologies or partners are supporting your digital transformation strategy in retail?",
+      "What is your approach to digital transformation in the context of manufacturing?",
+      "What is your approach to digital transformation in the context of tech?",
+      "What is your approach to digital transformation in the context of public safety?",
+      "What is your approach to digital transformation in the context of healthcare?",
+      "What are your biggest challenges related to digital transformation in your CISO role?",
+      "What technologies or partners are supporting your digital transformation strategy in finance?",
+      "What is your approach to digital transformation in the context of energy?",
+      "What are your biggest challenges related to digital transformation in your CFO role?",
+      "What are your biggest challenges related to digital transformation in your VP of IT role?",
+      "What technologies or partners are supporting your digital transformation strategy in manufacturing?",
+      "What are your biggest challenges related to digital transformation in your IT Director role?",
+      "What are your biggest challenges related to digital transformation in your Senior Manager role?",
+      "What are your biggest challenges related to digital transformation in your Manager role?",
+      "What are your biggest challenges related to digital transformation in your Solutions Architect role?"
+    ],
+    "hybrid cloud": [
+      "Where are integration issues showing up between your public and private cloud environments?",
+      "What workloads have proven hardest to migrate or federate in your hybrid model?",
+      "How do you maintain consistent governance across multiple cloud providers?",
+      "What monitoring blind spots exist in your hybrid environment today?",
+      "Where do you see cost or complexity spiraling in your hybrid operations?",
+      "How are you managing policy enforcement across hybrid infrastructure?",
+      "What\u2019s been your biggest hybrid misstep \u2014 and what did it reveal?",
+      "What dependencies still force on-prem decisions despite cloud readiness?",
+      "How do your teams manage shared accountability across environments?",
+      "What\u2019s your vision for hybrid cloud 12 months from now \u2014 and what\u2019s in the way?",
+      "How are you measuring success with your hybrid cloud initiatives?",
+      "What technologies or partners are supporting your hybrid cloud strategy in healthcare?",
+      "How do you handle organizational resistance to change around hybrid cloud?",
+      "What are your biggest challenges related to hybrid cloud in your CIO role?",
+      "What technologies or partners are supporting your hybrid cloud strategy in retail?",
+      "What lessons have you learned from implementing hybrid cloud programs?",
+      "In what ways is your team driving innovation through hybrid cloud?",
+      "What is your approach to hybrid cloud in the context of manufacturing?",
+      "What is your approach to hybrid cloud in the context of tech?",
+      "What technologies or partners are supporting your hybrid cloud strategy in tech?",
+      "What is your approach to hybrid cloud in the context of education?",
+      "What technologies or partners are supporting your hybrid cloud strategy in education?",
+      "What technologies or partners are supporting your hybrid cloud strategy in public sector?",
+      "What KPIs are most important when tracking hybrid cloud progress?",
+      "What is your approach to hybrid cloud in the context of energy?",
+      "How do you ensure alignment of hybrid cloud goals with enterprise objectives?",
+      "What is your approach to hybrid cloud in the context of transportation?",
+      "How do you ensure scalability and sustainability in your hybrid cloud approach?",
+      "What technologies or partners are supporting your hybrid cloud strategy in public safety?",
+      "What is your approach to hybrid cloud in the context of public safety?",
+      "What technologies or partners are supporting your hybrid cloud strategy in casino gaming commercial?",
+      "What technologies or partners are supporting your hybrid cloud strategy in tribal?",
+      "What is your approach to hybrid cloud in the context of tribal?",
+      "What is your approach to hybrid cloud in the context of healthcare?",
+      "What technologies or partners are supporting your hybrid cloud strategy in finance?",
+      "What are your biggest challenges related to hybrid cloud in your CTO role?",
+      "What is your approach to hybrid cloud in the context of retail?",
+      "What technologies or partners are supporting your hybrid cloud strategy in manufacturing?",
+      "What is your approach to hybrid cloud in the context of public sector?",
+      "What technologies or partners are supporting your hybrid cloud strategy in energy?",
+      "What technologies or partners are supporting your hybrid cloud strategy in transportation?",
+      "What are your biggest challenges related to hybrid cloud in your CISO role?",
+      "What is your approach to hybrid cloud in the context of finance?",
+      "What is your approach to hybrid cloud in the context of casino gaming commercial?",
+      "What are your biggest challenges related to hybrid cloud in your CFO role?",
+      "What are your biggest challenges related to hybrid cloud in your VP of IT role?",
+      "What are your biggest challenges related to hybrid cloud in your IT Director role?",
+      "What are your biggest challenges related to hybrid cloud in your Senior Manager role?",
+      "What are your biggest challenges related to hybrid cloud in your Manager role?",
+      "What are your biggest challenges related to hybrid cloud in your Solutions Architect role?"
+    ],
+    "technical debt": [
+      "Which part of your stack creates the most drag on innovation?",
+      "How are you quantifying the business cost of your technical debt?",
+      "Where does debt show up in ways your business users don\u2019t fully see?",
+      "Which systems do you tolerate only because the migration cost feels too high?",
+      "How often are short-term dev choices creating long-term architectural issues?",
+      "What % of engineering time goes to managing vs building?",
+      "How do you balance velocity and debt in your delivery practices?",
+      "What\u2019s your governance process for sunsetting legacy platforms?",
+      "Where does lack of documentation create hidden debt?",
+      "Who owns the debt register \u2014 and is it actionable?",
+      "What technologies or partners are supporting your technical debt strategy in healthcare?",
+      "What lessons have you learned from implementing technical debt programs?",
+      "How do you ensure scalability and sustainability in your technical debt approach?",
+      "What technologies or partners are supporting your technical debt strategy in finance?",
+      "What technologies or partners are supporting your technical debt strategy in retail?",
+      "What are your biggest challenges related to technical debt in your CIO role?",
+      "What technologies or partners are supporting your technical debt strategy in manufacturing?",
+      "What is your approach to technical debt in the context of manufacturing?",
+      "What technologies or partners are supporting your technical debt strategy in tech?",
+      "How do you handle organizational resistance to change around technical debt?",
+      "What is your approach to technical debt in the context of education?",
+      "What KPIs are most important when tracking technical debt progress?",
+      "In what ways is your team driving innovation through technical debt?",
+      "What is your approach to technical debt in the context of public sector?",
+      "How do you ensure alignment of technical debt goals with enterprise objectives?",
+      "What is your approach to technical debt in the context of energy?",
+      "How are you measuring success with your technical debt initiatives?",
+      "What is your approach to technical debt in the context of transportation?",
+      "What technologies or partners are supporting your technical debt strategy in casino gaming commercial?",
+      "What is your approach to technical debt in the context of casino gaming commercial?",
+      "What is your approach to technical debt in the context of tribal?",
+      "What are your biggest challenges related to technical debt in your CTO role?",
+      "What is your approach to technical debt in the context of healthcare?",
+      "What is your approach to technical debt in the context of tech?",
+      "What technologies or partners are supporting your technical debt strategy in education?",
+      "What technologies or partners are supporting your technical debt strategy in public sector?",
+      "What technologies or partners are supporting your technical debt strategy in energy?",
+      "What technologies or partners are supporting your technical debt strategy in transportation?",
+      "What is your approach to technical debt in the context of public safety?",
+      "What technologies or partners are supporting your technical debt strategy in tribal?",
+      "What are your biggest challenges related to technical debt in your CISO role?",
+      "What is your approach to technical debt in the context of finance?",
+      "What is your approach to technical debt in the context of retail?",
+      "What are your biggest challenges related to technical debt in your CFO role?",
+      "What technologies or partners are supporting your technical debt strategy in public safety?",
+      "What are your biggest challenges related to technical debt in your VP of IT role?",
+      "What are your biggest challenges related to technical debt in your IT Director role?",
+      "What are your biggest challenges related to technical debt in your Senior Manager role?",
+      "What are your biggest challenges related to technical debt in your Manager role?",
+      "What are your biggest challenges related to technical debt in your Solutions Architect role?"
+    ],
+    "margin": [
+      "Where are you trading margin for growth \u2014 and is it intentional?",
+      "What hidden costs are eroding your margin despite strong topline?",
+      "How do operational delays impact margin in your business model?",
+      "What\u2019s your most overlooked lever for margin improvement?",
+      "Where do pricing and margin strategies misalign?",
+      "How are vendor or platform choices influencing your margin?",
+      "What margin thresholds trigger a strategic pivot?",
+      "Where are margin KPIs poorly understood across teams?",
+      "What\u2019s one process change that yielded surprising margin gains?",
+      "How do you evaluate margin risk before entering new markets?",
+      "How do you ensure alignment of margin goals with enterprise objectives?",
+      "How do you ensure scalability and sustainability in your margin approach?",
+      "What is your approach to margin in the context of finance?",
+      "How are you measuring success with your margin initiatives?",
+      "In what ways is your team driving innovation through margin?",
+      "What lessons have you learned from implementing margin programs?",
+      "What is your approach to margin in the context of manufacturing?",
+      "What KPIs are most important when tracking margin progress?",
+      "What is your approach to margin in the context of tech?",
+      "How do you handle organizational resistance to change around margin?",
+      "What are your biggest challenges related to margin in your CIO role?",
+      "What technologies or partners are supporting your margin strategy in education?",
+      "What technologies or partners are supporting your margin strategy in public sector?",
+      "What technologies or partners are supporting your margin strategy in energy?",
+      "What is your approach to margin in the context of energy?",
+      "What technologies or partners are supporting your margin strategy in transportation?",
+      "What is your approach to margin in the context of transportation?",
+      "What is your approach to margin in the context of public safety?",
+      "What is your approach to margin in the context of casino gaming commercial?",
+      "What is your approach to margin in the context of tribal?",
+      "What technologies or partners are supporting your margin strategy in healthcare?",
+      "What is your approach to margin in the context of healthcare?",
+      "What technologies or partners are supporting your margin strategy in finance?",
+      "What are your biggest challenges related to margin in your CTO role?",
+      "What is your approach to margin in the context of retail?",
+      "What technologies or partners are supporting your margin strategy in retail?",
+      "What technologies or partners are supporting your margin strategy in manufacturing?",
+      "What technologies or partners are supporting your margin strategy in tech?",
+      "What is your approach to margin in the context of education?",
+      "What is your approach to margin in the context of public sector?",
+      "What technologies or partners are supporting your margin strategy in public safety?",
+      "What technologies or partners are supporting your margin strategy in casino gaming commercial?",
+      "What technologies or partners are supporting your margin strategy in tribal?",
+      "What are your biggest challenges related to margin in your CISO role?",
+      "What are your biggest challenges related to margin in your CFO role?",
+      "What are your biggest challenges related to margin in your VP of IT role?",
+      "What are your biggest challenges related to margin in your IT Director role?",
+      "What are your biggest challenges related to margin in your Senior Manager role?",
+      "What are your biggest challenges related to margin in your Manager role?",
+      "What are your biggest challenges related to margin in your Solutions Architect role?"
+    ],
+    "cost control": [
+      "Where do you lack visibility into true costs?",
+      "Which cost centers consistently exceed plan, and why?",
+      "How do you balance cost control with customer experience?",
+      "What\u2019s been your biggest cost containment win in the past 6 months?",
+      "Where are costs shifting from CapEx to OpEx, and how are you adjusting?",
+      "Which contracts or renewals offer the best opportunity for renegotiation?",
+      "How do your teams validate the ROI of ongoing subscriptions or tools?",
+      "What\u2019s your top concern around fixed vs variable costs today?",
+      "Where does cost control slow down your agility?",
+      "How do you ensure cost decisions align with strategic goals?",
+      "How do you ensure scalability and sustainability in your cost control approach?",
+      "What KPIs are most important when tracking cost control progress?",
+      "In what ways is your team driving innovation through cost control?",
+      "What technologies or partners are supporting your cost control strategy in finance?",
+      "What lessons have you learned from implementing cost control programs?",
+      "What is your approach to cost control in the context of retail?",
+      "What technologies or partners are supporting your cost control strategy in manufacturing?",
+      "How do you ensure alignment of cost control goals with enterprise objectives?",
+      "What technologies or partners are supporting your cost control strategy in tech?",
+      "What is your approach to cost control in the context of tech?",
+      "What is your approach to cost control in the context of education?",
+      "What technologies or partners are supporting your cost control strategy in education?",
+      "How are you measuring success with your cost control initiatives?",
+      "What is your approach to cost control in the context of public sector?",
+      "What technologies or partners are supporting your cost control strategy in energy?",
+      "How do you handle organizational resistance to change around cost control?",
+      "What is your approach to cost control in the context of transportation?",
+      "What are your biggest challenges related to cost control in your CIO role?",
+      "What technologies or partners are supporting your cost control strategy in public safety?",
+      "What is your approach to cost control in the context of casino gaming commercial?",
+      "What technologies or partners are supporting your cost control strategy in casino gaming commercial?",
+      "What technologies or partners are supporting your cost control strategy in tribal?",
+      "What is your approach to cost control in the context of tribal?",
+      "What is your approach to cost control in the context of healthcare?",
+      "What technologies or partners are supporting your cost control strategy in healthcare?",
+      "What are your biggest challenges related to cost control in your CTO role?",
+      "What technologies or partners are supporting your cost control strategy in retail?",
+      "What is your approach to cost control in the context of manufacturing?",
+      "What technologies or partners are supporting your cost control strategy in public sector?",
+      "What is your approach to cost control in the context of energy?",
+      "What technologies or partners are supporting your cost control strategy in transportation?",
+      "What are your biggest challenges related to cost control in your CISO role?",
+      "What is your approach to cost control in the context of finance?",
+      "What are your biggest challenges related to cost control in your CFO role?",
+      "What is your approach to cost control in the context of public safety?",
+      "What are your biggest challenges related to cost control in your VP of IT role?",
+      "What are your biggest challenges related to cost control in your IT Director role?",
+      "What are your biggest challenges related to cost control in your Senior Manager role?",
+      "What are your biggest challenges related to cost control in your Manager role?",
+      "What are your biggest challenges related to cost control in your Solutions Architect role?"
+    ],
+    "revenue": [
+      "What\u2019s your most scalable revenue growth lever today?",
+      "Where are you seeing revenue plateau despite investment?",
+      "What revenue streams are misaligned with your brand promise?",
+      "How has customer behavior shifted your revenue model in the last year?",
+      "What barriers slow down revenue realization after customer acquisition?",
+      "Which internal processes are bottlenecks to faster revenue capture?",
+      "How are you using data to influence upsell and cross-sell performance?",
+      "Where do finance and sales teams clash on revenue forecasting?",
+      "What\u2019s one area of revenue leakage that surprised your team?",
+      "How do you prioritize predictable vs exploratory revenue bets?",
+      "In what ways is your team driving innovation through revenue?",
+      "What is your approach to revenue in the context of healthcare?",
+      "How do you handle organizational resistance to change around revenue?",
+      "What KPIs are most important when tracking revenue progress?",
+      "What are your biggest challenges related to revenue in your CIO role?",
+      "What lessons have you learned from implementing revenue programs?",
+      "How do you ensure alignment of revenue goals with enterprise objectives?",
+      "What is your approach to revenue in the context of manufacturing?",
+      "What technologies or partners are supporting your revenue strategy in tech?",
+      "How do you ensure scalability and sustainability in your revenue approach?",
+      "How are you measuring success with your revenue initiatives?",
+      "What is your approach to revenue in the context of public sector?",
+      "What technologies or partners are supporting your revenue strategy in public sector?",
+      "What technologies or partners are supporting your revenue strategy in energy?",
+      "What is your approach to revenue in the context of energy?",
+      "What technologies or partners are supporting your revenue strategy in transportation?",
+      "What technologies or partners are supporting your revenue strategy in public safety?",
+      "What is your approach to revenue in the context of public safety?",
+      "What is your approach to revenue in the context of casino gaming commercial?",
+      "What technologies or partners are supporting your revenue strategy in casino gaming commercial?",
+      "What is your approach to revenue in the context of tribal?",
+      "What technologies or partners are supporting your revenue strategy in tribal?",
+      "What are your biggest challenges related to revenue in your CTO role?",
+      "What technologies or partners are supporting your revenue strategy in healthcare?",
+      "What is your approach to revenue in the context of finance?",
+      "What technologies or partners are supporting your revenue strategy in retail?",
+      "What is your approach to revenue in the context of retail?",
+      "What technologies or partners are supporting your revenue strategy in manufacturing?",
+      "What is your approach to revenue in the context of tech?",
+      "What technologies or partners are supporting your revenue strategy in education?",
+      "What are your biggest challenges related to revenue in your CISO role?",
+      "What technologies or partners are supporting your revenue strategy in finance?",
+      "What is your approach to revenue in the context of education?",
+      "What are your biggest challenges related to revenue in your CFO role?",
+      "What is your approach to revenue in the context of transportation?",
+      "What are your biggest challenges related to revenue in your VP of IT role?",
+      "What are your biggest challenges related to revenue in your IT Director role?",
+      "What are your biggest challenges related to revenue in your Senior Manager role?",
+      "What are your biggest challenges related to revenue in your Manager role?",
+      "What are your biggest challenges related to revenue in your Solutions Architect role?"
+    ],
+    "regulatory": [
+      "Where do regulatory changes cause the most disruption to your operations?",
+      "How do you track and interpret new compliance obligations across regions?",
+      "Which teams feel the most strain when adapting to regulation shifts?",
+      "What\u2019s your playbook for avoiding last-minute compliance fire drills?",
+      "Where do audits most often reveal blind spots?",
+      "How do you factor compliance into your product roadmap?",
+      "Which regulation is causing disproportionate cost or effort?",
+      "How are you handling conflicting global regulations?",
+      "What\u2019s your biggest compliance concern in the next 12 months?",
+      "How are regulatory risks communicated to the board?",
+      "What lessons have you learned from implementing regulatory programs?",
+      "What technologies or partners are supporting your regulatory strategy in healthcare?",
+      "In what ways is your team driving innovation through regulatory?",
+      "What are your biggest challenges related to regulatory in your CIO role?",
+      "How do you handle organizational resistance to change around regulatory?",
+      "What technologies or partners are supporting your regulatory strategy in retail?",
+      "What is your approach to regulatory in the context of manufacturing?",
+      "What technologies or partners are supporting your regulatory strategy in manufacturing?",
+      "How do you ensure scalability and sustainability in your regulatory approach?",
+      "How are you measuring success with your regulatory initiatives?",
+      "What is your approach to regulatory in the context of education?",
+      "How do you ensure alignment of regulatory goals with enterprise objectives?",
+      "What is your approach to regulatory in the context of public sector?",
+      "What technologies or partners are supporting your regulatory strategy in public sector?",
+      "What technologies or partners are supporting your regulatory strategy in energy?",
+      "What KPIs are most important when tracking regulatory progress?",
+      "What is your approach to regulatory in the context of transportation?",
+      "What technologies or partners are supporting your regulatory strategy in transportation?",
+      "What technologies or partners are supporting your regulatory strategy in public safety?",
+      "What is your approach to regulatory in the context of casino gaming commercial?",
+      "What technologies or partners are supporting your regulatory strategy in casino gaming commercial?",
+      "What is your approach to regulatory in the context of tribal?",
+      "What technologies or partners are supporting your regulatory strategy in tribal?",
+      "What is your approach to regulatory in the context of finance?",
+      "What technologies or partners are supporting your regulatory strategy in finance?",
+      "What is your approach to regulatory in the context of retail?",
+      "What are your biggest challenges related to regulatory in your CTO role?",
+      "What technologies or partners are supporting your regulatory strategy in tech?",
+      "What technologies or partners are supporting your regulatory strategy in education?",
+      "What is your approach to regulatory in the context of energy?",
+      "What is your approach to regulatory in the context of public safety?",
+      "What are your biggest challenges related to regulatory in your CISO role?",
+      "What is your approach to regulatory in the context of tech?",
+      "What are your biggest challenges related to regulatory in your CFO role?",
+      "What is your approach to regulatory in the context of healthcare?",
+      "What are your biggest challenges related to regulatory in your VP of IT role?",
+      "What are your biggest challenges related to regulatory in your IT Director role?",
+      "What are your biggest challenges related to regulatory in your Senior Manager role?",
+      "What are your biggest challenges related to regulatory in your Manager role?",
+      "What are your biggest challenges related to regulatory in your Solutions Architect role?"
+    ],
+    "remote work": [
+      "What\u2019s your biggest infrastructure or support gap for remote teams?",
+      "How do you measure productivity in hybrid or distributed models?",
+      "Where has remote work improved outcomes \u2014 and where has it worsened them?",
+      "How do you manage culture and cohesion without physical proximity?",
+      "What\u2019s your remote onboarding experience like for new hires?",
+      "How do you ensure equity across remote vs on-site roles?",
+      "Which collaboration tools are overused or underdelivering?",
+      "How has your IT security model evolved with remote expansion?",
+      "What burnout signals are you monitoring in distributed teams?",
+      "How do you define success in your hybrid workforce strategy?",
+      "In what ways is your team driving innovation through remote work?",
+      "What lessons have you learned from implementing remote work programs?",
+      "What is your approach to remote work in the context of finance?",
+      "How do you ensure scalability and sustainability in your remote work approach?",
+      "What technologies or partners are supporting your remote work strategy in retail?",
+      "What KPIs are most important when tracking remote work progress?",
+      "How are you measuring success with your remote work initiatives?",
+      "How do you ensure alignment of remote work goals with enterprise objectives?",
+      "What technologies or partners are supporting your remote work strategy in tech?",
+      "What are your biggest challenges related to remote work in your CIO role?",
+      "What technologies or partners are supporting your remote work strategy in education?",
+      "What is your approach to remote work in the context of education?",
+      "What is your approach to remote work in the context of public sector?",
+      "How do you handle organizational resistance to change around remote work?",
+      "What technologies or partners are supporting your remote work strategy in energy?",
+      "What is your approach to remote work in the context of transportation?",
+      "What is your approach to remote work in the context of public safety?",
+      "What technologies or partners are supporting your remote work strategy in public safety?",
+      "What technologies or partners are supporting your remote work strategy in casino gaming commercial?",
+      "What is your approach to remote work in the context of tribal?",
+      "What technologies or partners are supporting your remote work strategy in tribal?",
+      "What are your biggest challenges related to remote work in your CTO role?",
+      "What is your approach to remote work in the context of healthcare?",
+      "What technologies or partners are supporting your remote work strategy in finance?",
+      "What is your approach to remote work in the context of retail?",
+      "What technologies or partners are supporting your remote work strategy in manufacturing?",
+      "What is your approach to remote work in the context of manufacturing?",
+      "What is your approach to remote work in the context of tech?",
+      "What technologies or partners are supporting your remote work strategy in public sector?",
+      "What is your approach to remote work in the context of energy?",
+      "What technologies or partners are supporting your remote work strategy in transportation?",
+      "What is your approach to remote work in the context of casino gaming commercial?",
+      "What are your biggest challenges related to remote work in your CISO role?",
+      "What are your biggest challenges related to remote work in your CFO role?",
+      "What technologies or partners are supporting your remote work strategy in healthcare?",
+      "What are your biggest challenges related to remote work in your VP of IT role?",
+      "What are your biggest challenges related to remote work in your IT Director role?",
+      "What are your biggest challenges related to remote work in your Senior Manager role?",
+      "What are your biggest challenges related to remote work in your Manager role?",
+      "What are your biggest challenges related to remote work in your Solutions Architect role?"
+    ],
+    "talent": [
+      "Where are you facing the steepest talent gaps?",
+      "How do you retain high performers in a competitive talent market?",
+      "What capabilities are you building internally vs buying externally?",
+      "Where does your org design hinder talent development?",
+      "How are you addressing skills obsolescence across teams?",
+      "Which roles are hardest to fill \u2014 and why?",
+      "What feedback loops exist between attrition and onboarding?",
+      "How do you keep institutional knowledge from walking out the door?",
+      "How is your talent strategy adjusting to tech evolution?",
+      "What does internal mobility look like in practice?",
+      "How do you ensure scalability and sustainability in your talent approach?",
+      "What is your approach to talent in the context of healthcare?",
+      "What technologies or partners are supporting your talent strategy in finance?",
+      "What are your biggest challenges related to talent in your CIO role?",
+      "In what ways is your team driving innovation through talent?",
+      "What technologies or partners are supporting your talent strategy in retail?",
+      "What lessons have you learned from implementing talent programs?",
+      "How do you ensure alignment of talent goals with enterprise objectives?",
+      "How do you handle organizational resistance to change around talent?",
+      "What KPIs are most important when tracking talent progress?",
+      "What technologies or partners are supporting your talent strategy in education?",
+      "What is your approach to talent in the context of education?",
+      "How are you measuring success with your talent initiatives?",
+      "What is your approach to talent in the context of public sector?",
+      "What is your approach to talent in the context of energy?",
+      "What technologies or partners are supporting your talent strategy in energy?",
+      "What technologies or partners are supporting your talent strategy in transportation?",
+      "What is your approach to talent in the context of transportation?",
+      "What is your approach to talent in the context of public safety?",
+      "What technologies or partners are supporting your talent strategy in public safety?",
+      "What is your approach to talent in the context of casino gaming commercial?",
+      "What technologies or partners are supporting your talent strategy in casino gaming commercial?",
+      "What technologies or partners are supporting your talent strategy in tribal?",
+      "What is your approach to talent in the context of tribal?",
+      "What are your biggest challenges related to talent in your CTO role?",
+      "What technologies or partners are supporting your talent strategy in healthcare?",
+      "What is your approach to talent in the context of finance?",
+      "What is your approach to talent in the context of retail?",
+      "What technologies or partners are supporting your talent strategy in manufacturing?",
+      "What is your approach to talent in the context of manufacturing?",
+      "What technologies or partners are supporting your talent strategy in tech?",
+      "What is your approach to talent in the context of tech?",
+      "What technologies or partners are supporting your talent strategy in public sector?",
+      "What are your biggest challenges related to talent in your CISO role?",
+      "What are your biggest challenges related to talent in your CFO role?",
+      "What are your biggest challenges related to talent in your VP of IT role?",
+      "What are your biggest challenges related to talent in your IT Director role?",
+      "What are your biggest challenges related to talent in your Senior Manager role?",
+      "What are your biggest challenges related to talent in your Manager role?",
+      "What are your biggest challenges related to talent in your Solutions Architect role?"
+    ],
+    "compliance": [
+      "Where do you find the biggest compliance-policy-to-execution gap?",
+      "How do you ensure non-technical teams follow security/compliance processes?",
+      "What manual steps could cause future compliance failures?",
+      "How are you documenting control effectiveness and testing frequency?",
+      "What\u2019s your escalation process when controls fail?",
+      "Which compliance mandates generate the most internal tension?",
+      "How do you balance speed of delivery with control rigor?",
+      "What\u2019s your audit readiness posture today?",
+      "Where is compliance becoming a competitive advantage or blocker?",
+      "What part of your compliance framework still relies on spreadsheets?",
+      "How do you ensure alignment of compliance goals with enterprise objectives?",
+      "What are your biggest challenges related to compliance in your CIO role?",
+      "How do you handle organizational resistance to change around compliance?",
+      "What KPIs are most important when tracking compliance progress?",
+      "In what ways is your team driving innovation through compliance?",
+      "What is your approach to compliance in the context of retail?",
+      "What technologies or partners are supporting your compliance strategy in manufacturing?",
+      "How do you ensure scalability and sustainability in your compliance approach?",
+      "What is your approach to compliance in the context of tech?",
+      "What technologies or partners are supporting your compliance strategy in tech?",
+      "How are you measuring success with your compliance initiatives?",
+      "What is your approach to compliance in the context of education?",
+      "What lessons have you learned from implementing compliance programs?",
+      "What is your approach to compliance in the context of public sector?",
+      "What is your approach to compliance in the context of energy?",
+      "What technologies or partners are supporting your compliance strategy in energy?",
+      "What is your approach to compliance in the context of transportation?",
+      "What technologies or partners are supporting your compliance strategy in transportation?",
+      "What is your approach to compliance in the context of public safety?",
+      "What technologies or partners are supporting your compliance strategy in casino gaming commercial?",
+      "What is your approach to compliance in the context of healthcare?",
+      "What technologies or partners are supporting your compliance strategy in healthcare?",
+      "What are your biggest challenges related to compliance in your CTO role?",
+      "What is your approach to compliance in the context of finance?",
+      "What technologies or partners are supporting your compliance strategy in retail?",
+      "What technologies or partners are supporting your compliance strategy in education?",
+      "What technologies or partners are supporting your compliance strategy in public sector?",
+      "What is your approach to compliance in the context of casino gaming commercial?",
+      "What technologies or partners are supporting your compliance strategy in tribal?",
+      "What is your approach to compliance in the context of tribal?",
+      "What technologies or partners are supporting your compliance strategy in finance?",
+      "What is your approach to compliance in the context of manufacturing?",
+      "What are your biggest challenges related to compliance in your CISO role?",
+      "What are your biggest challenges related to compliance in your CFO role?",
+      "What technologies or partners are supporting your compliance strategy in public safety?",
+      "What are your biggest challenges related to compliance in your VP of IT role?",
+      "What are your biggest challenges related to compliance in your IT Director role?",
+      "What are your biggest challenges related to compliance in your Senior Manager role?",
+      "What are your biggest challenges related to compliance in your Manager role?",
+      "What are your biggest challenges related to compliance in your Solutions Architect role?"
+    ],
+    "sustainability": [
+      "How are you measuring progress on your sustainability goals?",
+      "Where are short-term pressures conflicting with long-term sustainability?",
+      "How is ESG integrated into vendor and supplier decisions?",
+      "Which sustainability metric is most meaningful to your leadership?",
+      "Where does sustainability show up in customer decision-making?",
+      "How do you balance reporting rigor with operational feasibility?",
+      "What\u2019s your carbon data quality and traceability process?",
+      "Where are sustainability efforts stuck at the pilot stage?",
+      "What are your biggest internal blockers to scaling green initiatives?",
+      "How do you ensure accountability beyond public commitments?",
+      "How do you ensure alignment of sustainability goals with enterprise objectives?",
+      "How do you handle organizational resistance to change around sustainability?",
+      "In what ways is your team driving innovation through sustainability?",
+      "What is your approach to sustainability in the context of finance?",
+      "What are your biggest challenges related to sustainability in your CIO role?",
+      "What is your approach to sustainability in the context of retail?",
+      "What is your approach to sustainability in the context of manufacturing?",
+      "How are you measuring success with your sustainability initiatives?",
+      "What KPIs are most important when tracking sustainability progress?",
+      "What technologies or partners are supporting your sustainability strategy in tech?",
+      "What technologies or partners are supporting your sustainability strategy in education?",
+      "How do you ensure scalability and sustainability in your sustainability approach?",
+      "What technologies or partners are supporting your sustainability strategy in public sector?",
+      "What lessons have you learned from implementing sustainability programs?",
+      "What technologies or partners are supporting your sustainability strategy in energy?",
+      "What is your approach to sustainability in the context of transportation?",
+      "What is your approach to sustainability in the context of public safety?",
+      "What technologies or partners are supporting your sustainability strategy in public safety?",
+      "What technologies or partners are supporting your sustainability strategy in casino gaming commercial?",
+      "What is your approach to sustainability in the context of casino gaming commercial?",
+      "What is your approach to sustainability in the context of healthcare?",
+      "What are your biggest challenges related to sustainability in your CTO role?",
+      "What technologies or partners are supporting your sustainability strategy in manufacturing?",
+      "What is your approach to sustainability in the context of tech?",
+      "What is your approach to sustainability in the context of energy?",
+      "What technologies or partners are supporting your sustainability strategy in transportation?",
+      "What technologies or partners are supporting your sustainability strategy in tribal?",
+      "What is your approach to sustainability in the context of tribal?",
+      "What are your biggest challenges related to sustainability in your CISO role?",
+      "What technologies or partners are supporting your sustainability strategy in healthcare?",
+      "What technologies or partners are supporting your sustainability strategy in retail?",
+      "What is your approach to sustainability in the context of education?",
+      "What is your approach to sustainability in the context of public sector?",
+      "What are your biggest challenges related to sustainability in your CFO role?",
+      "What technologies or partners are supporting your sustainability strategy in finance?",
+      "What are your biggest challenges related to sustainability in your VP of IT role?",
+      "What are your biggest challenges related to sustainability in your IT Director role?",
+      "What are your biggest challenges related to sustainability in your Senior Manager role?",
+      "What are your biggest challenges related to sustainability in your Manager role?",
+      "What are your biggest challenges related to sustainability in your Solutions Architect role?"
+    ],
+    "customer experience": [
+      "Where do customers experience the most friction today?",
+      "Which CX investments have moved the needle \u2014 and which haven\u2019t?",
+      "How do you gather real-time customer insight and act on it?",
+      "Where are backend limitations creating frontend CX gaps?",
+      "What does personalization mean for your customer strategy?",
+      "Where do customers fall through the cracks between channels?",
+      "How aligned are ops and CX teams on service delivery KPIs?",
+      "What\u2019s the most surprising feedback you've acted on recently?",
+      "How do you turn support data into proactive experience design?",
+      "What\u2019s the biggest CX blind spot in your org right now?",
+      "How do you handle organizational resistance to change around customer experience?",
+      "What are your biggest challenges related to customer experience in your CIO role?",
+      "In what ways is your team driving innovation through customer experience?",
+      "How do you ensure scalability and sustainability in your customer experience approach?",
+      "What is your approach to customer experience in the context of retail?",
+      "How are you measuring success with your customer experience initiatives?",
+      "What technologies or partners are supporting your customer experience strategy in manufacturing?",
+      "What is your approach to customer experience in the context of manufacturing?",
+      "What is your approach to customer experience in the context of tech?",
+      "What technologies or partners are supporting your customer experience strategy in tech?",
+      "What is your approach to customer experience in the context of education?",
+      "What lessons have you learned from implementing customer experience programs?",
+      "What is your approach to customer experience in the context of public sector?",
+      "What technologies or partners are supporting your customer experience strategy in public sector?",
+      "What is your approach to customer experience in the context of energy?",
+      "What KPIs are most important when tracking customer experience progress?",
+      "How do you ensure alignment of customer experience goals with enterprise objectives?",
+      "What technologies or partners are supporting your customer experience strategy in public safety?",
+      "What technologies or partners are supporting your customer experience strategy in tribal?",
+      "What is your approach to customer experience in the context of tribal?",
+      "What technologies or partners are supporting your customer experience strategy in healthcare?",
+      "What is your approach to customer experience in the context of healthcare?",
+      "What technologies or partners are supporting your customer experience strategy in finance?",
+      "What is your approach to customer experience in the context of finance?",
+      "What are your biggest challenges related to customer experience in your CTO role?",
+      "What technologies or partners are supporting your customer experience strategy in education?",
+      "What technologies or partners are supporting your customer experience strategy in energy?",
+      "What is your approach to customer experience in the context of transportation?",
+      "What technologies or partners are supporting your customer experience strategy in transportation?",
+      "What is your approach to customer experience in the context of public safety?",
+      "What is your approach to customer experience in the context of casino gaming commercial?",
+      "What technologies or partners are supporting your customer experience strategy in casino gaming commercial?",
+      "What are your biggest challenges related to customer experience in your CISO role?",
+      "What technologies or partners are supporting your customer experience strategy in retail?",
+      "What are your biggest challenges related to customer experience in your CFO role?",
+      "What are your biggest challenges related to customer experience in your VP of IT role?",
+      "What are your biggest challenges related to customer experience in your IT Director role?",
+      "What are your biggest challenges related to customer experience in your Senior Manager role?",
+      "What are your biggest challenges related to customer experience in your Manager role?",
+      "What are your biggest challenges related to customer experience in your Solutions Architect role?"
+    ],
+    "supply chain": [
+      "Where is your supply chain still vulnerable post-COVID?",
+      "How are you balancing cost vs resiliency in your supply chain strategy?",
+      "What\u2019s your backup plan for single-source dependencies?",
+      "Where are you blind to tier-2 or tier-3 supplier risks?",
+      "How automated is your supply chain decision-making?",
+      "Where are delays most common \u2014 and how predictable are they?",
+      "How do you incorporate ESG or DEI criteria in sourcing?",
+      "What\u2019s your strategy for nearshoring or reshoring?",
+      "Where are you struggling to synchronize physical and digital flows?",
+      "What part of your supply chain would benefit most from modernization?",
+      "What technologies or partners are supporting your supply chain strategy in healthcare?",
+      "How are you measuring success with your supply chain initiatives?",
+      "In what ways is your team driving innovation through supply chain?",
+      "What is your approach to supply chain in the context of finance?",
+      "What KPIs are most important when tracking supply chain progress?",
+      "What are your biggest challenges related to supply chain in your CIO role?",
+      "What is your approach to supply chain in the context of manufacturing?",
+      "How do you ensure scalability and sustainability in your supply chain approach?",
+      "What is your approach to supply chain in the context of tech?",
+      "What technologies or partners are supporting your supply chain strategy in tech?",
+      "How do you handle organizational resistance to change around supply chain?",
+      "What technologies or partners are supporting your supply chain strategy in education?",
+      "How do you ensure alignment of supply chain goals with enterprise objectives?",
+      "What lessons have you learned from implementing supply chain programs?",
+      "What technologies or partners are supporting your supply chain strategy in energy?",
+      "What is your approach to supply chain in the context of energy?",
+      "What is your approach to supply chain in the context of transportation?",
+      "What technologies or partners are supporting your supply chain strategy in transportation?",
+      "What is your approach to supply chain in the context of public safety?",
+      "What is your approach to supply chain in the context of casino gaming commercial?",
+      "What technologies or partners are supporting your supply chain strategy in tribal?",
+      "What is your approach to supply chain in the context of healthcare?",
+      "What are your biggest challenges related to supply chain in your CTO role?",
+      "What technologies or partners are supporting your supply chain strategy in finance?",
+      "What technologies or partners are supporting your supply chain strategy in manufacturing?",
+      "What is your approach to supply chain in the context of education?",
+      "What is your approach to supply chain in the context of public sector?",
+      "What technologies or partners are supporting your supply chain strategy in public sector?",
+      "What technologies or partners are supporting your supply chain strategy in public safety?",
+      "What technologies or partners are supporting your supply chain strategy in casino gaming commercial?",
+      "What is your approach to supply chain in the context of tribal?",
+      "What are your biggest challenges related to supply chain in your CISO role?",
+      "What are your biggest challenges related to supply chain in your CFO role?",
+      "What technologies or partners are supporting your supply chain strategy in retail?",
+      "What is your approach to supply chain in the context of retail?",
+      "What are your biggest challenges related to supply chain in your VP of IT role?",
+      "What are your biggest challenges related to supply chain in your IT Director role?",
+      "What are your biggest challenges related to supply chain in your Senior Manager role?",
+      "What are your biggest challenges related to supply chain in your Manager role?",
+      "What are your biggest challenges related to supply chain in your Solutions Architect role?"
+    ],
+    "services": [
+      "How do you define success in your services/managed services relationships?",
+      "Where have you outgrown existing service provider capabilities?",
+      "What are your biggest concerns about lock-in with managed services?",
+      "Where do SLAs fall short of actual business expectations?",
+      "How do you validate the ROI of service partnerships?",
+      "Where are your services partners lacking industry-specific expertise?",
+      "How do you handle vendor transitions without disrupting delivery?",
+      "What\u2019s your internal vs external services mix \u2014 and why?",
+      "How do you hold partners accountable for strategic outcomes?",
+      "What triggers a service re-evaluation in your organization?",
+      "What lessons have you learned from implementing services programs?",
+      "What are your biggest challenges related to services in your CIO role?",
+      "How do you ensure alignment of services goals with enterprise objectives?",
+      "How do you handle organizational resistance to change around services?",
+      "In what ways is your team driving innovation through services?",
+      "How are you measuring success with your services initiatives?",
+      "What KPIs are most important when tracking services progress?",
+      "What is your approach to services in the context of manufacturing?",
+      "What is your approach to services in the context of tech?",
+      "How do you ensure scalability and sustainability in your services approach?",
+      "What technologies or partners are supporting your services strategy in education?",
+      "What is your approach to services in the context of public sector?",
+      "What technologies or partners are supporting your services strategy in public sector?",
+      "What is your approach to services in the context of energy?",
+      "What is your approach to services in the context of transportation?",
+      "What technologies or partners are supporting your services strategy in transportation?",
+      "What technologies or partners are supporting your services strategy in public safety?",
+      "What is your approach to services in the context of casino gaming commercial?",
+      "What technologies or partners are supporting your services strategy in casino gaming commercial?",
+      "What is your approach to services in the context of tribal?",
+      "What technologies or partners are supporting your services strategy in tribal?",
+      "What is your approach to services in the context of healthcare?",
+      "What are your biggest challenges related to services in your CTO role?",
+      "What is your approach to services in the context of finance?",
+      "What is your approach to services in the context of retail?",
+      "What technologies or partners are supporting your services strategy in retail?",
+      "What technologies or partners are supporting your services strategy in manufacturing?",
+      "What technologies or partners are supporting your services strategy in tech?",
+      "What technologies or partners are supporting your services strategy in energy?",
+      "What is your approach to services in the context of public safety?",
+      "What are your biggest challenges related to services in your CISO role?",
+      "What technologies or partners are supporting your services strategy in healthcare?",
+      "What technologies or partners are supporting your services strategy in finance?",
+      "What is your approach to services in the context of education?",
+      "What are your biggest challenges related to services in your CFO role?",
+      "What are your biggest challenges related to services in your VP of IT role?",
+      "What are your biggest challenges related to services in your IT Director role?",
+      "What are your biggest challenges related to services in your Senior Manager role?",
+      "What are your biggest challenges related to services in your Manager role?",
+      "What are your biggest challenges related to services in your Solutions Architect role?"
+    ]
+  }
+}
