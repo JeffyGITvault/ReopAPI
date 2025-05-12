@@ -1,1 +1,4 @@
 .env
+logs/
+logs/question_bank.log
+logs/question_bank_analytics.jsonl
