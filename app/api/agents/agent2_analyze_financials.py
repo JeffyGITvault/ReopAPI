@@ -336,7 +336,7 @@ def _extract_metrics_from_df(df, metrics_data: dict, metrics_found: set) -> None
 def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[str, Any]:
     """
     Agent 2: Analyze financials from SEC data, fetch news signals, and with LLM.
-    Returns a dict with financial analysis or error.
+    Returns a dict with financial analysis or error, and always includes raw_tables.
     """
     logger.info("Starting analyze_financials for company: %s", sec_data.get("company_name", "Unknown"))
     try:
@@ -344,17 +344,18 @@ def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[
         filings = sec_data.get("filings", [])
         if not filings:
             logger.error("No 10-Q filings found for financial analysis. Company: %s", company_name)
-            return {"error": "No 10-Q filings found for financial analysis.", "notes": [], "stage": "fetch_filings"}
+            return {"error": "No 10-Q filings found for financial analysis.", "notes": [], "stage": "fetch_filings", "raw_tables": []}
         # --- Refactored: Fetch and extract filings ---
         filings_result = _fetch_and_extract_filings(filings, company_name)
         if "error" in filings_result:
             logger.error("Error in _fetch_and_extract_filings: %s", filings_result["error"])
-            return filings_result
+            return {**filings_result, "raw_tables": filings_result.get("all_raw_tables", [])}
         extracted_filings = filings_result["extracted_filings"]
         extraction_notes = filings_result["extraction_notes"]
         python_metrics = filings_result["python_metrics"]
         python_metrics_found = filings_result["python_metrics_found"]
         missing_filings = filings_result["missing_filings"]
+        all_raw_tables = filings_result["all_raw_tables"]
         # --- If all required metrics found, use Python extraction ---
         if python_metrics and len(python_metrics_found) == len(REQUIRED_METRICS):
             extraction_notes.append("All required metrics extracted via Python table parsing.")
@@ -368,12 +369,13 @@ def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[
                 "suggested_graph": "",
                 "questions_to_ask": [],
                 "notes": extraction_notes,
-                "source": "python"
+                "source": "python",
+                "raw_tables": all_raw_tables
             }
         # --- Otherwise, fallback to LLM/RAG as before ---
         if not extracted_filings:
             logger.error("No valid 10-Q filings could be processed for company: %s", company_name)
-            return {"error": "No valid 10-Q filings could be processed.", "notes": extraction_notes, "stage": "fetch_and_extract_filings"}
+            return {"error": "No valid 10-Q filings could be processed.", "notes": extraction_notes, "stage": "fetch_and_extract_filings", "raw_tables": all_raw_tables}
         if missing_filings:
             extraction_notes.append(f"{missing_filings} filings could not be processed and were skipped.")
         # Always use Google Custom Search for news enrichment
@@ -397,9 +399,10 @@ def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[
         llm_result = _llm_fallback_analysis(prompt, extraction_notes)
         if "error" in llm_result:
             logger.error("LLM fallback analysis failed: %s", llm_result["error"])
-            return llm_result
+            return {**llm_result, "raw_tables": all_raw_tables}
         # --- Refactored: Output normalization ---
         normalized_output = _normalize_llm_output(llm_result, extraction_notes, company_name)
+        normalized_output["raw_tables"] = all_raw_tables
         return normalized_output
     except Exception as e:
         logger.error(f"Agent 2 - Financial analysis failed: {e}", exc_info=True)
@@ -410,13 +413,14 @@ def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[
             "suggested_graph": "",
             "questions_to_ask": [],
             "notes": [],
-            "stage": "analyze_financials_exception"
+            "stage": "analyze_financials_exception",
+            "raw_tables": []
         }
 
 def _fetch_and_extract_filings(filings: list, company_name: str) -> dict:
     """
-    Helper to fetch and extract 10-Q filings, returning extracted sections, notes, and metrics.
-    Returns a dict with keys: extracted_filings, extraction_notes, python_metrics, python_metrics_found, missing_filings.
+    Helper to fetch and extract 10-Q filings, returning extracted sections, notes, metrics, and all raw tables.
+    Returns a dict with keys: extracted_filings, extraction_notes, python_metrics, python_metrics_found, missing_filings, all_raw_tables.
     Returns {"error": ..., "notes": [...], "stage": ...} on error.
     """
     logger.info("Fetching and extracting %d filings for company: %s", len(filings), company_name)
@@ -425,6 +429,7 @@ def _fetch_and_extract_filings(filings: list, company_name: str) -> dict:
     extraction_notes = []
     python_metrics = {}
     python_metrics_found = set()
+    all_raw_tables = []  # New: collect all tables for all filings
     for filing in filings:
         url = filing.get("html_url")
         if not url or url == "Unavailable":
@@ -443,13 +448,23 @@ def _fetch_and_extract_filings(filings: list, company_name: str) -> dict:
                     extracted[key] = safe_truncate_prompt(section, 32000)
             extracted["filing_date"] = filing.get("filing_date", "")
             extracted["title"] = filing.get("title", company_name)
-            extracted_filings.append(extracted)
             # --- Try Python table extraction ---
             html_tables = extracted.get("item1_tables", [])
             metrics, found = extract_metrics_from_html_tables(html_tables)
             if metrics:
                 python_metrics.update(metrics)
             python_metrics_found.update(found)
+            # --- Collect all tables for this filing ---
+            filing_tables = []
+            for table in html_tables:
+                rows = [row.split(',') for row in table.split('\n') if row.strip()]
+                filing_tables.append(rows)
+            all_raw_tables.append({
+                "filing_date": extracted["filing_date"],
+                "title": extracted["title"],
+                "tables": filing_tables
+            })
+            extracted_filings.append(extracted)
         except Exception as e:
             logger.warning(f"Failed to fetch or extract filing at {url}: {e}", exc_info=True)
             extraction_notes.append(f"Failed to fetch or extract filing at {url}: {e}")
@@ -462,7 +477,8 @@ def _fetch_and_extract_filings(filings: list, company_name: str) -> dict:
         "extraction_notes": extraction_notes,
         "python_metrics": python_metrics,
         "python_metrics_found": python_metrics_found,
-        "missing_filings": missing_filings
+        "missing_filings": missing_filings,
+        "all_raw_tables": all_raw_tables  # New
     }
 
 def generate_synthetic_signals(company_name: str) -> str:
