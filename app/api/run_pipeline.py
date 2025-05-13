@@ -55,9 +55,15 @@ async def run_pipeline(payload: PipelineRequest):
         is_public = bool(sec_data.get("filings")) and not sec_data.get("error")
         private_company_analysis = None
         if is_public:
+            # Extract the extracted_sections from the most recent filing
+            filings = sec_data.get("filings", [])
+            if filings and filings[0].get("extracted_sections"):
+                extracted_sections = filings[0]["extracted_sections"]
+            else:
+                extracted_sections = {}
             # === Launch Agent 2, 3, and 4 concurrently ===
             tasks = [
-                asyncio.to_thread(analyze_financials, sec_data, additional_context),
+                asyncio.to_thread(analyze_financials, extracted_sections, additional_context),
                 asyncio.to_thread(profile_people, people, company, titles),
                 # Agent 4 will be called after Agent 2 and 3 finish, to allow dynamic contexting
             ]

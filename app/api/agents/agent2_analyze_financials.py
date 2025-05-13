@@ -331,36 +331,45 @@ def _extract_metrics_from_df(df, metrics_data: dict, metrics_found: set) -> None
     except Exception as e:
         logger.warning(f"Error extracting metrics from DataFrame: {e}", exc_info=True)
 
-def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[str, Any]:
+def analyze_financials(extracted_data: dict, additional_context: dict = None) -> Dict[str, Any]:
     """
-    Agent 2: Analyze financials from SEC data, fetch news signals, and with LLM.
+    Agent 2: Analyze extracted 10-Q sections and tables, build metrics table, and provide analysis.
+    Expects a dict with keys: item1, item2, notes, item1_tables, etc.
     Returns a dict with financial analysis or error, and always includes raw_tables.
     """
-    logger.info("Starting analyze_financials for company: %s", sec_data.get("company_name", "Unknown"))
+    logger.info("Starting analyze_financials for extracted data.")
     try:
-        company_name = sec_data.get("company_name", "the company")
-        filings = sec_data.get("filings", [])
-        if not filings:
-            logger.error("No 10-Q filings found for financial analysis. Company: %s", company_name)
-            return {"error": "No 10-Q filings found for financial analysis.", "notes": [], "stage": "fetch_filings", "raw_tables": []}
-        # --- Refactored: Fetch and extract filings ---
-        filings_result = _fetch_and_extract_filings(filings, company_name)
-        if "error" in filings_result:
-            logger.error("Error in _fetch_and_extract_filings: %s", filings_result["error"])
-            return {**filings_result, "raw_tables": filings_result.get("all_raw_tables", [])}
-        extracted_filings = filings_result["extracted_filings"]
-        extraction_notes = filings_result["extraction_notes"]
-        python_metrics = filings_result["python_metrics"]
-        python_metrics_found = filings_result["python_metrics_found"]
-        missing_filings = filings_result["missing_filings"]
-        all_raw_tables = filings_result["all_raw_tables"]
+        # Validate input
+        if not extracted_data or not isinstance(extracted_data, dict):
+            logger.error("No extracted data provided to Agent 2.")
+            return {"error": "No extracted data provided to Agent 2.", "notes": [], "stage": "input_validation", "raw_tables": []}
+        item1 = extracted_data.get("item1", "")
+        item2 = extracted_data.get("item2", "")
+        notes = extracted_data.get("notes", "")
+        item1_tables = extracted_data.get("item1_tables", [])
+        extraction_notes = extracted_data.get("extraction_notes", [])
+        all_raw_tables = []
+        # --- Try Python table extraction ---
+        python_metrics = {}
+        python_metrics_found = set()
+        metrics, found = extract_metrics_from_html_tables(item1_tables)
+        if metrics:
+            python_metrics.update(metrics)
+        python_metrics_found.update(found)
+        # --- Collect all tables for this filing ---
+        filing_tables = []
+        for table in item1_tables:
+            rows = [row.split(',') for row in table.split('\n') if row.strip()]
+            filing_tables.append(rows)
+        all_raw_tables.append({
+            "tables": filing_tables
+        })
         # --- If all required metrics found, use Python extraction ---
         if python_metrics and len(python_metrics_found) == len(REQUIRED_METRICS):
             extraction_notes.append("All required metrics extracted via Python table parsing.")
             normalized_table = normalize_key_metrics_table(python_metrics)
-            logger.info("All required metrics extracted via Python table parsing for company: %s", company_name)
+            logger.info("All required metrics extracted via Python table parsing.")
             return {
-                "company_name": company_name,
                 "financial_summary": "Extracted all key metrics using Python table parsing.",
                 "recent_events_summary": "",
                 "key_metrics_table": normalized_table,
@@ -371,13 +380,11 @@ def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[
                 "raw_tables": all_raw_tables
             }
         # --- Otherwise, fallback to LLM/RAG as before ---
-        if not extracted_filings:
-            logger.error("No valid 10-Q filings could be processed for company: %s", company_name)
-            return {"error": "No valid 10-Q filings could be processed.", "notes": extraction_notes, "stage": "fetch_and_extract_filings", "raw_tables": all_raw_tables}
-        if missing_filings:
-            extraction_notes.append(f"{missing_filings} filings could not be processed and were skipped.")
+        if not item1 and not item2:
+            logger.error("No valid extracted sections could be processed.")
+            return {"error": "No valid extracted sections could be processed.", "notes": extraction_notes, "stage": "extract_validation", "raw_tables": all_raw_tables}
         # Always use Google Custom Search for news enrichment
-        external_signals = _get_external_signals(company_name)
+        external_signals = _get_external_signals("")  # Company name not available here
         # --- Add user context to the prompt ---
         ac = additional_context or {}
         user_context_section = (
@@ -387,7 +394,13 @@ def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[
             f"- Proposed solutions: {ac.get('proposed_solutions', 'Not specified')}\n"
             f"- Wants messaging help: {ac.get('messaging_help', 'Not specified')}\n\n"
         )
-        prompt = user_context_section + build_groq_prompt_from_filings(company_name, extracted_filings, external_signals, extraction_notes)
+        # Build prompt from extracted sections
+        prompt = user_context_section + build_groq_prompt_from_filings("", [{
+            "item1": item1,
+            "item2": item2,
+            "notes": notes,
+            "item1_tables": item1_tables
+        }], external_signals, extraction_notes)
         prompt_token_count = count_tokens(prompt)
         logger.info(f"Prompt token count: {prompt_token_count}")
         if prompt_token_count > GROQ_SAFE_PROMPT_TOKENS:
@@ -399,7 +412,7 @@ def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[
             logger.error("LLM fallback analysis failed: %s", llm_result["error"])
             return {**llm_result, "raw_tables": all_raw_tables}
         # --- Refactored: Output normalization ---
-        normalized_output = _normalize_llm_output(llm_result, extraction_notes, company_name)
+        normalized_output = _normalize_llm_output(llm_result, extraction_notes, "")
         normalized_output["raw_tables"] = all_raw_tables
         return normalized_output
     except Exception as e:
@@ -414,70 +427,6 @@ def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[
             "stage": "analyze_financials_exception",
             "raw_tables": []
         }
-
-def _fetch_and_extract_filings(filings: list, company_name: str) -> dict:
-    """
-    Helper to fetch and extract 10-Q filings, returning extracted sections, notes, metrics, and all raw tables.
-    Returns a dict with keys: extracted_filings, extraction_notes, python_metrics, python_metrics_found, missing_filings, all_raw_tables.
-    Returns {"error": ..., "notes": [...], "stage": ...} on error.
-    """
-    logger.info("Fetching and extracting %d filings for company: %s", len(filings), company_name)
-    extracted_filings = []
-    missing_filings = 0
-    extraction_notes = []
-    python_metrics = {}
-    python_metrics_found = set()
-    all_raw_tables = []  # New: collect all tables for all filings
-    for filing in filings:
-        url = filing.get("html_url")
-        if not url or url == "Unavailable":
-            missing_filings += 1
-            continue
-        try:
-            response = requests.get(url, headers=DEFAULT_HEADERS, timeout=10)
-            response.raise_for_status()
-            html = response.text
-            extracted = extract_10q_sections(html, extraction_notes)
-            # Truncate each section individually before summarizing
-            for key in ["item1", "item2", "notes"]:
-                section = extracted.get(key, "")
-                if count_tokens(section) > 32000:
-                    extraction_notes.append(f"Section '{key}' in filing '{filing.get('filing_date', '')}' was truncated to 32000 tokens.")
-                    extracted[key] = safe_truncate_prompt(section, 32000)
-            extracted["filing_date"] = filing.get("filing_date", "")
-            extracted["title"] = filing.get("title", company_name)
-            # --- Try Python table extraction ---
-            html_tables = extracted.get("item1_tables", [])
-            metrics, found = extract_metrics_from_html_tables(html_tables)
-            if metrics:
-                python_metrics.update(metrics)
-            python_metrics_found.update(found)
-            # --- Collect all tables for this filing ---
-            filing_tables = []
-            for table in html_tables:
-                rows = [row.split(',') for row in table.split('\n') if row.strip()]
-                filing_tables.append(rows)
-            all_raw_tables.append({
-                "filing_date": extracted["filing_date"],
-                "title": extracted["title"],
-                "tables": filing_tables
-            })
-            extracted_filings.append(extracted)
-        except Exception as e:
-            logger.warning(f"Failed to fetch or extract filing at {url}: {e}", exc_info=True)
-            extraction_notes.append(f"Failed to fetch or extract filing at {url}: {e}")
-            missing_filings += 1
-    if not extracted_filings:
-        logger.error("No valid 10-Q filings could be processed for company: %s", company_name)
-        return {"error": "No valid 10-Q filings could be processed.", "notes": extraction_notes, "stage": "fetch_and_extract_filings"}
-    return {
-        "extracted_filings": extracted_filings,
-        "extraction_notes": extraction_notes,
-        "python_metrics": python_metrics,
-        "python_metrics_found": python_metrics_found,
-        "missing_filings": missing_filings,
-        "all_raw_tables": all_raw_tables  # New
-    }
 
 def generate_synthetic_signals(company_name: str) -> str:
     """
