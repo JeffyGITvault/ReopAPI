@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Any, Dict
 from app.api.agents.analyze_private_company import analyze_private_company
 from fastapi.middleware.cors import CORSMiddleware
+import re
 
 QUESTION_BANK_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "customgpt_question_bank_v4_9_reconstructed_full.json")
 LOGS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
