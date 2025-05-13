@@ -296,50 +296,28 @@ def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[
     Agent 2: Analyze financials from SEC data, fetch news signals, and with LLM.
     Returns a dict with financial analysis or error.
     """
-    note = None
+    logger.info("Starting analyze_financials for company: %s", sec_data.get("company_name", "Unknown"))
     try:
         company_name = sec_data.get("company_name", "the company")
         filings = sec_data.get("filings", [])
         if not filings:
-            return {"error": "No 10-Q filings found for financial analysis."}
-        extracted_filings = []
-        missing_filings = 0
-        extraction_notes = []
-        python_metrics = {}
-        python_metrics_found = set()
-        for filing in filings:
-            url = filing.get("html_url")
-            if not url or url == "Unavailable":
-                missing_filings += 1
-                continue
-            try:
-                response = requests.get(url, headers=DEFAULT_HEADERS, timeout=10)
-                response.raise_for_status()
-                html = response.text
-                extracted = extract_10q_sections(html, extraction_notes)
-                # Truncate each section individually before summarizing
-                for key in ["item1", "item2", "notes"]:
-                    section = extracted.get(key, "")
-                    if count_tokens(section) > 32000:
-                        extraction_notes.append(f"Section '{key}' in filing '{filing.get('filing_date', '')}' was truncated to 32000 tokens.")
-                        extracted[key] = safe_truncate_prompt(section, 32000)
-                extracted["filing_date"] = filing.get("filing_date", "")
-                extracted["title"] = filing.get("title", company_name)
-                extracted_filings.append(extracted)
-                # --- Try Python table extraction ---
-                html_tables = extracted.get("item1_tables", [])
-                metrics, found = extract_metrics_from_html_tables(html_tables)
-                if metrics:
-                    python_metrics.update(metrics)
-                python_metrics_found.update(found)
-            except Exception as e:
-                logger.warning(f"Failed to fetch or extract filing at {url}: {e}")
-                extraction_notes.append(f"Failed to fetch or extract filing at {url}: {e}")
-                missing_filings += 1
+            logger.error("No 10-Q filings found for financial analysis. Company: %s", company_name)
+            return {"error": "No 10-Q filings found for financial analysis.", "notes": [], "stage": "fetch_filings"}
+        # --- Refactored: Fetch and extract filings ---
+        filings_result = _fetch_and_extract_filings(filings, company_name)
+        if "error" in filings_result:
+            logger.error("Error in _fetch_and_extract_filings: %s", filings_result["error"])
+            return filings_result
+        extracted_filings = filings_result["extracted_filings"]
+        extraction_notes = filings_result["extraction_notes"]
+        python_metrics = filings_result["python_metrics"]
+        python_metrics_found = filings_result["python_metrics_found"]
+        missing_filings = filings_result["missing_filings"]
         # --- If all required metrics found, use Python extraction ---
         if python_metrics and len(python_metrics_found) == len(REQUIRED_METRICS):
             extraction_notes.append("All required metrics extracted via Python table parsing.")
             normalized_table = normalize_key_metrics_table(python_metrics)
+            logger.info("All required metrics extracted via Python table parsing for company: %s", company_name)
             return {
                 "company_name": company_name,
                 "financial_summary": "Extracted all key metrics using Python table parsing.",
@@ -352,13 +330,12 @@ def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[
             }
         # --- Otherwise, fallback to LLM/RAG as before ---
         if not extracted_filings:
-            return {"error": "No valid 10-Q filings could be processed."}
+            logger.error("No valid 10-Q filings could be processed for company: %s", company_name)
+            return {"error": "No valid 10-Q filings could be processed.", "notes": extraction_notes, "stage": "fetch_and_extract_filings"}
         if missing_filings:
             extraction_notes.append(f"{missing_filings} filings could not be processed and were skipped.")
         # Always use Google Custom Search for news enrichment
-        external_signals = fetch_google_company_signals(company_name)
-        if not external_signals or 'No public web results found.' in external_signals or 'API key' in external_signals:
-            external_signals = generate_synthetic_signals(company_name)
+        external_signals = _get_external_signals(company_name)
         # --- Add user context to the prompt ---
         ac = additional_context or {}
         user_context_section = (
@@ -374,105 +351,77 @@ def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[
         if prompt_token_count > GROQ_SAFE_PROMPT_TOKENS:
             extraction_notes.append(f"Prompt was truncated from {prompt_token_count} tokens to {GROQ_SAFE_PROMPT_TOKENS} tokens.")
             prompt = safe_truncate_prompt(prompt, GROQ_SAFE_PROMPT_TOKENS)
-        try:
-            result = call_groq(
-                prompt,
-                max_tokens=32768,
-                include_domains=["sec.gov"],
-                response_format={"type": "json_object"}
-            )
-        except Exception as e:
-            if "context_length_exceeded" in str(e) or "Request too large" in str(e):
-                extraction_notes.append("Groq context limit exceeded, prompt was truncated and retried.")
-                prompt = safe_truncate_prompt(prompt, GROQ_SAFE_PROMPT_TOKENS // 2)
-                try:
-                    result = call_groq(
-                        prompt,
-                        max_tokens=32768,
-                        include_domains=["sec.gov"],
-                        response_format={"type": "json_object"}
-                    )
-                except Exception as e2:
-                    logger.error(f"Agent 2 - Financial analysis failed after retry: {e2}")
-                    return {"error": f"Agent 2 - Financial analysis failed after retry: {str(e2)}", "notes": extraction_notes}
-            else:
-                logger.error(f"Agent 2 - Financial analysis failed: {e}")
-                return {"error": f"Agent 2 - Financial analysis failed: {str(e)}", "notes": extraction_notes}
-        logger.info("Agent 2 Groq raw output: %s", result)
-        clean_result = extract_json_from_llm_output(result) if isinstance(result, str) else result
-        try:
-            parsed = json.loads(clean_result) if isinstance(clean_result, str) else clean_result
-        except Exception as e:
-            logger.warning(f"Groq output was not valid JSON: {e}. Attempting to fix.")
-            # Try to extract the largest JSON object using regex
-            json_match = re.search(r'\{(?:[^{}]|(?R))*\}', clean_result, re.DOTALL)
-            if json_match:
-                try:
-                    parsed = json.loads(json_match.group(0))
-                except Exception as e2:
-                    logger.error(f"Failed to fix Groq output with regex: {e2}")
-                    return {"error": f"Groq output was not valid JSON and could not be fixed: {str(e2)}", "notes": extraction_notes}
-            else:
-                try:
-                    fixed = clean_result.replace(",]", "]").replace(",}}", "}}")
-                    parsed = json.loads(fixed)
-                except Exception as e2:
-                    logger.error(f"Failed to fix Groq output: {e2}")
-                    return {"error": f"Groq output was not valid JSON and could not be fixed: {str(e2)}", "notes": extraction_notes}
-        # Fallback messaging if no real data
-        if not parsed or not any(parsed.get(k) for k in ["financial_summary", "key_metrics_table", "recent_events_summary"]):
-            return {
-                "financial_summary": "No financial data found in filings. Please check the filings manually.",
-                "key_metrics_table": {},
-                "suggested_graph": "",
-                "recent_events_summary": "",
-                "questions_to_ask": [],
-                "notes": extraction_notes
-            }
-        # --- Ensure correct types for output fields ---
-        key_metrics_table = parsed.get("key_metrics_table", {})
-        # Post-process: ensure all values are lists of strings
-        def dict_to_list_of_strings(d):
-            return [f"{k}: {v}" for k, v in d.items()]
-        if isinstance(key_metrics_table, dict):
-            for k, v in list(key_metrics_table.items()):
-                if isinstance(v, dict):
-                    key_metrics_table[k] = dict_to_list_of_strings(v)
-                elif isinstance(v, str):
-                    key_metrics_table[k] = [v]
-                elif isinstance(v, list):
-                    key_metrics_table[k] = [str(x) for x in v]
-                else:
-                    key_metrics_table[k] = [str(v)]
-        else:
-            key_metrics_table = {}
-        # --- Normalize table for UI ---
-        normalized_table = normalize_key_metrics_table(parsed.get("key_metrics_table", {}))
-        questions_to_ask = parsed.get("questions_to_ask", [])
-        if not isinstance(questions_to_ask, list):
-            questions_to_ask = [str(questions_to_ask)] if questions_to_ask else []
-        # Remove or blank out suggested_graph
-        suggested_graph = ""
-        json_payload_for_agents_3_4 = {
-            "company_name": company_name,
-            "financial_summary": parsed.get("financial_summary", "") if parsed else "",
-            "recent_events_summary": parsed.get("recent_events_summary", "") if parsed else "",
-            "key_metrics_table": normalized_table,
-            "suggested_graph": suggested_graph,
-            "questions_to_ask": questions_to_ask,
-            "notes": extraction_notes
-        }
-        return json_payload_for_agents_3_4
+        # --- Refactored: LLM fallback analysis ---
+        llm_result = _llm_fallback_analysis(prompt, extraction_notes)
+        if "error" in llm_result:
+            logger.error("LLM fallback analysis failed: %s", llm_result["error"])
+            return llm_result
+        # --- Refactored: Output normalization ---
+        normalized_output = _normalize_llm_output(llm_result, extraction_notes, company_name)
+        return normalized_output
     except Exception as e:
-        logger.error(f"Agent 2 - Financial analysis failed: {e}")
+        logger.error(f"Agent 2 - Financial analysis failed: {e}", exc_info=True)
         return {
             "financial_summary": f"Agent 2 - Financial analysis failed: {str(e)}",
             "key_metrics_table": {},
             "recent_events_summary": "",
             "suggested_graph": "",
             "questions_to_ask": [],
-            "notes": extraction_notes if 'extraction_notes' in locals() else []
+            "notes": [],
+            "stage": "analyze_financials_exception"
         }
+
+def _fetch_and_extract_filings(filings: list, company_name: str) -> dict:
+    """
+    Helper to fetch and extract 10-Q filings, returning extracted sections, notes, and metrics.
+    Returns a dict with keys: extracted_filings, extraction_notes, python_metrics, python_metrics_found, missing_filings.
+    Returns {"error": ..., "notes": [...], "stage": ...} on error.
+    """
+    logger.info("Fetching and extracting %d filings for company: %s", len(filings), company_name)
+    extracted_filings = []
+    missing_filings = 0
+    extraction_notes = []
+    python_metrics = {}
+    python_metrics_found = set()
+    for filing in filings:
+        url = filing.get("html_url")
+        if not url or url == "Unavailable":
+            missing_filings += 1
+            continue
+        try:
+            response = requests.get(url, headers=DEFAULT_HEADERS, timeout=10)
+            response.raise_for_status()
+            html = response.text
+            extracted = extract_10q_sections(html, extraction_notes)
+            # Truncate each section individually before summarizing
+            for key in ["item1", "item2", "notes"]:
+                section = extracted.get(key, "")
+                if count_tokens(section) > 32000:
+                    extraction_notes.append(f"Section '{key}' in filing '{filing.get('filing_date', '')}' was truncated to 32000 tokens.")
+                    extracted[key] = safe_truncate_prompt(section, 32000)
+            extracted["filing_date"] = filing.get("filing_date", "")
+            extracted["title"] = filing.get("title", company_name)
+            extracted_filings.append(extracted)
+            # --- Try Python table extraction ---
+            html_tables = extracted.get("item1_tables", [])
+            metrics, found = extract_metrics_from_html_tables(html_tables)
+            if metrics:
+                python_metrics.update(metrics)
+            python_metrics_found.update(found)
+        except Exception as e:
+            logger.warning(f"Failed to fetch or extract filing at {url}: {e}", exc_info=True)
+            extraction_notes.append(f"Failed to fetch or extract filing at {url}: {e}")
+            missing_filings += 1
+    if not extracted_filings:
+        logger.error("No valid 10-Q filings could be processed for company: %s", company_name)
+        return {"error": "No valid 10-Q filings could be processed.", "notes": extraction_notes, "stage": "fetch_and_extract_filings"}
+    return {
+        "extracted_filings": extracted_filings,
+        "extraction_notes": extraction_notes,
+        "python_metrics": python_metrics,
+        "python_metrics_found": python_metrics_found,
+        "missing_filings": missing_filings
+    }
 
 def generate_synthetic_signals(company_name: str) -> str:
     """
@@ -540,3 +489,118 @@ def parse_groq_response(response: Any) -> Dict[str, Any]:
     except json.JSONDecodeError as e:
         logger.error(f"Invalid JSON returned from Groq: {e}. Raw output: {response}")
         return {"error": f"Invalid JSON returned from Groq: {str(e)}", "raw_output": response}
+
+def _llm_fallback_analysis(prompt: str, extraction_notes: list) -> dict:
+    """
+    Helper to call the LLM for financial analysis. Returns dict with LLM output or error structure.
+    """
+    try:
+        result = call_groq(
+            prompt,
+            max_tokens=32768,
+            include_domains=["sec.gov"],
+            response_format={"type": "json_object"}
+        )
+        logger.info("Agent 2 Groq raw output: %s", result)
+        return {"llm_output": result}
+    except Exception as e:
+        logger.error(f"Agent 2 - Financial analysis failed: {e}", exc_info=True)
+        extraction_notes.append(f"Agent 2 - Financial analysis failed: {str(e)}")
+        return {"error": f"Agent 2 - Financial analysis failed: {str(e)}", "notes": extraction_notes, "stage": "llm_fallback_analysis"}
+
+def _normalize_llm_output(llm_result: dict, extraction_notes: list, company_name: str) -> dict:
+    """
+    Helper to parse and normalize LLM output, ensuring correct types and fallback messaging.
+    Returns the final output dict for the API.
+    """
+    try:
+        result = llm_result.get("llm_output")
+        clean_result = extract_json_from_llm_output(result) if isinstance(result, str) else result
+        try:
+            parsed = json.loads(clean_result) if isinstance(clean_result, str) else clean_result
+        except Exception as e:
+            logger.warning(f"Groq output was not valid JSON: {e}. Attempting to fix.")
+            # Try to extract the largest JSON object using regex
+            json_match = re.search(r'\{(?:[^{}]|(?R))*\}', clean_result, re.DOTALL)
+            if json_match:
+                try:
+                    parsed = json.loads(json_match.group(0))
+                except Exception as e2:
+                    logger.error(f"Failed to fix Groq output with regex: {e2}")
+                    return {"error": f"Groq output was not valid JSON and could not be fixed: {str(e2)}", "notes": extraction_notes, "stage": "normalize_llm_output"}
+            else:
+                try:
+                    fixed = clean_result.replace(",]", "]").replace(",}}", "}}")
+                    parsed = json.loads(fixed)
+                except Exception as e2:
+                    logger.error(f"Failed to fix Groq output: {e2}")
+                    return {"error": f"Groq output was not valid JSON and could not be fixed: {str(e2)}", "notes": extraction_notes, "stage": "normalize_llm_output"}
+        # Fallback messaging if no real data
+        if not parsed or not any(parsed.get(k) for k in ["financial_summary", "key_metrics_table", "recent_events_summary"]):
+            logger.warning("No financial data found in filings for company: %s", company_name)
+            return {
+                "financial_summary": "No financial data found in filings. Please check the filings manually.",
+                "key_metrics_table": {},
+                "suggested_graph": "",
+                "recent_events_summary": "",
+                "questions_to_ask": [],
+                "notes": extraction_notes,
+                "stage": "normalize_llm_output"
+            }
+        # --- Ensure correct types for output fields ---
+        key_metrics_table = parsed.get("key_metrics_table", {})
+        def dict_to_list_of_strings(d):
+            return [f"{k}: {v}" for k, v in d.items()]
+        if isinstance(key_metrics_table, dict):
+            for k, v in list(key_metrics_table.items()):
+                if isinstance(v, dict):
+                    key_metrics_table[k] = dict_to_list_of_strings(v)
+                elif isinstance(v, str):
+                    key_metrics_table[k] = [v]
+                elif isinstance(v, list):
+                    key_metrics_table[k] = [str(x) for x in v]
+                else:
+                    key_metrics_table[k] = [str(v)]
+        else:
+            key_metrics_table = {}
+        normalized_table = normalize_key_metrics_table(parsed.get("key_metrics_table", {}))
+        questions_to_ask = parsed.get("questions_to_ask", [])
+        if not isinstance(questions_to_ask, list):
+            questions_to_ask = [str(questions_to_ask)] if questions_to_ask else []
+        suggested_graph = ""
+        json_payload_for_agents_3_4 = {
+            "company_name": company_name,
+            "financial_summary": parsed.get("financial_summary", "") if parsed else "",
+            "recent_events_summary": parsed.get("recent_events_summary", "") if parsed else "",
+            "key_metrics_table": normalized_table,
+            "suggested_graph": suggested_graph,
+            "questions_to_ask": questions_to_ask,
+            "notes": extraction_notes
+        }
+        return json_payload_for_agents_3_4
+    except Exception as e:
+        logger.error(f"Failed to normalize LLM output: {e}", exc_info=True)
+        return {
+            "error": f"Failed to normalize LLM output: {str(e)}",
+            "notes": extraction_notes,
+            "stage": "normalize_llm_output_exception"
+        }
+
+def _get_external_signals(company_name: str) -> str:
+    """
+    Helper to get external news/signals for a company. Tries Google Custom Search first, then falls back to synthetic signals.
+    Returns a string with news/signals, or a clear error message.
+    """
+    logger.info("Fetching external signals for company: %s", company_name)
+    try:
+        signals = fetch_google_company_signals(company_name)
+        if not signals or 'No public web results found.' in signals or 'API key' in signals:
+            logger.warning("Google Custom Search did not return results or API key missing for company: %s. Falling back to synthetic signals.", company_name)
+            signals = generate_synthetic_signals(company_name)
+        if not signals:
+            logger.error("No external signals (news or synthetic) could be generated for company: %s", company_name)
+            return "No external signals available."
+        return signals
+    except Exception as e:
+        logger.error(f"Failed to fetch or generate external signals for {company_name}: {e}", exc_info=True)
+        return f"Failed to fetch or generate external signals: {str(e)}"
