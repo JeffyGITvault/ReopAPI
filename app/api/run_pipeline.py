@@ -44,6 +44,7 @@ async def run_pipeline(payload: PipelineRequest):
     Agent 2 -> Financial Analysis (parallel)
     Agent 3 -> People Profiling (parallel)
     Agent 4 -> Analyze Company (parallel)
+    Agent 5 -> Analyze Private Company (parallel)
     """
     try:
         # === Agent 1: SEC 10-Q Fetch ===
