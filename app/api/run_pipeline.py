@@ -12,6 +12,7 @@ from app.api.memory_schema import Agent2Financials, Agent3Profile, Agent4RiskMap
 from app.api.prompt_builder import build_agent_1_prompt, format_table
 import logging
 import openai
+import os
 from app.api.agents.analyze_private_company import analyze_private_company
 
 router = APIRouter()
@@ -25,12 +26,14 @@ class PipelineRequest(BaseModel):
     
 @router.post("/run_pipeline")
 async def run_pipeline(payload: PipelineRequest):
+    # Log if OPENAI_API_KEY is present
+    logger = logging.getLogger("run_pipeline")
+    logger.info(f"OPENAI_API_KEY is present: {'OPENAI_API_KEY' in os.environ}")
     company = payload.company
     people = payload.people
     meeting_context = payload.meeting_context
     additional_context = payload.additional_context or {}
     titles = payload.titles if hasattr(payload, 'titles') else [None] * len(people)
-    logger = logging.getLogger("run_pipeline")
     # Input validation
     if not company or not isinstance(company, str) or not company.strip():
         raise HTTPException(status_code=400, detail="Missing or invalid 'company' field.")
