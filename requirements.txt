@@ -10,3 +10,4 @@ transformers==4.51.3
 openai>=1.77.0,<2.0.0
 spacy==3.7.4
 pandas==2.2.2
+cachetools==5.3.3
