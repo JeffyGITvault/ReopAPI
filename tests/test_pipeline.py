@@ -19,7 +19,7 @@ mock_sec_data = {
             "html_url": "http://example.com/10q",
             "title": "TestCo Q1",
             "marker": "📌 Most Recent",
-            "estimated_tokens": 1000,
+            "estimated_tokens": 8000,
             "extracted_sections": {
                 "item1": "Balance Sheet ...",
                 "item2": "MD&A ...",
