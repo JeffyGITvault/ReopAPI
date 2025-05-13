@@ -3,18 +3,43 @@ from fastapi.testclient import TestClient
 from unittest.mock import patch
 from app.api.run_pipeline import router, PipelineRequest
 from fastapi import FastAPI
+import logging
 
 app = FastAPI()
 app.include_router(router)
 client = TestClient(app)
 
-# Mock agent outputs
+# Updated mock agent outputs to match new schema
+mock_sec_data = {
+    "company_name": "TestCo",
+    "cik": "123",
+    "filings": [
+        {
+            "filing_date": "2024-01-01",
+            "html_url": "http://example.com/10q",
+            "title": "TestCo Q1",
+            "marker": "📌 Most Recent",
+            "estimated_tokens": 1000,
+            "extracted_sections": {
+                "item1": "Balance Sheet ...",
+                "item2": "MD&A ...",
+                "notes": "Note 1 ...",
+                "item1_tables": ["header1,header2\nval1,val2"],
+                "extraction_notes": ["Item 1 extracted", "Item 2 extracted"]
+            },
+            "extraction_notes": []
+        }
+    ]
+}
+
 valid_agent2 = {
     "financial_summary": "Strong growth.",
-    "key_metrics_table": {"Revenue": ["$1M", "$2M"]},
+    "key_metrics_table": {"Q1 2024": {"Revenue": "$1M"}},
     "recent_events_summary": "IPO completed.",
     "suggested_graph": None,
-    "questions_to_ask": ["What are the risks?"]
+    "questions_to_ask": ["What are the risks?"],
+    "notes": ["All required metrics extracted via Python table parsing."],
+    "raw_tables": [[["header1", "header2"], ["val1", "val2"]]]
 }
 valid_agent3 = [{
     "name": "Jane Doe",
@@ -30,7 +55,7 @@ valid_agent4 = {
     "questions_to_ask": ["How to grow?"]
 }
 
-@patch("app.api.run_pipeline.fetch_10q", return_value={"company_name": "TestCo", "cik": "123", "filings": []})
+@patch("app.api.run_pipeline.fetch_10q", return_value=mock_sec_data)
 @patch("app.api.run_pipeline.analyze_financials", return_value=valid_agent2)
 @patch("app.api.run_pipeline.profile_people", return_value=valid_agent3)
 @patch("app.api.run_pipeline.analyze_company", return_value=valid_agent4)
@@ -46,6 +71,9 @@ def test_run_pipeline_success(mock_openai, mock_agent4, mock_agent3, mock_agent2
     data = response.json()
     assert data["executive_briefing"] == "Synthesized briefing."
     assert data["company"] == "TestCo"
+    # Check new fields
+    assert "raw_tables" in data["financial_analysis"]
+    assert "notes" in data["financial_analysis"]
 
 @patch("app.api.run_pipeline.fetch_10q", return_value={"company_name": "TestCo", "cik": "123", "filings": []})
 @patch("app.api.run_pipeline.analyze_financials", return_value={"bad": "data"})
@@ -104,4 +132,69 @@ def test_run_pipeline_agent1_error(mock_agent1):
     }
     response = client.post("/run_pipeline", json=payload)
     assert response.status_code == 500
-    assert "Agent 1 failed" in response.text 
+    assert "Agent 1 failed" in response.text
+
+# Truncation test: simulate huge item1 and check for truncation notes
+@patch("app.api.run_pipeline.fetch_10q", return_value={
+    "company_name": "TestCo",
+    "cik": "123",
+    "filings": [
+        {
+            "filing_date": "2024-01-01",
+            "html_url": "http://example.com/10q",
+            "title": "TestCo Q1",
+            "marker": "📌 Most Recent",
+            "estimated_tokens": 200000,
+            "extracted_sections": {
+                "item1": "A" * 200000,  # Simulate huge section
+                "item2": "B" * 1000,
+                "notes": "C" * 1000,
+                "item1_tables": [],
+                "extraction_notes": []
+            },
+            "extraction_notes": []
+        }
+    ]
+})
+@patch("app.api.run_pipeline.analyze_financials")
+@patch("app.api.run_pipeline.profile_people", return_value=valid_agent3)
+@patch("app.api.run_pipeline.analyze_company", return_value=valid_agent4)
+@patch("app.api.run_pipeline.openai.ChatCompletion.create", return_value={"choices": [{"message": {"content": "Synthesized briefing."}}]})
+def test_run_pipeline_truncation(mock_openai, mock_agent4, mock_agent3, mock_agent2, mock_agent1):
+    # The analyze_financials mock will check for truncation notes in the input
+    def analyze_financials_side_effect(extracted_sections, additional_context=None):
+        notes = extracted_sections.get("extraction_notes", [])
+        truncation_notes = extracted_sections.get("truncation_notes", [])
+        return {
+            "financial_summary": "Truncated input test.",
+            "key_metrics_table": {},
+            "recent_events_summary": "",
+            "suggested_graph": None,
+            "questions_to_ask": [],
+            "notes": notes + truncation_notes,
+            "raw_tables": []
+        }
+    mock_agent2.side_effect = analyze_financials_side_effect
+    payload = {
+        "company": "TestCo",
+        "people": ["Jane Doe"],
+        "meeting_context": "Quarterly review"
+    }
+    response = client.post("/run_pipeline", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    # Check that truncation notes are present
+    assert any("truncated" in note or "omitted" in note for note in data["financial_analysis"]["notes"])
+
+@pytest.mark.skip(reason="Integration test: calls real SEC API. Remove this line to run.")
+def test_agent1_real_extraction():
+    from app.api.agents.agent1_fetch_sec import fetch_10q
+    company = "Apple"
+    result = fetch_10q(company)
+    filings = result.get("filings", [])
+    assert filings, "No filings returned from SEC API."
+    extracted = filings[0].get("extracted_sections", {})
+    assert "item1" in extracted and "item2" in extracted, "Extracted sections missing expected keys."
+    logging.info(f"Extracted sections for {company}:\nItem 1: {extracted['item1'][:500]}\nItem 2: {extracted['item2'][:500]}")
+    print(f"Extracted Item 1 (first 500 chars): {extracted['item1'][:500]}")
+    print(f"Extracted Item 2 (first 500 chars): {extracted['item2'][:500]}") 

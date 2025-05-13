@@ -20,6 +20,7 @@ GROQ_MAX_TOTAL_TOKENS = 131072
 GROQ_MAX_COMPLETION_TOKENS = 32768
 GROQ_MAX_PROMPT_TOKENS = GROQ_MAX_TOTAL_TOKENS - GROQ_MAX_COMPLETION_TOKENS
 GROQ_SAFE_PROMPT_TOKENS = 90000  # Leave a buffer for org/tier limits
+GROQ_SOFT_EXTRACTION_TOKEN_LIMIT = 100000  # Soft limit for extraction payload
 
 # Use the tokenizer for the primary model
 PRIMARY_MODEL = GROQ_MODEL_PRIORITY[0]
@@ -331,6 +332,33 @@ def _extract_metrics_from_df(df, metrics_data: dict, metrics_found: set) -> None
     except Exception as e:
         logger.warning(f"Error extracting metrics from DataFrame: {e}", exc_info=True)
 
+def _truncate_extracted_sections(sections: dict, max_tokens: int, logger) -> dict:
+    """
+    Truncate extracted sections (item1, item2, notes) to fit within max_tokens.
+    Returns a new dict and a list of truncation notes.
+    """
+    from copy import deepcopy
+    truncated = deepcopy(sections)
+    truncation_notes = []
+    total_tokens = 0
+    for key in ["item1", "item2", "notes"]:
+        text = truncated.get(key, "")
+        tokens = count_tokens(text)
+        if total_tokens + tokens > max_tokens:
+            allowed = max_tokens - total_tokens
+            if allowed > 0:
+                text = safe_truncate_prompt(text, allowed)
+                truncation_notes.append(f"{key} truncated to fit token budget.")
+                tokens = count_tokens(text)
+            else:
+                text = ""
+                truncation_notes.append(f"{key} omitted due to token budget.")
+                tokens = 0
+        truncated[key] = text
+        total_tokens += tokens
+    truncated["truncation_notes"] = truncation_notes
+    return truncated
+
 def analyze_financials(extracted_data: dict, additional_context: dict = None) -> Dict[str, Any]:
     """
     Agent 2: Analyze extracted 10-Q sections and tables, build metrics table, and provide analysis.
@@ -383,6 +411,20 @@ def analyze_financials(extracted_data: dict, additional_context: dict = None) ->
         if not item1 and not item2:
             logger.error("No valid extracted sections could be processed.")
             return {"error": "No valid extracted sections could be processed.", "notes": extraction_notes, "stage": "extract_validation", "raw_tables": all_raw_tables}
+        # --- Token count and soft truncation logic ---
+        extraction_payload = {
+            "item1": item1,
+            "item2": item2,
+            "notes": notes,
+            "item1_tables": item1_tables
+        }
+        total_tokens = count_tokens(item1) + count_tokens(item2) + count_tokens(notes)
+        logger.info(f"[Agent2] Extraction payload token count: {total_tokens}")
+        truncation_notes = []
+        if total_tokens > GROQ_SOFT_EXTRACTION_TOKEN_LIMIT:
+            logger.warning(f"[Agent2] Extraction payload exceeds soft token limit ({GROQ_SOFT_EXTRACTION_TOKEN_LIMIT}). Truncating sections.")
+            extraction_payload = _truncate_extracted_sections(extraction_payload, GROQ_SOFT_EXTRACTION_TOKEN_LIMIT, logger)
+            truncation_notes = extraction_payload.get("truncation_notes", [])
         # Always use Google Custom Search for news enrichment
         external_signals = _get_external_signals("")  # Company name not available here
         # --- Add user context to the prompt ---
@@ -396,11 +438,11 @@ def analyze_financials(extracted_data: dict, additional_context: dict = None) ->
         )
         # Build prompt from extracted sections
         prompt = user_context_section + build_groq_prompt_from_filings("", [{
-            "item1": item1,
-            "item2": item2,
-            "notes": notes,
-            "item1_tables": item1_tables
-        }], external_signals, extraction_notes)
+            "item1": extraction_payload["item1"],
+            "item2": extraction_payload["item2"],
+            "notes": extraction_payload["notes"],
+            "item1_tables": extraction_payload["item1_tables"]
+        }], external_signals, extraction_notes + truncation_notes)
         prompt_token_count = count_tokens(prompt)
         logger.info(f"Prompt token count: {prompt_token_count}")
         if prompt_token_count > GROQ_SAFE_PROMPT_TOKENS:
