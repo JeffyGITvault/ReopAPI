@@ -30,12 +30,18 @@ except Exception:
     logger.warning("Could not load tokenizer for meta-llama/Llama-3.3-70b-versatile. Token counting will be approximate.")
 
 def count_tokens(text: str) -> int:
+    """
+    Count the number of tokens in a text string using the tokenizer, or estimate if unavailable.
+    """
     if tokenizer:
         return len(tokenizer.encode(text))
     # Fallback: rough estimate
     return int(len(text.split()) / 0.75)
 
 def safe_truncate_prompt(prompt: str, max_tokens: int) -> str:
+    """
+    Truncate a prompt to a maximum number of tokens, using the tokenizer if available.
+    """
     if tokenizer:
         tokens = tokenizer.encode(prompt)
         if len(tokens) > max_tokens:
@@ -81,23 +87,32 @@ def extract_10q_sections(html: str, extraction_notes: List[str]) -> Dict[str, st
         extraction_notes.append("Item 1 not found using section boundary detection.")
     if not item2:
         extraction_notes.append("Item 2 not found using section boundary detection.")
-    # Extract tables from Item 1 (if any)
-    item1_tables = []
-    if item1:
-        # Find the HTML corresponding to Item 1
-        # Use regex to find the HTML segment for Item 1
+    # Modularized: Extract tables from Item 1 (if any)
+    item1_tables = _extract_tables_from_item1(html, item1, extraction_notes)
+    # Modularized: Extract notes
+    notes_text = _extract_referenced_notes(text, item1, item2, extraction_notes)
+    return {"item1": item1, "item2": item2, "notes": notes_text, "item1_tables": item1_tables}
+
+def _extract_tables_from_item1(html: str, item1: str, extraction_notes: list) -> list:
+    """
+    Extract tables from the Item 1 section of the 10-Q HTML.
+    Returns a list of table strings.
+    """
+    try:
+        if not item1:
+            extraction_notes.append("No Item 1 section found for table extraction.")
+            return []
         html_text = html
         item1_html = ''
         item1_match = re.search(r'(Item\s*1\.?[^<]{0,30})(.*?)(Item\s*2\.?|$)', html_text, re.IGNORECASE | re.DOTALL)
         if item1_match:
             item1_html = item1_match.group(2)
         else:
-            # fallback: use the whole HTML if not found
             item1_html = html_text
         item1_soup = BeautifulSoup(item1_html, "html.parser")
         tables = item1_soup.find_all('table')
+        item1_tables = []
         for table in tables:
-            # Convert table to text (or CSV-like string)
             rows = []
             for tr in table.find_all('tr'):
                 cells = [td.get_text(separator=" ", strip=True) for td in tr.find_all(['td', 'th'])]
@@ -109,16 +124,28 @@ def extract_10q_sections(html: str, extraction_notes: List[str]) -> Dict[str, st
             extraction_notes.append(f"Extracted {len(item1_tables)} tables from Item 1 section.")
         else:
             extraction_notes.append("No tables found in Item 1 section.")
-    else:
-        extraction_notes.append("No Item 1 section found for table extraction.")
-    # Notes extraction: cross-reference Note mentions
-    all_notes = re.findall(r'(Note\s*\d+.*?)(?=Note\s*\d+|$)', text, re.IGNORECASE)
-    referenced_notes = set(re.findall(r'Note\s*\d+', item1 + item2, re.IGNORECASE))
-    notes = [n for n in all_notes if any(ref in n for ref in referenced_notes)]
-    if not notes:
-        extraction_notes.append("No referenced notes found in Item 1 or 2.")
-    notes_text = '\n\n'.join(notes)
-    return {"item1": item1, "item2": item2, "notes": notes_text, "item1_tables": item1_tables}
+        return item1_tables
+    except Exception as e:
+        extraction_notes.append(f"Error extracting tables from Item 1: {e}")
+        logger.warning(f"Error extracting tables from Item 1: {e}", exc_info=True)
+        return []
+
+def _extract_referenced_notes(text: str, item1: str, item2: str, extraction_notes: list) -> str:
+    """
+    Extract referenced notes from the 10-Q text, cross-referencing mentions in Item 1 and 2.
+    Returns a string of concatenated notes.
+    """
+    try:
+        all_notes = re.findall(r'(Note\s*\d+.*?)(?=Note\s*\d+|$)', text, re.IGNORECASE)
+        referenced_notes = set(re.findall(r'Note\s*\d+', item1 + item2, re.IGNORECASE))
+        notes = [n for n in all_notes if any(ref in n for ref in referenced_notes)]
+        if not notes:
+            extraction_notes.append("No referenced notes found in Item 1 or 2.")
+        return '\n\n'.join(notes)
+    except Exception as e:
+        extraction_notes.append(f"Error extracting referenced notes: {e}")
+        logger.warning(f"Error extracting referenced notes: {e}", exc_info=True)
+        return ""
 
 def summarize_section(section: str, max_tokens: int = 10000) -> str:
     """
@@ -143,7 +170,7 @@ REQUIRED_METRICS = [
     "Liquidity Ratio"
 ]
 
-def normalize_key_metrics_table(table):
+def normalize_key_metrics_table(table: dict) -> dict:
     """
     Ensure the key_metrics_table is a dict of {quarter: {metric: value, ...}},
     with all REQUIRED_METRICS present for each quarter. Fill missing with blank or 'Not Provided'.
@@ -172,6 +199,10 @@ def normalize_key_metrics_table(table):
     return {}
 
 def build_groq_prompt_from_filings(company_name: str, filings: List[Dict[str, str]], news: str = "", extraction_notes: List[str] = None) -> str:
+    """
+    Build a prompt for the LLM to analyze SEC 10-Q filings, including extracted sections and news.
+    Returns the prompt string.
+    """
     system_message = (
         "You are a financial analyst. Only output valid JSON. "
         "Do NOT use markdown or code blocks. "
@@ -219,6 +250,7 @@ def build_groq_prompt_from_filings(company_name: str, filings: List[Dict[str, st
 def fetch_google_company_signals(company_name: str) -> str:
     """
     Fetch recent company news using Google Custom Search as a fallback enrichment source.
+    Returns a string of formatted news results or an error message.
     """
     if not SEARCH_API_KEY or not GOOGLE_CSE_ID:
         logger.warning("Google Search API key or CSE ID not set. Skipping Google fetch.")
@@ -245,7 +277,9 @@ def fetch_google_company_signals(company_name: str) -> str:
         return f"Google Search API fetch failed: {str(e)}"
 
 def extract_json_from_llm_output(output: str) -> str:
-    # Remove markdown code block markers if present
+    """
+    Remove markdown code block markers and whitespace from LLM output, returning clean JSON string.
+    """
     if output.strip().startswith("```"):
         # Remove the first line (``` or ```json) and the last line (```)
         lines = output.strip().splitlines()
@@ -258,38 +292,46 @@ def extract_json_from_llm_output(output: str) -> str:
     # Optionally, remove any leading/trailing whitespace
     return output.strip()
 
-def extract_metrics_from_html_tables(html_tables):
+def extract_metrics_from_html_tables(html_tables: list) -> tuple:
     """
     Attempt to extract required metrics from HTML tables using pandas.
-    Returns a dict of {quarter: {metric: value, ...}} and a set of found metrics.
+    Returns a tuple: (metrics_data: dict, metrics_found: set)
     """
     metrics_found = set()
     metrics_data = {}
     for table_html in html_tables:
         try:
             dfs = pd.read_html(table_html)
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Error reading HTML table with pandas: {e}", exc_info=True)
             continue
         for df in dfs:
-            # Try to find columns that match required metrics
-            for metric in REQUIRED_METRICS:
-                for col in df.columns:
-                    if metric.lower() in str(col).lower():
-                        metrics_found.add(metric)
-                        # Try to extract values for each quarter (columns or rows)
-                        for idx, row in df.iterrows():
-                            for c in df.columns:
-                                if metric.lower() in str(c).lower():
-                                    val = row[c]
-                                    # Use index or a column as quarter label
-                                    quarter = str(row[0]) if df.columns[0] != c else f"Row {idx+1}"
-                                    if quarter not in metrics_data:
-                                        metrics_data[quarter] = {}
-                                    metrics_data[quarter][metric] = str(val)
+            # Modularized: Extract metrics from DataFrame
+            _extract_metrics_from_df(df, metrics_data, metrics_found)
         # If we found all metrics, break early
         if len(metrics_found) == len(REQUIRED_METRICS):
             break
     return metrics_data, metrics_found
+
+def _extract_metrics_from_df(df, metrics_data: dict, metrics_found: set) -> None:
+    """
+    Extract required metrics from a pandas DataFrame and update metrics_data and metrics_found.
+    """
+    try:
+        for metric in REQUIRED_METRICS:
+            for col in df.columns:
+                if metric.lower() in str(col).lower():
+                    metrics_found.add(metric)
+                    for idx, row in df.iterrows():
+                        for c in df.columns:
+                            if metric.lower() in str(c).lower():
+                                val = row[c]
+                                quarter = str(row[0]) if df.columns[0] != c else f"Row {idx+1}"
+                                if quarter not in metrics_data:
+                                    metrics_data[quarter] = {}
+                                metrics_data[quarter][metric] = str(val)
+    except Exception as e:
+        logger.warning(f"Error extracting metrics from DataFrame: {e}", exc_info=True)
 
 def analyze_financials(sec_data: dict, additional_context: dict = None) -> Dict[str, Any]:
     """
