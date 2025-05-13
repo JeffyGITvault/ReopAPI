@@ -163,9 +163,7 @@ REQUIRED_METRICS = [
     "Gross Margin",
     "Net Income",
     "Cost of Goods Sold",
-    "Cost of Sales",
-    "Days Sales Outstanding (DSO)",
-    "Days Payable Outstanding (DPO)",
+    
     "Debt to Equity Ratio",
     "Liquidity Ratio"
 ]
@@ -229,7 +227,7 @@ def build_groq_prompt_from_filings(company_name: str, filings: List[Dict[str, st
     prompt += (
         f"Recent News:\n{news}\n\n"
         "Instructions: Carefully extract and compare the following financial metrics from the 10-Q filings: "
-        "Revenue, Gross Margin, Net Income, Cost of Goods Sold (COGS) or Cost of Sales, Days Sales Outstanding (DSO), Days Payable Outstanding (DPO), Debt to Equity Ratio, and Liquidity Ratio. "
+        "Revenue, Gross Margin, Net Income, Cost of Goods Sold (COGS), Cost of Sales, Debt to Equity Ratio, and Liquidity Ratio. "
         "If any metric is not available, leave the cell blank or mark as 'Not Provided'. "
         "Build a summary table with columns for each filing/quarter and rows for each metric above. "
         "The table should be in markdown format, with each column representing a quarter/filing and each row a metric. "
