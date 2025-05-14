@@ -186,8 +186,7 @@ def test_run_pipeline_truncation(mock_openai, mock_agent4, mock_agent3, mock_age
     # Check that truncation notes are present
     assert any("truncated" in note or "omitted" in note for note in data["financial_analysis"]["notes"])
 
-@pytest.mark.skip(reason="Integration test: calls real SEC API.")
-@pytest.mark.parametrize("company", ["Apple", "Microsoft", "ball corp"])
+@pytest.mark.parametrize("company", ["Apple", "Microsoft", "Tesla", "Ball Corp"])
 def test_agent1_real_extraction(company):
     from app.api.agents.agent1_fetch_sec import fetch_10q
     result = fetch_10q(company)
