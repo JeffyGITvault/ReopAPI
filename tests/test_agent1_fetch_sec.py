@@ -1,3 +1,6 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pytest
 from app.api.agents.agent1_fetch_sec import extract_10q_sections, fetch_10q
 
