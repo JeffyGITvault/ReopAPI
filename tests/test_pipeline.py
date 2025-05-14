@@ -187,14 +187,14 @@ def test_run_pipeline_truncation(mock_openai, mock_agent4, mock_agent3, mock_age
     assert any("truncated" in note or "omitted" in note for note in data["financial_analysis"]["notes"])
 
 @pytest.mark.skip(reason="Integration test: calls real SEC API.")
-def test_agent1_real_extraction():
+@pytest.mark.parametrize("company", ["Apple", "Microsoft", "ball corp"])
+def test_agent1_real_extraction(company):
     from app.api.agents.agent1_fetch_sec import fetch_10q
-    company = "Apple"
     result = fetch_10q(company)
     filings = result.get("filings", [])
-    assert filings, "No filings returned from SEC API."
+    assert filings, f"No filings returned from SEC API for {company}."
     extracted = filings[0].get("extracted_sections", {})
-    assert "item1" in extracted and "item2" in extracted, "Extracted sections missing expected keys."
+    assert "item1" in extracted and "item2" in extracted, f"Extracted sections missing expected keys for {company}."
     logging.info(f"Extracted sections for {company}:\nItem 1: {extracted['item1'][:500]}\nItem 2: {extracted['item2'][:500]}")
-    print(f"Extracted Item 1 (first 500 chars): {extracted['item1'][:500]}")
-    print(f"Extracted Item 2 (first 500 chars): {extracted['item2'][:500]}") 
+    print(f"Extracted Item 1 for {company} (first 500 chars): {extracted['item1'][:500]}")
+    print(f"Extracted Item 2 for {company} (first 500 chars): {extracted['item2'][:500]}") 
