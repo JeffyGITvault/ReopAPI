@@ -197,6 +197,12 @@ def test_agent1_real_extraction(company):
     assert filings, f"No filings returned from SEC API for {company}."
     extracted = filings[0].get("extracted_sections", {})
     assert "item1" in extracted and "item2" in extracted, f"Extracted sections missing expected keys for {company}."
-    logging.info(f"Extracted sections for {company}:\nItem 1: {extracted['item1'][:500]}\nItem 2: {extracted['item2'][:500]}")
-    print(f"Extracted Item 1 for {company} (first 500 chars): {extracted['item1'][:500]}")
-    print(f"Extracted Item 2 for {company} (first 500 chars): {extracted['item2'][:500]}") 
+    print(f"\n===== FULL EXTRACTED DATA FOR {company} =====")
+    print(f"\nItem 1:\n{extracted.get('item1', '')}")
+    print(f"\nItem 2:\n{extracted.get('item2', '')}")
+    print(f"\nNotes:\n{extracted.get('notes', '')}")
+    tables = extracted.get('item1_tables', [])
+    if tables:
+        print(f"\nFirst Table (raw):\n{tables[0]}")
+    else:
+        print("\nNo tables extracted.") 
