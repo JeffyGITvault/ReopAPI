@@ -16,7 +16,6 @@ def get_groq_client() -> Groq:
         raise RuntimeError("GROQ_API_KEY environment variable is not set.")
     return Groq(api_key=api_key)
 
-client = get_groq_client()
 
 # Short, focused list of agentic/web-search-enabled models per Groq docs
 GROQ_MODEL_PRIORITY = [
@@ -49,6 +48,7 @@ def call_groq(
     for model in GROQ_MODEL_PRIORITY:
         try:
             logger.info(f"Calling Groq model: {model} (max_tokens={max_tokens})")
+            client = get_groq_client()
             response = client.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": prompt}],
