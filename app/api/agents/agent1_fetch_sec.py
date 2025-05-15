@@ -120,90 +120,76 @@ def estimate_token_count(text: str) -> int:
 
 def extract_10q_sections(html: str, extraction_notes: list) -> dict:
     """
-    Extract all Parts (I, II, etc.) and their Items from 10-Q HTML/text.
-    For each item, extract text, tables, and token count.
-    Returns a nested dict: { "part1": { "total_tokens": int, "items": { "Item 1.": {...}, ... } }, ... }
+    Extracts all Parts (I, II, etc.) and their Items from 10-Q HTML/text.
+    Always keys the result as "Part I", "Part II", etc. (Roman numerals).
     """
     from bs4 import BeautifulSoup
     import re
 
-    def estimate_token_count(text: str) -> int:
+    def estimate_tokens(text: str) -> int:
         words = len(text.split())
         return int(words / 0.75)
 
-    def normalize_part_key(s):
-        s = s.lower().replace('.', '').replace(' ', '')
-        roman_map = {
-            'x': '10', 'ix': '9', 'viii': '8', 'vii': '7', 'vi': '6',
-            'v': '5', 'iv': '4', 'iii': '3', 'ii': '2', 'i': '1'
+    def arabic_to_roman(num):
+        mapping = {
+            '1': 'I', '2': 'II', '3': 'III', '4': 'IV', '5': 'V',
+            '6': 'VI', '7': 'VII', '8': 'VIII', '9': 'IX', '10': 'X'
         }
-        for roman, arabic in sorted(roman_map.items(), key=lambda x: -len(x[0])):  # longest first
-            if s.endswith(roman):
-                s = s[:-len(roman)] + arabic
-                break
-        return s
+        return mapping.get(str(num), str(num))
 
     soup = BeautifulSoup(html, "html.parser")
-    text = soup.get_text(separator=" ")
-    norm = ' '.join(text.split())
+    raw = soup.get_text(separator=" ")
+    norm = " ".join(raw.split())
 
-    # Find all "Part I", "Part II", etc.
-    part_matches = list(re.finditer(r'(Part\s+[IVX]+\.?)', norm, re.IGNORECASE))
-    part_spans = []
-    for idx, match in enumerate(part_matches):
-        start = match.start()
-        end = part_matches[idx + 1].start() if idx + 1 < len(part_matches) else len(norm)
-        part_spans.append((match.group(1).strip(), start, end))
+    # Match both Roman and Arabic numerals for "Part"
+    part_hdrs = list(re.finditer(r'(Part\s+((?:[IVX]+)|(?:\d+)))\.?', norm, re.IGNORECASE))
+    parts = []
+    for idx, m in enumerate(part_hdrs):
+        start = m.start()
+        end = part_hdrs[idx+1].start() if idx+1 < len(part_hdrs) else len(norm)
+        numeral = m.group(2)
+        # Convert Arabic to Roman if needed
+        if numeral.isdigit():
+            roman = arabic_to_roman(numeral)
+        else:
+            roman = numeral.upper()
+        key = f"Part {roman}"
+        parts.append((key, norm[start:end]))
 
     result = {}
-    for part_name, start, end in part_spans:
-        part_text = norm[start:end]
-        # Find all "Item X." headers in this part
-        item_matches = list(re.finditer(r'(Item\s*\d+[A-Za-z]?\.)(?=\s)', part_text, re.IGNORECASE))
+    for key, part_text in parts:
         items = {}
-        for idx, item_match in enumerate(item_matches):
-            item_start = item_match.start()
-            item_end = item_matches[idx + 1].start() if idx + 1 < len(item_matches) else len(part_text)
-            item_title = item_match.group(1).strip()
-            item_body = part_text[item_start:item_end].strip()
-            # Extract tables from the original HTML for this item
-            html_item_match = re.search(re.escape(item_title), html, re.IGNORECASE)
-            if html_item_match:
-                html_item_start = html_item_match.start()
-                html_item_end = html.find("Item", html_item_start + 1)
-                html_item = html[html_item_start:html_item_end] if html_item_end != -1 else html[html_item_start:]
-                item_soup = BeautifulSoup(html_item, "html.parser")
-                tables = []
-                for table in item_soup.find_all('table'):
-                    rows = []
-                    for tr in table.find_all('tr'):
-                        cells = [td.get_text(separator=" ", strip=True) for td in tr.find_all(['td', 'th'])]
-                        rows.append(','.join(cells))
-                    table_text = '\n'.join(rows)
-                    if table_text.strip():
-                        tables.append(table_text)
-            else:
-                tables = []
-            items[item_title] = {
-                "text": item_body,
+        item_hdrs = list(re.finditer(r'(Item\s*\d+[A-Za-z]?\.)(?=\s)', part_text, re.IGNORECASE))
+        for i, ih in enumerate(item_hdrs):
+            istart = ih.start()
+            iend = item_hdrs[i+1].start() if i+1 < len(item_hdrs) else len(part_text)
+            title = ih.group(1).strip()
+            body = part_text[istart:iend].strip()
+            # Pull out tables from the raw HTML slice
+            html_slice = html[ html.lower().find(title.lower()) : ]
+            next_item = re.search(r'Item\s*\d+[A-Za-z]?\.', html_slice, re.IGNORECASE)
+            html_slice = html_slice[: next_item.start() ] if next_item else html_slice
+            tsoup = BeautifulSoup(html_slice, "html.parser")
+            tables = []
+            for tbl in tsoup.find_all("table"):
+                rows = []
+                for tr in tbl.find_all("tr"):
+                    cells = [td.get_text(" ", strip=True) for td in tr.find_all(["td","th"])]
+                    rows.append(",".join(cells))
+                text_tbl = "\n".join(rows).strip()
+                if text_tbl:
+                    tables.append(text_tbl)
+            items[title] = {
+                "text":   body,
                 "tables": tables,
-                "tokens": estimate_token_count(item_body)
+                "tokens": estimate_tokens(body)
             }
-        part_total_tokens = sum(item["tokens"] for item in items.values())
-        # Normalize the part key here!
-        norm_part_key = normalize_part_key(part_name)
-        result[norm_part_key] = {
-            "total_tokens": part_total_tokens,
-            "items": items
+        total = sum(v["tokens"] for v in items.values())
+        result[key] = {
+            "total_tokens": total,
+            "items":        items
         }
-        extraction_notes.append(f"{part_name} (normalized: {norm_part_key}): {part_total_tokens} tokens, {len(items)} items extracted.")
-
-    # Log the token counts for each part and item
-    for part, pdata in result.items():
-        logger.info(f"[Token Budget] {part}: {pdata['total_tokens']} tokens")
-        for item, idata in pdata["items"].items():
-            logger.info(f"  - {item}: {idata['tokens']} tokens")
-
+        extraction_notes.append(f"{key}: {total} tokens across {len(items)} items")
     return result
 
 def normalize_part_key(s):

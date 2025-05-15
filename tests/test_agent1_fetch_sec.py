@@ -8,7 +8,7 @@ from app.api.agents.agent1_fetch_sec import extract_10q_sections, fetch_10q
 def test_extract_10q_sections_parts_and_items():
     html = """
     <html><body>
-    <b>Part I</b>
+    <b>PART 1</b>
     <b>Item 1.</b>
     <table><tr><td>Revenue</td><td>100</td></tr></table>
     <b>Item 2.</b>
@@ -20,7 +20,7 @@ def test_extract_10q_sections_parts_and_items():
     """
     notes = []
     result = extract_10q_sections(html, notes)
-    # Check for Part I and Part II
+    # Should always have "Part I" and "Part II" as keys
     assert "Part I" in result and "Part II" in result
     # Check for items in Part I
     part1 = result["Part I"]
@@ -32,9 +32,7 @@ def test_extract_10q_sections_parts_and_items():
     item1 = part1["items"]["Item 1."]
     assert "text" in item1 and "tables" in item1 and "tokens" in item1
     assert "Revenue" in item1["text"] or any("Revenue" in t for t in item1["tables"])
-    # Check that tokens is an int
     assert isinstance(item1["tokens"], int)
-    # Optionally print for debug
     print("Extracted structure:", result)
 
 # Unit test for fetch_10q with monkeypatching

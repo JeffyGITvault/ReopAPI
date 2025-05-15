@@ -228,17 +228,21 @@ def test_agent1_real_extraction(company):
     filings = result.get("filings", [])
     assert filings, f"No filings returned from SEC API for {company}."
     extracted = filings[0].get("extracted_sections", {})
-    # Check for Part I and Part II in the extracted structure
-    assert "Part I" in extracted and "Part II" in extracted, f"Extracted sections missing expected parts for {company}."
+
+    # Should always have "Part I" and "Part II" as keys
+    assert "Part I" in extracted and "Part II" in extracted, (
+        f"Extracted sections missing expected parts for {company}. Extracted keys: {list(extracted.keys())}"
+    )
+
     # Check that each part has items and token counts
-    for part in ["Part I", "Part II"]:
-        part_data = extracted.get(part, {})
+    for part_key in ["Part I", "Part II"]:
+        part_data = extracted.get(part_key, {})
         assert "total_tokens" in part_data and "items" in part_data
-        # Optionally, check for at least one item in each part
         assert isinstance(part_data["items"], dict)
         if part_data["items"]:
             first_item = next(iter(part_data["items"].values()))
             assert "text" in first_item and "tables" in first_item and "tokens" in first_item
+
     print(f"\n===== FULL EXTRACTED DATA FOR {company} =====")
     for part, pdata in extracted.items():
         print(f"\n{part} (tokens: {pdata.get('total_tokens', 0)})")
