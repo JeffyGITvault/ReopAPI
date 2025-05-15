@@ -80,6 +80,9 @@ def fetch_10q(company_name: str, count: int = 2) -> Dict[str, Any]:
             "filings": filings_list
         }
         _meta_cache[cache_key] = result
+        print("Part I text length:", len(result["Part I"]["items"]))
+        for item, data in result["Part I"]["items"].items():
+            print(f"{item}: {len(data['text'])} chars, {data['tokens']} tokens")
         return result
     except Exception as e:
         logger.error(f"Agent 1 - SEC data fetch failed: {e}")
