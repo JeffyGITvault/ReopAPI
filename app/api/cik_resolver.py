@@ -7,6 +7,7 @@ from typing import Tuple, Dict, Optional, NamedTuple
 from functools import lru_cache
 from dataclasses import dataclass
 from enum import Enum, auto
+import re
 
 # === Third-Party Libraries ===
 import requests
