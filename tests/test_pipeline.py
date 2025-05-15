@@ -229,6 +229,12 @@ def test_agent1_real_extraction(company):
     assert filings, f"No filings returned from SEC API for {company}."
     extracted = filings[0].get("extracted_sections", {})
 
+    # Debug: print the extracted part keys
+    print("Extracted part keys:", list(extracted.keys()))
+    # Debug: print the first 500 characters of Part I > Item 1.
+    part_i_item_1_text = extracted.get("Part I", {}).get("items", {}).get("Item 1.", {}).get("text", "")
+    print("First 500 chars of Part I > Item 1.:", part_i_item_1_text[:500])
+
     # Should always have "Part I" and "Part II" as keys
     assert "Part I" in extracted and "Part II" in extracted, (
         f"Extracted sections missing expected parts for {company}. Extracted keys: {list(extracted.keys())}"

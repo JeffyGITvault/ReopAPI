@@ -144,8 +144,13 @@ def extract_10q_sections(html: str, extraction_notes: list) -> dict:
     raw = soup.get_text(separator=" ")
     norm = " ".join(raw.split())
 
+    # Debug: print the first 1000 characters of the normalized text
+    print("First 1000 chars of filing text:", norm[:1000])
+
     # Match both Roman and Arabic numerals for "Part", with optional trailing period
     part_hdrs = list(re.finditer(r'(Part\s+((?:[IVX]+)|(?:\d+)))\.?', norm, re.IGNORECASE))
+    # Debug: print all part headers found
+    print("Part headers found in text:", [m.group(0) for m in part_hdrs])
     parts = []
     for idx, m in enumerate(part_hdrs):
         start = m.start()
@@ -193,6 +198,8 @@ def extract_10q_sections(html: str, extraction_notes: list) -> dict:
             "items":        items
         }
         extraction_notes.append(f"{key}: {total} tokens across {len(items)} items")
+    # Debug: print the final extracted part keys
+    print("Final extracted part keys:", list(result.keys()))
     return result
 
 def normalize_part_key(s):
