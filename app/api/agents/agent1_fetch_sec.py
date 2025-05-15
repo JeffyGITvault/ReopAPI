@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 from app.api.config import DEFAULT_HEADERS
 import os
 from cachetools import TTLCache
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -192,12 +193,20 @@ def extract_10q_sections(html: str, extraction_notes: list) -> dict:
     return result
 
 def normalize_part_key(s):
+    """
+    Normalize part keys to a canonical form: 'part1', 'part2', etc.
+    Handles case, whitespace, periods, and roman numerals.
+    """
     s = s.lower().replace('.', '').replace(' ', '')
-    # Convert roman numerals to arabic numerals
-    roman_map = {'i': '1', 'ii': '2', 'iii': '3', 'iv': '4', 'v': '5', 'vi': '6', 'vii': '7', 'viii': '8', 'ix': '9', 'x': '10'}
-    for roman, arabic in roman_map.items():
+    # Convert roman numerals to arabic numerals at the end of the string
+    roman_map = {
+        'x': '10', 'ix': '9', 'viii': '8', 'vii': '7', 'vi': '6',
+        'v': '5', 'iv': '4', 'iii': '3', 'ii': '2', 'i': '1'
+    }
+    for roman, arabic in sorted(roman_map.items(), key=lambda x: -len(x[0])):  # longest first
         if s.endswith(roman):
             s = s[:-len(roman)] + arabic
+            break
     return s
 
 def find_part_key(extracted, part_name):
