@@ -3,7 +3,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from app.api.run_pipeline import router, PipelineRequest
 from fastapi import FastAPI
 import logging
@@ -58,12 +58,18 @@ valid_agent4 = {
     "questions_to_ask": ["How to grow?"]
 }
 
-@patch("app.api.run_pipeline.fetch_10q", return_value=mock_sec_data)
-@patch("app.api.run_pipeline.analyze_financials", return_value=valid_agent2)
-@patch("app.api.run_pipeline.profile_people", return_value=valid_agent3)
+@patch("app.api.run_pipeline.openai.OpenAI")
 @patch("app.api.run_pipeline.analyze_company", return_value=valid_agent4)
-@patch("app.api.run_pipeline.openai.ChatCompletion.create", return_value={"choices": [{"message": {"content": "Synthesized briefing."}}]})
-def test_run_pipeline_success(mock_openai, mock_agent4, mock_agent3, mock_agent2, mock_agent1):
+@patch("app.api.run_pipeline.profile_people", return_value=valid_agent3)
+@patch("app.api.run_pipeline.analyze_financials", return_value=valid_agent2)
+@patch("app.api.run_pipeline.fetch_10q", return_value=mock_sec_data)
+def test_run_pipeline_success(mock_agent1, mock_agent2, mock_agent3, mock_agent4, mock_openai):
+    # Mock the OpenAI client and its response
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=MagicMock(content="Synthesized briefing."))]
+    mock_client.chat.completions.create.return_value = mock_response
+    mock_openai.return_value = mock_client
     payload = {
         "company": "TestCo",
         "people": ["Jane Doe"],
@@ -78,12 +84,17 @@ def test_run_pipeline_success(mock_openai, mock_agent4, mock_agent3, mock_agent2
     assert "raw_tables" in data["financial_analysis"]
     assert "notes" in data["financial_analysis"]
 
-@patch("app.api.run_pipeline.fetch_10q", return_value={"company_name": "TestCo", "cik": "123", "filings": []})
-@patch("app.api.run_pipeline.analyze_financials", return_value={"bad": "data"})
-@patch("app.api.run_pipeline.profile_people", return_value=valid_agent3)
+@patch("app.api.run_pipeline.openai.OpenAI")
 @patch("app.api.run_pipeline.analyze_company", return_value=valid_agent4)
-@patch("app.api.run_pipeline.openai.ChatCompletion.create", return_value={"choices": [{"message": {"content": "Synthesized briefing."}}]})
-def test_run_pipeline_agent2_invalid(mock_openai, mock_agent4, mock_agent3, mock_agent2, mock_agent1):
+@patch("app.api.run_pipeline.profile_people", return_value=valid_agent3)
+@patch("app.api.run_pipeline.analyze_financials", return_value={"bad": "data"})
+@patch("app.api.run_pipeline.fetch_10q", return_value={"company_name": "TestCo", "cik": "123", "filings": []})
+def test_run_pipeline_agent2_invalid(mock_agent1, mock_agent2, mock_agent3, mock_agent4, mock_openai):
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=MagicMock(content="Synthesized briefing."))]
+    mock_client.chat.completions.create.return_value = mock_response
+    mock_openai.return_value = mock_client
     payload = {
         "company": "TestCo",
         "people": ["Jane Doe"],
@@ -94,12 +105,17 @@ def test_run_pipeline_agent2_invalid(mock_openai, mock_agent4, mock_agent3, mock
     data = response.json()
     assert "Agent 2 output invalid" in data["executive_briefing"]
 
-@patch("app.api.run_pipeline.fetch_10q", return_value={"company_name": "TestCo", "cik": "123", "filings": []})
-@patch("app.api.run_pipeline.analyze_financials", return_value=valid_agent2)
-@patch("app.api.run_pipeline.profile_people", return_value=[{"bad": "data"}])
+@patch("app.api.run_pipeline.openai.OpenAI")
 @patch("app.api.run_pipeline.analyze_company", return_value=valid_agent4)
-@patch("app.api.run_pipeline.openai.ChatCompletion.create", return_value={"choices": [{"message": {"content": "Synthesized briefing."}}]})
-def test_run_pipeline_agent3_invalid(mock_openai, mock_agent4, mock_agent3, mock_agent2, mock_agent1):
+@patch("app.api.run_pipeline.profile_people", return_value=[{"bad": "data"}])
+@patch("app.api.run_pipeline.analyze_financials", return_value=valid_agent2)
+@patch("app.api.run_pipeline.fetch_10q", return_value={"company_name": "TestCo", "cik": "123", "filings": []})
+def test_run_pipeline_agent3_invalid(mock_agent1, mock_agent2, mock_agent3, mock_agent4, mock_openai):
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=MagicMock(content="Synthesized briefing."))]
+    mock_client.chat.completions.create.return_value = mock_response
+    mock_openai.return_value = mock_client
     payload = {
         "company": "TestCo",
         "people": ["Jane Doe"],
@@ -110,12 +126,17 @@ def test_run_pipeline_agent3_invalid(mock_openai, mock_agent4, mock_agent3, mock
     data = response.json()
     assert "Agent 3 output invalid" in data["executive_briefing"]
 
-@patch("app.api.run_pipeline.fetch_10q", return_value={"company_name": "TestCo", "cik": "123", "filings": []})
-@patch("app.api.run_pipeline.analyze_financials", return_value=valid_agent2)
-@patch("app.api.run_pipeline.profile_people", return_value=valid_agent3)
+@patch("app.api.run_pipeline.openai.OpenAI")
 @patch("app.api.run_pipeline.analyze_company", return_value={"bad": "data"})
-@patch("app.api.run_pipeline.openai.ChatCompletion.create", return_value={"choices": [{"message": {"content": "Synthesized briefing."}}]})
-def test_run_pipeline_agent4_invalid(mock_openai, mock_agent4, mock_agent3, mock_agent2, mock_agent1):
+@patch("app.api.run_pipeline.profile_people", return_value=valid_agent3)
+@patch("app.api.run_pipeline.analyze_financials", return_value=valid_agent2)
+@patch("app.api.run_pipeline.fetch_10q", return_value={"company_name": "TestCo", "cik": "123", "filings": []})
+def test_run_pipeline_agent4_invalid(mock_agent1, mock_agent2, mock_agent3, mock_agent4, mock_openai):
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=MagicMock(content="Synthesized briefing."))]
+    mock_client.chat.completions.create.return_value = mock_response
+    mock_openai.return_value = mock_client
     payload = {
         "company": "TestCo",
         "people": ["Jane Doe"],
@@ -142,6 +163,10 @@ def test_run_pipeline_agent1_error(mock_agent1):
         assert "error" in data["sec_data"] or "error" in data
 
 # Truncation test: simulate huge item1 and check for truncation notes
+@patch("app.api.run_pipeline.openai.OpenAI")
+@patch("app.api.run_pipeline.analyze_company", return_value=valid_agent4)
+@patch("app.api.run_pipeline.profile_people", return_value=valid_agent3)
+@patch("app.api.run_pipeline.analyze_financials")
 @patch("app.api.run_pipeline.fetch_10q", return_value={
     "company_name": "TestCo",
     "cik": "123",
@@ -163,12 +188,12 @@ def test_run_pipeline_agent1_error(mock_agent1):
         }
     ]
 })
-@patch("app.api.run_pipeline.analyze_financials")
-@patch("app.api.run_pipeline.profile_people", return_value=valid_agent3)
-@patch("app.api.run_pipeline.analyze_company", return_value=valid_agent4)
-@patch("app.api.run_pipeline.openai.ChatCompletion.create", return_value={"choices": [{"message": {"content": "Synthesized briefing."}}]})
-def test_run_pipeline_truncation(mock_openai, mock_agent4, mock_agent3, mock_agent2, mock_agent1):
-    # The analyze_financials mock will check for truncation notes in the input
+def test_run_pipeline_truncation(mock_agent1, mock_agent2, mock_agent3, mock_agent4, mock_openai):
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=MagicMock(content="Synthesized briefing."))]
+    mock_client.chat.completions.create.return_value = mock_response
+    mock_openai.return_value = mock_client
     def analyze_financials_side_effect(extracted_sections, additional_context=None):
         notes = extracted_sections.get("extraction_notes", [])
         truncation_notes = extracted_sections.get("truncation_notes", [])
