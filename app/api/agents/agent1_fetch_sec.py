@@ -148,6 +148,7 @@ def extract_10q_sections(html: str, extraction_notes: list) -> dict:
     print("First 1000 chars of filing text:", norm[:1000])
 
     # Match both Roman and Arabic numerals for "Part", with optional trailing period
+    # Accepts: Part I, Part I., PART I, PART I., Part 1, Part 1., PART 1, PART 1.
     part_hdrs = list(re.finditer(r'(Part\s+((?:[IVX]+)|(?:\d+)))\.?', norm, re.IGNORECASE))
     # Debug: print all part headers found
     print("Part headers found in text:", [m.group(0) for m in part_hdrs])
