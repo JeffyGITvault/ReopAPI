@@ -115,6 +115,7 @@ def load_alias_map(force_reload: bool = False) -> Dict[str, str]:
             _alias_map = {_normalize_key(k): v for k, v in response.json().items()}
             _last_load_time = current_time
             logger.info(f"Loaded {len(_alias_map)} aliases from GitHub")
+            print("Alias map loaded with keys:", list(_alias_map.keys())[:5])
             return _alias_map
         else:
             logger.warning(f"GitHub alias map fetch failed with status: {response.status_code}")
@@ -129,6 +130,7 @@ def load_alias_map(force_reload: bool = False) -> Dict[str, str]:
                 _alias_map = {_normalize_key(k): v for k, v in json.load(f).items()}
                 _last_load_time = current_time
                 logger.info(f"Loaded {len(_alias_map)} aliases from local file")
+                print("Alias map loaded with keys:", list(_alias_map.keys())[:5])
                 return _alias_map
         except Exception as e:
             last_exception = e
