@@ -122,7 +122,7 @@ def extract_10q_sections(html: str, extraction_notes: list) -> dict:
     """
     Extract all Parts (I, II, etc.) and their Items from 10-Q HTML/text.
     For each item, extract text, tables, and token count.
-    Returns a nested dict: { "Part I": { "total_tokens": int, "items": { "Item 1.": {...}, ... } }, ... }
+    Returns a nested dict: { "part1": { "total_tokens": int, "items": { "Item 1.": {...}, ... } }, ... }
     """
     from bs4 import BeautifulSoup
     import re
@@ -130,6 +130,18 @@ def extract_10q_sections(html: str, extraction_notes: list) -> dict:
     def estimate_token_count(text: str) -> int:
         words = len(text.split())
         return int(words / 0.75)
+
+    def normalize_part_key(s):
+        s = s.lower().replace('.', '').replace(' ', '')
+        roman_map = {
+            'x': '10', 'ix': '9', 'viii': '8', 'vii': '7', 'vi': '6',
+            'v': '5', 'iv': '4', 'iii': '3', 'ii': '2', 'i': '1'
+        }
+        for roman, arabic in sorted(roman_map.items(), key=lambda x: -len(x[0])):  # longest first
+            if s.endswith(roman):
+                s = s[:-len(roman)] + arabic
+                break
+        return s
 
     soup = BeautifulSoup(html, "html.parser")
     text = soup.get_text(separator=" ")
@@ -178,11 +190,13 @@ def extract_10q_sections(html: str, extraction_notes: list) -> dict:
                 "tokens": estimate_token_count(item_body)
             }
         part_total_tokens = sum(item["tokens"] for item in items.values())
-        result[part_name] = {
+        # Normalize the part key here!
+        norm_part_key = normalize_part_key(part_name)
+        result[norm_part_key] = {
             "total_tokens": part_total_tokens,
             "items": items
         }
-        extraction_notes.append(f"{part_name}: {part_total_tokens} tokens, {len(items)} items extracted.")
+        extraction_notes.append(f"{part_name} (normalized: {norm_part_key}): {part_total_tokens} tokens, {len(items)} items extracted.")
 
     # Log the token counts for each part and item
     for part, pdata in result.items():
