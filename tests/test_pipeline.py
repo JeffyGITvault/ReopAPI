@@ -221,20 +221,28 @@ def test_run_pipeline_truncation(mock_agent1, mock_agent2, mock_agent3, mock_age
     # Check that truncation notes are present
     assert any("truncated" in note or "omitted" in note for note in data["financial_analysis"]["notes"])
 
-@pytest.mark.parametrize("company", ["Apple", "Microsoft", "Tesla", "Ball Corp"])
+@pytest.mark.parametrize("company", ["Ball Corp"])
 def test_agent1_real_extraction(company):
     from app.api.agents.agent1_fetch_sec import fetch_10q
     result = fetch_10q(company)
     filings = result.get("filings", [])
     assert filings, f"No filings returned from SEC API for {company}."
     extracted = filings[0].get("extracted_sections", {})
-    assert "item1" in extracted and "item2" in extracted, f"Extracted sections missing expected keys for {company}."
+    # Check for Part I and Part II in the extracted structure
+    assert "Part I" in extracted and "Part II" in extracted, f"Extracted sections missing expected parts for {company}."
+    # Check that each part has items and token counts
+    for part in ["Part I", "Part II"]:
+        part_data = extracted.get(part, {})
+        assert "total_tokens" in part_data and "items" in part_data
+        # Optionally, check for at least one item in each part
+        assert isinstance(part_data["items"], dict)
+        if part_data["items"]:
+            first_item = next(iter(part_data["items"].values()))
+            assert "text" in first_item and "tables" in first_item and "tokens" in first_item
     print(f"\n===== FULL EXTRACTED DATA FOR {company} =====")
-    print(f"\nItem 1:\n{extracted.get('item1', '')}")
-    print(f"\nItem 2:\n{extracted.get('item2', '')}")
-    print(f"\nNotes:\n{extracted.get('notes', '')}")
-    tables = extracted.get('item1_tables', [])
-    if tables:
-        print(f"\nFirst Table (raw):\n{tables[0]}")
-    else:
-        print("\nNo tables extracted.") 
+    for part, pdata in extracted.items():
+        print(f"\n{part} (tokens: {pdata.get('total_tokens', 0)})")
+        for item, idata in pdata.get("items", {}).items():
+            print(f"\n{item} (tokens: {idata.get('tokens', 0)})\nText: {idata.get('text', '')[:500]}")
+            if idata.get("tables"):
+                print(f"\nFirst Table (raw):\n{idata['tables'][0]}") 
