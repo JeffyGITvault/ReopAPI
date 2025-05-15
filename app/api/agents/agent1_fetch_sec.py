@@ -215,5 +215,3 @@ def find_part_key(extracted, part_name):
         if normalize_part_key(k) == norm_part:
             return k
     return None
-
-assert "Part I" in result and "Part II" in result
