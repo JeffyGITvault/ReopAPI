@@ -5,21 +5,37 @@ import pytest
 from app.api.agents.agent1_fetch_sec import extract_10q_sections, fetch_10q
 
 # Unit test for extract_10q_sections
-def test_extract_10q_sections_basic():
+def test_extract_10q_sections_parts_and_items():
     html = """
     <html><body>
-    <b>Item 1. Financial Statements</b>
+    <b>Part I</b>
+    <b>Item 1.</b>
     <table><tr><td>Revenue</td><td>100</td></tr></table>
-    <b>Item 2. Management's Discussion and Analysis</b>
+    <b>Item 2.</b>
     Some MD&A text.
+    <b>Part II</b>
+    <b>Item 1.</b>
+    Legal proceedings.
     </body></html>
     """
     notes = []
     result = extract_10q_sections(html, notes)
-    assert "item1" in result and "item2" in result
-    assert "Revenue" in result["item1"]
-    assert "MD&A" in result["item2"]
-    assert isinstance(result["item1_tables"], list)
+    # Check for Part I and Part II
+    assert "Part I" in result and "Part II" in result
+    # Check for items in Part I
+    part1 = result["Part I"]
+    assert "items" in part1 and "Item 1." in part1["items"] and "Item 2." in part1["items"]
+    # Check for items in Part II
+    part2 = result["Part II"]
+    assert "items" in part2 and "Item 1." in part2["items"]
+    # Check for text, tables, and tokens in an item
+    item1 = part1["items"]["Item 1."]
+    assert "text" in item1 and "tables" in item1 and "tokens" in item1
+    assert "Revenue" in item1["text"] or any("Revenue" in t for t in item1["tables"])
+    # Check that tokens is an int
+    assert isinstance(item1["tokens"], int)
+    # Optionally print for debug
+    print("Extracted structure:", result)
 
 # Unit test for fetch_10q with monkeypatching
 @pytest.mark.usefixtures("monkeypatch")

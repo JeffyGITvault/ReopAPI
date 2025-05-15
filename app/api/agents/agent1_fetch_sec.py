@@ -190,3 +190,19 @@ def extract_10q_sections(html: str, extraction_notes: list) -> dict:
             logger.info(f"  - {item}: {idata['tokens']} tokens")
 
     return result
+
+def normalize_part_key(s):
+    s = s.lower().replace('.', '').replace(' ', '')
+    # Convert roman numerals to arabic numerals
+    roman_map = {'i': '1', 'ii': '2', 'iii': '3', 'iv': '4', 'v': '5', 'vi': '6', 'vii': '7', 'viii': '8', 'ix': '9', 'x': '10'}
+    for roman, arabic in roman_map.items():
+        if s.endswith(roman):
+            s = s[:-len(roman)] + arabic
+    return s
+
+def find_part_key(extracted, part_name):
+    norm_part = normalize_part_key(part_name)
+    for k in extracted:
+        if normalize_part_key(k) == norm_part:
+            return k
+    return None
