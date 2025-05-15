@@ -121,7 +121,7 @@ def estimate_token_count(text: str) -> int:
 def extract_10q_sections(html: str, extraction_notes: list) -> dict:
     """
     Extracts all Parts (I, II, etc.) and their Items from 10-Q HTML/text.
-    Always keys the result as "Part I", "Part II", etc. (Roman numerals).
+    Always keys the result as "Part I", "Part II", etc. (Roman numerals, no trailing period).
     """
     from bs4 import BeautifulSoup
     import re
@@ -141,7 +141,7 @@ def extract_10q_sections(html: str, extraction_notes: list) -> dict:
     raw = soup.get_text(separator=" ")
     norm = " ".join(raw.split())
 
-    # Match both Roman and Arabic numerals for "Part"
+    # Match both Roman and Arabic numerals for "Part", with optional trailing period
     part_hdrs = list(re.finditer(r'(Part\s+((?:[IVX]+)|(?:\d+)))\.?', norm, re.IGNORECASE))
     parts = []
     for idx, m in enumerate(part_hdrs):
@@ -153,7 +153,7 @@ def extract_10q_sections(html: str, extraction_notes: list) -> dict:
             roman = arabic_to_roman(numeral)
         else:
             roman = numeral.upper()
-        key = f"Part {roman}"
+        key = f"Part {roman}"  # Always no trailing period
         parts.append((key, norm[start:end]))
 
     result = {}
@@ -215,3 +215,5 @@ def find_part_key(extracted, part_name):
         if normalize_part_key(k) == norm_part:
             return k
     return None
+
+assert "Part I" in result and "Part II" in result
