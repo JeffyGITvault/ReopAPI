@@ -199,3 +199,7 @@ def get_resolver_stats() -> Dict:
         "cache_age": time.time() - _last_load_time if _last_load_time else None,
         "sec_data_cache_size": _fetch_sec_data.cache_info().currsize
     }
+
+from app.api.agents.agent1_fetch_sec import _meta_cache, _html_cache
+_meta_cache.clear()
+_html_cache.clear()
